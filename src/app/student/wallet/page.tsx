@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { RootState } from '@/store/store';
+import { RootState } from '@/redux/store';
 import api from '@/api/axiosInstance';
 import { getTokens } from '@/services/storageService';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -22,6 +22,7 @@ export interface StudentSession {
   tutor: string;
   status: string;
   price: number;
+  scheduled_time: string; // ✅ ADD THIS
   started_at: string;
   ended_at: string | null;
 }

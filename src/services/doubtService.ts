@@ -16,22 +16,21 @@ export const createDoubt = async (data: CreateDoubtPayload) => {
 
 // ✅ Accept query parameters for filtering
 // services/doubtService.ts
-export const getMyDoubts = async (params?: { mode?: string; status?: string; type?: string }) => {
+export const getMyDoubts = async (
+  params?: { mode?: string; status?: string; type?: string },
+  url?: string
+) => {
   try {
-    const response = await api.get('/doubts/my-doubts/', { params });
-    
-    // Safe extraction – always return an array
-    const doubtsArray = response.data?.results?.data;
-    
-    if (Array.isArray(doubtsArray)) {
-      return doubtsArray;
-    }
-    
-    console.warn('API did not return an array:', response.data);
-    return [];
+    const response = await api.get(
+      url || '/doubts/my-doubts/',
+      { params }
+    );
+
+    return response;
+
   } catch (error) {
     console.error('Error in getMyDoubts:', error);
-    return []; // Return empty array on error
+    throw error;
   }
 };
 

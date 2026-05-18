@@ -13,13 +13,20 @@ import toast, { Toaster } from 'react-hot-toast';
 // ============================================
 const FloatingEmoji = ({ emoji, delay, duration, top, left, right, bottom, opacity = 0.3 }: any) => (
   <motion.div
-    className="absolute text-5xl pointer-events-none select-none"
-    style={{ top, left, right, bottom }}
-    animate={{ y: [0, -20, 0] }}
-    transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    initial={{ opacity: 0 }}
-    animate={{ opacity }}
-  >
+      className="absolute text-5xl pointer-events-none select-none"
+      style={{ top, left, right, bottom }}
+      initial={{ opacity: 0 }}
+      animate={{
+        y: [0, -20, 0],
+        opacity,
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      }}
+    >
     {emoji}
   </motion.div>
 );

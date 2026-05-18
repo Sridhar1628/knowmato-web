@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDoubt, sendDirectRequest, CreateDoubtPayload } from '@/services/doubtService';
@@ -29,7 +29,7 @@ const EXPLANATION_TYPES = [
   { label: '🎥 Video', value: 'video' },
 ];
 
-export default function PostDoubtPage() {
+function PostDoubtContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tutorIdParam = searchParams.get('tutorId');
@@ -372,5 +372,13 @@ export default function PostDoubtPage() {
       {/* Tutor Modal */}
       <TutorModal />
     </div>
+  );
+}
+
+export default function PostDoubtPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PostDoubtContent />
+    </Suspense>
   );
 }

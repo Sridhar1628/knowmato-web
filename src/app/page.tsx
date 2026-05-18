@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { RootState } from '@/store/store';
+import { RootState } from '@/redux/store';
 
 // ============================================
 // 1. Animated Gradient Background Component
@@ -51,8 +51,8 @@ const Particle = ({ index }: { index: number }) => {
         duration: duration,
         delay: delay,
         repeat: Infinity,
-        repeatType: 'loop',
-        ease: 'easeInOut',
+        repeatType: "loop",
+        ease: "easeInOut",
         times: [0, 0.25, 0.5, 0.75, 1],
       }}
     />
@@ -66,30 +66,6 @@ export default function SplashScreen() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
-
-  // Animation states
-  const logoControls = {
-    hidden: { opacity: 0, y: 50, scale: 0.8 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: {
-        type: 'spring',
-        damping: 12,
-        stiffness: 100,
-        duration: 0.8,
-      },
-    },
-  };
-
-  const taglineControls = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { delay: 0.4, duration: 0.6, ease: 'easeOut' },
-    },
-  };
 
   // Redirect logic after splash delay
   useEffect(() => {
@@ -144,9 +120,14 @@ export default function SplashScreen() {
       <div className="relative z-10 flex flex-col items-center justify-center px-4 text-center">
         {/* Animated Logo */}
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={logoControls}
+          initial={{ opacity: 0, y: 50, scale: 0.8 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            type: "spring",
+            damping: 12,
+            stiffness: 100,
+            duration: 0.8,
+          }}
           className="mb-4"
         >
           <h1 className="text-6xl font-extrabold tracking-wide text-white drop-shadow-2xl sm:text-7xl md:text-8xl">
@@ -156,9 +137,13 @@ export default function SplashScreen() {
 
         {/* Animated Tagline */}
         <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={taglineControls}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{
+            delay: 0.4,
+            duration: 0.6,
+            ease: "easeOut",
+          }}
         >
           <p className="text-xl font-medium text-white/95 drop-shadow-md sm:text-2xl md:text-3xl">
             Learn. Solve. Grow.

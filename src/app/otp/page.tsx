@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
@@ -17,7 +17,7 @@ const OTP_LENGTH = 6;
 const showError = (message: string) => toast.error(message);
 const showSuccess = (message: string) => toast.success(message);
 
-export default function OtpPage() {
+function OTPContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -33,24 +33,7 @@ export default function OtpPage() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Entrance animations (using framer-motion)
-  const cardVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-  };
 
-  const emojiSpinVariants = {
-    animate: {
-      rotate: [0, 10, 0, -10, 0],
-      transition: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
-    },
-  };
-
-  const floatingEmojiVariants = (yOffset: number) => ({
-    animate: {
-      y: [0, -yOffset, 0],
-      transition: { repeat: Infinity, duration: 3 + yOffset / 10, ease: 'easeInOut' },
-    },
-  });
 
   // Timer countdown and progress
   useEffect(() => {
@@ -191,15 +174,27 @@ export default function OtpPage() {
       {/* Floating Emojis with Animation */}
       <motion.div
         className="absolute left-[10%] top-[12%] text-4xl opacity-25"
-        variants={floatingEmojiVariants(15)}
-        animate="animate"
+        animate={{
+          y: [0, -15, 0],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 15,
+          ease: "easeInOut",
+        }}
       >
         📨
       </motion.div>
       <motion.div
-        className="absolute bottom-[12%] right-[10%] text-5xl opacity-20"
-        variants={floatingEmojiVariants(20)}
-        animate="animate"
+        className="absolute left-[10%] top-[12%] text-4xl opacity-25"
+        animate={{
+          y: [0, -15, 0],
+        }}
+        transition={{
+          repeat: Infinity,
+          duration: 15,
+          ease: "easeInOut",
+        }}
       >
         🔐
       </motion.div>
@@ -207,16 +202,25 @@ export default function OtpPage() {
       {/* Main Card */}
       <motion.div
         className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-indigo-100/50"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          ease: "easeOut",
+        }}
         style={shake ? { animation: 'shake 0.3s ease-in-out 0s 1' } : {}}
       >
         {/* Animated Emoji */}
         <motion.div
           className="mb-4 text-center text-5xl"
-          variants={emojiSpinVariants}
-          animate="animate"
+          animate={{
+            rotate: [0, 10, 0, -10, 0],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: 2,
+            ease: "easeInOut",
+          }}
         >
           ⚡
         </motion.div>
@@ -335,5 +339,13 @@ export default function OtpPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function OTPPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OTPContent />
+    </Suspense>
   );
 }

@@ -131,7 +131,7 @@ export default function SubmitReviewPage() {
     try {
       const response = await getSessionDetails(Number(sessionId));
       // Handle both wrapped and direct responses
-      const sessionData = response?.data?.data || response?.data || response;
+      const sessionData = (response as unknown) as SessionDetails;
       setSessionDetails(sessionData);
     } catch (error: any) {
       console.error('Error fetching session details:', error);
