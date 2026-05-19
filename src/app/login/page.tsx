@@ -111,7 +111,7 @@ export default function LoginPage() {
         toast.success('Login successful 🎉');
 
         // ✅ Redirect
-        router.push('/dashboard');
+        router.push('/student/dashboard');
 
         return;
       }
