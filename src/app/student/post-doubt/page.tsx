@@ -475,10 +475,10 @@ function PostDoubtContent() {
               {/* Submit Button */}
               <button
                 onClick={handleSubmit}
-                disabled={
+                disabled={Boolean(
                   submitting ||
                   (mode === 'specific' && selectedTutor?.is_online === false)
-                }
+                )}
                 className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold text-white shadow-md transition ${
                   submitting ||
                   (mode === 'specific' && selectedTutor?.is_online === false)
