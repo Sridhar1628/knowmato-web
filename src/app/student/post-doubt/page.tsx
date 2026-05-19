@@ -477,11 +477,11 @@ function PostDoubtContent() {
                 onClick={handleSubmit}
                 disabled={
                   submitting ||
-                  (mode === 'specific' && selectedTutor && !selectedTutor.is_online)
+                  (mode === 'specific' && selectedTutor?.is_online === false)
                 }
                 className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold text-white shadow-md transition ${
                   submitting ||
-                  (mode === 'specific' && selectedTutor && !selectedTutor.is_online)
+                  (mode === 'specific' && selectedTutor?.is_online === false)
                     ? 'bg-indigo-300 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-700'
                 }`}
