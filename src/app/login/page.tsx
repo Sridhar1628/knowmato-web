@@ -8,6 +8,8 @@ import * as Yup from 'yup';
 import { loginWithOtp } from '@/services/authService';
 import toast, { Toaster } from 'react-hot-toast';
 
+import { saveTokens } from '@/services/storageService';
+
 // ============================================
 // 1. Floating Emoji Component
 // ============================================
@@ -99,9 +101,8 @@ export default function LoginPage() {
       // ============================================
       if (!isPhoneLogin && res?.access) {
 
-        // ✅ Store tokens
-        localStorage.setItem('access', res.access);
-        localStorage.setItem('refresh', res.refresh);
+        // ✅ Save tokens properly
+        saveTokens(res.access, res.refresh);
 
         // ✅ Store user info (optional)
         localStorage.setItem('user_id', res.user_id);

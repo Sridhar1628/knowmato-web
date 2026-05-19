@@ -1,0 +1,478 @@
+// services/v1Service.ts
+
+import { apiGet, apiPost, apiPut, apiDelete } from './apiService';
+
+// ================== STUDENT ==================
+
+// 📊 Dashboard
+export const getStudentDashboard = async () => {
+  return await apiGet('/v1/student/dashboard/');
+};
+
+export const getAdminDashboard = async () => {
+  return await apiGet('/v1/admin/dashboard/');
+};
+
+export const getTutorDashboard = async () => {
+  return await apiGet('/v1/tutor/dashboard/');
+};
+
+export interface StudentSession {
+  session_id: number;
+  doubt: string;
+  tutor: string;
+  status: 'active' | 'completed' | 'cancelled' | 'scheduled';
+  session_type: 'chat' | 'live_video';
+  scheduled_at: string;
+
+  // 🔥 NEW
+  is_reviewed: boolean;
+  rating?: number;
+  feedback?: string;
+}
+
+// 📜 Doubt History
+export const getMyDoubts = async (params: {
+  status?: string;
+  category?: string;
+  mode?: string;
+  search?: string;
+  from_date?: string;
+  to_date?: string;
+  page?: number;
+}) => {
+  return await apiGet('/v1/student/doubts/', params);
+};
+
+export const getDoubtDetails = async (doubtId: number) => {
+  return await apiGet(`/v1/student/doubts/${doubtId}/`);
+};
+
+// 🔍 Session Detail
+export const getSessionDetail = async (sessionId: number) => {
+  const res = await apiGet(`/v1/session/${sessionId}/`);
+  return res;
+};
+
+// ✍️ Submit Review
+export const submitReview = async (data: {
+  session_id: number;
+  rating: number;
+  feedback?: string;
+}) => {
+  return await apiPost('/v1/submit-review/', data);
+};
+
+// ================== DOUBT ==================
+
+// 💰 Current Price
+export const getCurrentPrice = async () => {
+  return await apiGet('/v1/current-price/');
+};
+
+// ❓ Post Doubt
+export const postDoubt = async (data: any) => {
+  return await apiPost('/v1/post-doubt/', data);
+};
+
+// 💳 Payment Success
+export const paymentSuccess = async (data: {
+  doubt_id: number;
+}) => {
+  return await apiPost('/v1/payment-success/', data);
+};
+
+// ================== SESSION ==================
+
+// ▶️ Start Session
+export const startSession = async (sessionId: number) => {
+  return await apiPost('/v1/start-session/', {
+    session_id: sessionId,
+  });
+};
+
+// ⏹ End Session
+export const endSession = async (sessionId: number) => {
+  return await apiPost('/v1/end-session/', {
+    session_id: sessionId,
+  });
+};
+
+// ⏱ Remaining Time
+export const getSessionTime = async (sessionId: number) => {
+  return await apiGet(`/v1/session-time/${sessionId}/`);
+};
+
+// ➕ Extend Session
+export const extendSession = async (sessionId: number) => {
+  return await apiPost('/v1/extend-session/', {
+    session_id: sessionId,
+  });
+};
+
+// ================== DIRECT REQUEST ==================
+
+export const handleDirectRequest = async (data: {
+  request_id: number;
+  action: 'accept' | 'reject';
+}) => {
+  return await apiPost('/v1/handle-direct-request/', data);
+};
+
+export const toggleOnline = async (isOnline: boolean = true) => {
+  return await apiPost('/v1/toggle-online/', {
+    is_online: isOnline,
+  });
+};
+
+// ✅ Heartbeat
+export const sendHeartbeat = async () => {
+  return await apiPost('/v1/heartbeat/', {});
+};
+
+
+export const getTutorRequests = async () => {
+  return await apiGet('/v1/tutor/requests/');
+};
+
+export const getTutorPoolDoubts = async () => {
+  return await apiGet('/v1/tutor/pool-doubts/');
+};
+
+export const AcceptPoolDoubt = async (data: {
+  doubt_id: number;
+}) => {
+  return await apiPost('/v1/accept-doubt/', data);
+};
+
+export const getAdminDoubts = async (params: {
+  status?: string;
+  mode?: string;
+  type?: string;
+  category?: string;
+  search?: string;
+  page?: number;
+}) => {
+  return await apiGet('/v1/admin/doubts/', params);
+};
+
+export const getAdminDoubtDetails = async (doubtId: number) => {
+  return await apiGet(`/v1/admin/doubts/${doubtId}/`);
+};
+
+export const getAdminSessions = async (params: {
+  status?: string;
+  session_type?: string;
+  category?: string;
+  search?: string;
+  from_date?: string;
+  to_date?: string;
+  page?: number;
+}) => {
+  return await apiGet('/v1/admin/sessions/', params);
+};
+
+/**
+ * Get pricing slots (admin)
+ */
+export const getPricingSlots = async (params?: {
+  date?: string;
+  from_date?: string;
+  to_date?: string;
+  start_time?: string;
+  page?: number;
+}) => {
+  return await apiGet('/v1/admin/pricing/', params);
+};
+
+export const createPricingSlot = async (data: {
+  date: string;
+  start_time: string;
+  end_time: string;
+  price: number;
+}) => {
+  return await apiPost('/v1/admin/pricing/create/', data);
+};
+
+export const updatePricingSlot = async (
+  slotId: number,
+  data: {
+    date?: string;
+    start_time?: string;
+    end_time?: string;
+    price?: number;
+  }
+) => {
+  return await apiPut(`/v1/pricing-slots/${slotId}/`, data);
+};
+
+export const deletePricingSlot = async (slotId: number) => {
+  return await apiDelete(`/v1/pricing-slots/${slotId}/`);
+};
+
+export const getStudentSessions = async (): Promise<StudentSession[]> => {
+  const res = await apiGet('/v1/student/sessions/');
+  return res.data; // assuming your backend returns { data: [...] }
+};
+
+
+// ================== Wallet Services ==================
+// ================== Wallet Services ==================
+
+// ---------- Razorpay ----------
+export interface CreateOrderRequest {
+  amount: number; // in rupees (will be converted to paise on backend)
+}
+
+// ---------- Cashfree ----------
+
+export interface CreateCashfreeOrderRequest {
+  amount: number;
+}
+
+export interface CreateCashfreeOrderResponse {
+  success: boolean;
+
+  payment_session_id: string;
+
+  order_id: string;
+
+  amount: number;
+}
+
+export const createCashfreeOrder = async (
+  data: CreateCashfreeOrderRequest
+) => {
+
+  return await apiPost(
+    '/v1/wallet/',
+    data
+  );
+
+};
+
+export interface VerifyCashfreePaymentRequest {
+
+  order_id: string;
+
+  amount: number;
+
+}
+
+export interface VerifyCashfreePaymentResponse {
+
+  message: string;
+
+  real_balance: number;
+
+  bonus_balance: number;
+
+}
+
+export const verifyCashfreePayment = async (
+  data: VerifyCashfreePaymentRequest
+) => {
+
+  return await apiPost(
+    '/v1/wallet/verify/',
+    data
+  );
+
+};
+// ---------- Wallet Transactions ----------
+export interface Transaction {
+  id: number;
+  amount: number;        // total amount (real + bonus)
+  real_amount: number;
+  bonus_amount: number;
+  type: 'credit' | 'debit';
+  source: string;        // e.g., 'wallet_topup', 'session_payment', etc.
+  session_id: number | null;
+  doubt_id: number | null;
+  description: string;
+  date: string;          // YYYY-MM-DD
+  time: string;          // HH:MM:SS
+  created_at: string;    // ISO datetime
+}
+
+export interface WalletInfo {
+  real_balance: number;
+  bonus_balance: number;
+  total_balance: number;
+}
+
+export interface TransactionListResponse {
+  success: boolean;
+  message: string;
+  wallet: WalletInfo;
+  transactions: Transaction[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
+export interface TransactionFilters {
+  type?: 'credit' | 'debit';
+  source?: string;
+  start_date?: string; // YYYY-MM-DD
+  end_date?: string;   // YYYY-MM-DD
+  page?: number;
+  page_size?: number;
+}
+
+export const getTransactionHistory = async (filters?: TransactionFilters) => {
+  return await apiGet('/v1/wallet/transactions/', filters);
+};
+
+// ---------- Wallet Offers (Admin) ----------
+export interface WalletOffer {
+  id: number;
+  title: string;
+  description?: string;
+  min_amount: number;        // minimum top-up amount to qualify
+  bonus_percentage: number;  // e.g., 10 for 10%
+  max_bonus: number;         // maximum bonus amount
+  is_active: boolean;
+  start_date: string;        // ISO date
+  end_date: string;          // ISO date
+  created_at: string;
+}
+
+export interface CreateWalletOfferRequest {
+  title: string;
+  description?: string;
+  min_amount: number;
+  bonus_percentage: number;
+  max_bonus: number;
+  start_date: string;        // YYYY-MM-DD
+  end_date: string;          // YYYY-MM-DD
+}
+
+export const createWalletOffer = async (data: CreateWalletOfferRequest) => {
+  return await apiPost('/v1/wallet/offers/create/', data);
+};
+
+export const listWalletOffers = async () => {
+  return await apiGet('/v1/wallet/offers/');
+};
+
+export const toggleWalletOffer = async (offerId: number) => {
+  return await apiPost('/v1/wallet/offers/toggle/', { offer_id: offerId });
+};
+
+// ---------- Available Offers (Student) ----------
+export interface AvailableOffer extends WalletOffer {
+  // same fields as WalletOffer
+}
+
+export const getAvailableWalletOffers = async () => {
+  return await apiGet('/v1/wallet/offers/available/');
+};
+
+export const getOnlineTutors =
+  async () => {
+
+    return await apiGet(
+      "/accounts/online-tutors/"
+    );
+
+};
+
+// =====================================================
+// 💰 ADMIN TUTOR EARNINGS
+// =====================================================
+
+export interface TutorEarning {
+  earning_id: number;
+
+  tutor: string;
+  tutor_id: number;
+
+  session_id: number;
+
+  doubt_id: number | null;
+  doubt_title: string | null;
+
+  amount: number;
+
+  is_paid: boolean;
+
+  created_at: string;
+}
+
+export interface TutorEarningsResponse {
+  total: number;
+  data: TutorEarning[];
+}
+
+// 🔥 Get tutor earnings
+export const getTutorEarnings = async (
+  is_paid?: boolean
+): Promise<TutorEarningsResponse> => {
+
+  return await apiGet(
+    '/v1/admin/tutor/earnings/',
+    is_paid !== undefined
+      ? { is_paid }
+      : {}
+  );
+
+};
+
+// ✅ Mark tutor earnings as paid
+export const markTutorEarningsPaid = async (
+  earningIds: number[]
+) => {
+
+  return await apiPost(
+    '/v1/admin/pay/tutor/',
+    {
+      earning_ids: earningIds,
+    }
+  );
+
+};
+
+// ======================================================
+// 👨‍💼 ADMIN USER MANAGEMENT
+// ======================================================
+
+export const getAdminUsers =
+  async (role?: string) => {
+
+    let endpoint =
+      '/v1/admin/users/';
+
+    if (role) {
+
+      endpoint += `?role=${role}`;
+
+    }
+
+    return await apiGet(endpoint);
+
+};
+
+// ======================================================
+// ⭐ TOGGLE TUTOR BADGES
+// ======================================================
+
+export const toggleTutorBadge =
+  async (
+    tutorId: number,
+    action:
+      | 'verify'
+      | 'unverify'
+      | 'top'
+      | 'remove_top'
+  ) => {
+
+    return await apiPost(
+      '/v1/admin/tutor/badge/',
+      {
+        tutor_id: tutorId,
+        action,
+      }
+    );
+
+};
