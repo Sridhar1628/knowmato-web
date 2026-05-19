@@ -1,21 +1,36 @@
 import axiosInstance from '../api/axiosInstance';
 
-export const apiGet = async (url: string) => {
+export const apiGet = async (
+  url: string,
+  params?: any
+) => {
   try {
-    const res = await axiosInstance.get(url);
+    const res = await axiosInstance.get(url, {
+      params,
+    });
+
     return res.data;
   } catch (error: any) {
-    console.log('GET Error:', error?.response?.data || error.message);
+    console.log(
+      'GET Error:',
+      error?.response?.data || error.message
+    );
     throw error;
   }
 };
 
-export const apiPost = async (url: string, data: any) => {
+export const apiPost = async (
+  url: string,
+  data: any
+) => {
   try {
     const res = await axiosInstance.post(url, data);
     return res.data;
   } catch (error: any) {
-    console.log('POST Error:', error?.response?.data || error.message);
+    console.log(
+      'POST Error:',
+      error?.response?.data || error.message
+    );
     throw error;
   }
 };

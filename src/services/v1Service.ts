@@ -2,6 +2,31 @@
 
 import { apiGet, apiPost, apiPut, apiDelete } from './apiService';
 
+const apiGetWithParams = async <T = any>(
+  url: string,
+  params?: Record<string, any>
+) => {
+  if (!params || Object.keys(params).length === 0) {
+    return await apiGet(url);
+  }
+
+  const queryParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    queryParams.append(key, String(value));
+  });
+
+  const queryString = queryParams.toString();
+  if (!queryString) {
+    return await apiGet(url);
+  }
+
+  const separator = url.includes('?') ? '&' : '?';
+  return await apiGet(`${url}${separator}${queryString}`);
+};
+
 // ================== STUDENT ==================
 
 // 📊 Dashboard
@@ -41,7 +66,7 @@ export const getMyDoubts = async (params: {
   to_date?: string;
   page?: number;
 }) => {
-  return await apiGet('/v1/student/doubts/', params);
+  return await apiGet(`/v1/student/doubts/?page=${params?.page || 1}`);
 };
 
 export const getDoubtDetails = async (doubtId: number) => {
@@ -153,7 +178,7 @@ export const getAdminDoubts = async (params: {
   search?: string;
   page?: number;
 }) => {
-  return await apiGet('/v1/admin/doubts/', params);
+  return await apiGetWithParams('/v1/admin/doubts/', params);
 };
 
 export const getAdminDoubtDetails = async (doubtId: number) => {
@@ -169,7 +194,7 @@ export const getAdminSessions = async (params: {
   to_date?: string;
   page?: number;
 }) => {
-  return await apiGet('/v1/admin/sessions/', params);
+  return await apiGetWithParams('/v1/admin/sessions/', params);
 };
 
 /**
@@ -182,7 +207,7 @@ export const getPricingSlots = async (params?: {
   start_time?: string;
   page?: number;
 }) => {
-  return await apiGet('/v1/admin/pricing/', params);
+  return await apiGetWithParams('/v1/admin/pricing/', params);
 };
 
 export const createPricingSlot = async (data: {
@@ -321,7 +346,7 @@ export interface TransactionFilters {
 }
 
 export const getTransactionHistory = async (filters?: TransactionFilters) => {
-  return await apiGet('/v1/wallet/transactions/', filters);
+  return await apiGetWithParams('/v1/wallet/transactions/', filters);
 };
 
 // ---------- Wallet Offers (Admin) ----------
@@ -410,11 +435,14 @@ export const getTutorEarnings = async (
   is_paid?: boolean
 ): Promise<TutorEarningsResponse> => {
 
-  return await apiGet(
-    '/v1/admin/tutor/earnings/',
+  const params =
     is_paid !== undefined
       ? { is_paid }
-      : {}
+      : undefined;
+
+  return await apiGetWithParams(
+    '/v1/admin/tutor/earnings/',
+    params
   );
 
 };
