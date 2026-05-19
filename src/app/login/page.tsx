@@ -75,22 +75,60 @@ export default function LoginPage() {
 
   const handleSendOtp = async (values: { identifier: string; password?: string }) => {
     setIsLoading(true);
+
     try {
       const payload = isPhoneLogin
         ? { identifier: values.identifier }
-        : { identifier: values.identifier, password: values.password };
+        : {
+            identifier: values.identifier,
+            password: values.password,
+          };
 
       const res = await loginWithOtp(payload);
 
-      if (res?.message === 'OTP sent') {
+      // ============================================
+      // 📱 PHONE LOGIN → OTP SCREEN
+      // ============================================
+      if (isPhoneLogin && res?.message === 'OTP sent') {
         router.push(`/otp?identifier=${encodeURIComponent(values.identifier)}`);
-      } else {
-        throw new Error('Unexpected response');
+        return;
       }
+
+      // ============================================
+      // 📧 EMAIL LOGIN → DIRECT LOGIN
+      // ============================================
+      if (!isPhoneLogin && res?.access) {
+
+        // ✅ Store tokens
+        localStorage.setItem('access', res.access);
+        localStorage.setItem('refresh', res.refresh);
+
+        // ✅ Store user info (optional)
+        localStorage.setItem('user_id', res.user_id);
+        localStorage.setItem('role', res.role);
+        localStorage.setItem('display_name', res.display_name);
+
+        toast.success('Login successful 🎉');
+
+        // ✅ Redirect
+        router.push('/dashboard');
+
+        return;
+      }
+
+      throw new Error('Unexpected response');
+
     } catch (error: any) {
+
       console.error('Login error:', error);
-      const errorMsg = error?.response?.data?.error || error?.message || 'Failed to send OTP';
+
+      const errorMsg =
+        error?.response?.data?.error ||
+        error?.message ||
+        'Login failed';
+
       toast.error(errorMsg);
+
     } finally {
       setIsLoading(false);
     }
@@ -237,12 +275,19 @@ export default function LoginPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span>Sending OTP...</span>
+                        <span>
+                          {isPhoneLogin ? 'Sending OTP...' : 'Logging in...'}
+                        </span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        <span>Send OTP</span>
-                        <span>📨</span>
+                        <span>
+                          {isPhoneLogin ? 'Send OTP' : 'Login'}
+                        </span>
+
+                        <span>
+                          {isPhoneLogin ? '📨' : '🚀'}
+                        </span>
                       </div>
                     )}
                   </motion.button>
