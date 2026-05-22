@@ -142,7 +142,7 @@ const ChatScreen = () => {
           return [...prev, cleaned];
         });
         if (cleaned.sender_id !== currentUserId) {
-          sendReadReceipt([cleaned.id]);
+          sendReadReceipt([Number(cleaned.id)]);
         }
         return;
       }
@@ -168,7 +168,7 @@ const ChatScreen = () => {
           onAccept: async () => {
             try {
               setEnding(true);
-              await endSession(sessionId);
+              await endSession(Number(sessionId));
               sendChatMessage({
                 type: "END_SESSION_ACCEPTED",
                 session_id: sessionId,
@@ -262,7 +262,7 @@ const ChatScreen = () => {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await getMessages(sessionId);
+        const res = await getMessages(Number(sessionId));
         const cleaned = res.map(normalizeMessage);
         setMessages(cleaned);
       } catch (err) {
@@ -467,7 +467,6 @@ const ChatScreen = () => {
           className={styles.input}
           value={input}
           onChange={(e) => handleTyping(e.target.value)}
-          placeholder="Type a message..."
           placeholder="Type a message..."
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {

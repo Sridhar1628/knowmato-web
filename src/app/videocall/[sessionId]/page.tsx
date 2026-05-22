@@ -113,19 +113,35 @@ const VideoCallScreen: React.FC = () => {
         clientRef.current = client;
 
         // ---- Remote user joined ----
-        client.on("user-published", async (user: any, mediaType: string) => {
-          await client.subscribe(user, mediaType);
-          setRemoteUid(Number(user.uid));
-          setShowJoinToast(true);
-          setToastMessage("User joined");
-          setTimeout(() => setShowJoinToast(false), 2000);
+        client.on(
+          "user-published",
+          async (
+            user: any,
+            mediaType: "audio" | "video"
+          ) => {
+            await client.subscribe(user, mediaType);
 
-          if (mediaType === "video") {
-            const remoteVideoTrack = user.videoTrack;
-            remoteVideoTrack.play("remote-video-container");
-            setRemoteVideoMuted(false);
+            setRemoteUid(Number(user.uid));
+
+            setShowJoinToast(true);
+
+            setToastMessage("User joined");
+
+            if (
+              mediaType === "video" &&
+              user.videoTrack
+            ) {
+              user.videoTrack.play("remote-player");
+            }
+
+            if (
+              mediaType === "audio" &&
+              user.audioTrack
+            ) {
+              user.audioTrack.play();
+            }
           }
-        });
+        );
 
         // ---- Remote user unpublished ----
         client.on("user-unpublished", (user: any, mediaType: string) => {

@@ -33,9 +33,22 @@ export const connectChatSocket = (
   };
 };
 
-export const sendChatMessage = (text: string) => {
-  if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-    chatSocket.send(JSON.stringify({ text }));
+export const sendChatMessage = (
+  message: string | Record<string, any>
+) => {
+  if (
+    chatSocket &&
+    chatSocket.readyState === WebSocket.OPEN
+  ) {
+    if (typeof message === "string") {
+      chatSocket.send(
+        JSON.stringify({ text: message })
+      );
+    } else {
+      chatSocket.send(
+        JSON.stringify(message)
+      );
+    }
   }
 };
 
