@@ -7,7 +7,7 @@ export const connectSocket = (
 ) => {
   if (socket) socket.close();
 
-  const url = `wss://jeblio-mvp.onrender.com/ws/user/${userId}/?token=${token}`;
+  const url = `ws://127.0.0.1:8000/ws/user/${userId}/?token=${token}`;
 
   socket = new WebSocket(url);
 

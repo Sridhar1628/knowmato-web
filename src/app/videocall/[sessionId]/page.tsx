@@ -1,8 +1,9 @@
 "use client";
 
+import AgoraRTC from "agora-rtc-sdk-ng";
+
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { getTokens } from "@/services/storageService";
 import {
   connectChatSocket,
@@ -13,7 +14,6 @@ import axios from "@/api/axiosInstance";
 import styles from "./VideoCall.module.css";
 
 // ----- Agora SDK (client-only import to avoid SSR issues) -----
-const AgoraRTC = dynamic(() => import("agora-rtc-sdk-ng"), { ssr: false });
 
 const APP_ID = "19789ef2ac6e48e89404f52c1c3231a5";
 
@@ -109,7 +109,6 @@ const VideoCallScreen: React.FC = () => {
         const { channel_name, token, uid } = res.data;
 
         // 4. Initialise Agora
-        const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
         const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = client;
 
@@ -162,8 +161,17 @@ const VideoCallScreen: React.FC = () => {
         setMicTrack(micAudioTrack);
 
         // 6. Join channel
+        console.log("Joining Agora...");
+
         await client.join(APP_ID, channel_name, token, uid);
-        await client.publish([micAudioTrack]); // only audio published
+
+        console.log("Joined Agora");
+
+        console.log("Publishing tracks...");
+
+        await client.publish([micAudioTrack]);
+
+        console.log("Published tracks"); // only audio published
         setJoined(true);
         setConnectionState("connected");
 
@@ -199,17 +207,24 @@ const VideoCallScreen: React.FC = () => {
     try {
       if (!isScreenSharing) {
         // Start screen share
-        const { default: AgoraRTC } = await import("agora-rtc-sdk-ng");
         const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "disable"); // disable camera mirroring
         setScreenTrack(screenTrack);
         await client.unpublish(micTrack);
-        await client.publish([micTrack, screenTrack]); // publish mic + screen
+        if (Array.isArray(screenTrack)) {
+          await client.publish([micTrack, ...screenTrack]);
+        } else {
+          await client.publish([micTrack, screenTrack]);
+        }
         screenTrack.play("local-screen-container");
         setIsScreenSharing(true);
       } else {
         // Stop screen share
         await client.unpublish(screenTrack);
-        screenTrack.close();
+        if (Array.isArray(screenTrack)) {
+          screenTrack.forEach((track) => track.close());
+        } else {
+          screenTrack?.close();
+        }
         setScreenTrack(null);
         setIsScreenSharing(false);
       }
