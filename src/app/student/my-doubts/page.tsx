@@ -1,468 +1,580 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { getMyDoubts } from '@/services/doubtService';
-import { getTokens } from '@/services/storageService';
-import { WS_BASE_URL } from '@/config/env';
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getMyDoubts } from "@/services/v1Service";
+import { apiGet } from "@/services/apiService";
+import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
+import { getTokens } from "@/services/storageService";
+import styles from "./MyDoubts.module.css";
 
-// ============================================
-// Types
-// ============================================
+/* ---------- TYPES ---------- */
 interface Doubt {
-  id: number;
+  doubt_id: number;
   title: string;
   category: string;
-  mode: 'pool' | 'specific';
-  status: 'open' | 'assigned' | 'completed';
-  preferred_explanation: 'text' | 'audio' | 'video' | 'live_video';
+  preferred_explanation: "text" | "live_video";
+  status: "open" | "assigned" | "completed";
+  price: number | null;
+  mode: "pool" | "specific";
   created_at: string;
-  fixed_price: number | null;
-  is_fixed_price: boolean;
-  has_bids: boolean;
-  has_session: boolean;
-  session_id: number | null;
-  tutor_id: number | null;
-  tutor_name: string | null;
+  tutor_id: number;
+  tutor: string | null;
+  session: {
+    session_id: number;
+    status: string;
+    session_type: "text" | "chat" | "live_video";
+  } | null;
+  review: {
+    review_id: number;
+    rating: number;
+    feedback: string;
+    created_at: string;
+  } | null;
 }
 
-type StatusFilter = 'all' | 'open' | 'assigned' | 'completed';
-type ModeFilter = 'all' | 'pool' | 'specific';
-type PriceFilter = 'all' | 'fixed' | 'bidding';
+interface FilterOptions {
+  status: string;
+  category: string;
+  mode: string;
+  search: string;
+  from_date: string;
+  to_date: string;
+}
 
-// ============================================
-// Helper Functions
-// ============================================
-const getStatusColor = (status: string): string => {
-  switch (status) {
-    case 'open': return 'bg-amber-500';
-    case 'assigned': return 'bg-blue-500';
-    case 'completed': return 'bg-green-500';
-    default: return 'bg-gray-500';
-  }
-};
-
-const getStatusEmoji = (status: string): string => {
-  switch (status) {
-    case 'open': return '🟡';
-    case 'assigned': return '🔵';
-    case 'completed': return '✅';
-    default: return '⚪';
-  }
-};
-
-const getModeIcon = (mode: string): string => (mode === 'pool' ? '🌊' : '🎯');
-const getExplanationIcon = (exp: string): string => {
-  switch (exp) {
-    case 'text': return '📝';
-    case 'audio': return '🎧';
-    case 'video': return '🎥';
-    case 'live_video': return '📹';
-    default: return '💬';
-  }
-};
-
-const formatDate = (isoString: string): string => {
-  const date = new Date(isoString);
-  return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-};
-
-// ============================================
-// Filter Section Component (Collapsible)
-// ============================================
-const FilterSection = ({ title, icon, children, defaultOpen = true }: {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  return (
-    <div className="border-b border-gray-200 bg-white px-4 py-2">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between py-2 text-left"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{icon}</span>
-          <span className="font-semibold text-gray-700">{title}</span>
-        </div>
-        <span className="text-gray-400 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          ▼
-        </span>
-      </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden pb-3"
-          >
-            <div className="flex flex-wrap gap-2 pt-1">{children}</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-const FilterChip = ({ label, value, emoji, active, onClick }: {
-  label: string;
-  value: string;
-  emoji: string;
-  active: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-      active
-        ? 'bg-indigo-600 text-white shadow-sm'
-        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-    }`}
-  >
-    <span>{emoji}</span>
-    <span>{label}</span>
-  </button>
-);
-
-// ============================================
-// Main Component
-// ============================================
-export default function MyDoubtsPage() {
+const MyDoubtsScreen = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // Data states
+  // Data
   const [doubts, setDoubts] = useState<Doubt[]>([]);
-  const [filteredDoubts, setFilteredDoubts] = useState<Doubt[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Pagination
-  const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
+  const [nextPageUrl, setNextPageUrl] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [activeQuickFilter, setActiveQuickFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filters, setFilters] = useState<FilterOptions>({
+    status: "",
+    category: "",
+    mode: "",
+    search: "",
+    from_date: "",
+    to_date: "",
+  });
+  const [tempFilters, setTempFilters] = useState<FilterOptions>(filters);
 
-  // Refs for intersection observer
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  // Pull-to-refresh
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const pullingRef = useRef(false);
+  const startYRef = useRef(0);
 
-  // ---------- Data Fetching (with pagination) ----------
-  const fetchDoubts = useCallback(async (url?: string, isRefresh = false) => {
-    if (!isRefresh && !url && loadingMore) return;
-    if (isRefresh) {
-      setRefreshing(true);
-      setDoubts([]);
-      setNextPageUrl(null);
-      setHasMore(true);
-    }
-    if (!isRefresh && url === null) return;
+  const quickFilters = ["all", "live", "live_video", "text", "completed"];
+  const categoryOptions = ["", "Python", "JavaScript", "Java", "C++", "React", "Web Development", "Other"];
+  const modeOptions = ["", "pool", "specific"];
+
+  /* ---------- Fetch doubts ---------- */
+  const fetchDoubts = async (loadMore = false) => {
+    if (!loadMore) setLoading(true);
+    else setLoadingMore(true);
 
     try {
-      const params: any = {};
-      if (modeFilter !== 'all') params.mode = modeFilter;
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (priceFilter === 'fixed') params.type = 'fixed';
-
-      const response = await getMyDoubts(params, url || undefined);
-      // response structure: { data: { count, next, previous, results: { message, data } } }
-      const results = response.data?.results;
-      const newDoubts = results?.data || [];
-      const nextUrl = results ? (response.data.next || null) : null;
-
-      if (isRefresh || !url) {
-        setDoubts(newDoubts);
-      } else {
-        setDoubts(prev => [...prev, ...newDoubts]);
+      if (loadMore && nextPageUrl) {
+        const res = await apiGet(nextPageUrl);
+        const data = res?.data || res;
+        const newDoubts = data.results?.data || [];
+        setDoubts((prev) => [...prev, ...newDoubts]);
+        setNextPageUrl(data.next || null);
+        return;
       }
-      setNextPageUrl(nextUrl);
-      setHasMore(!!nextUrl);
-    } catch (err: any) {
-      console.error('Fetch doubts error:', err);
-      setError(err?.message || 'Failed to load doubts.');
+
+      const params: any = { page: 1 };
+
+      if (activeQuickFilter === "completed") params.status = "completed";
+      if (activeQuickFilter === "live") params.status = "assigned";
+      if (activeQuickFilter === "live_video") params.preferred_explanation = "live_video";
+      if (activeQuickFilter === "text") params.preferred_explanation = "text";
+
+      if (filters.category) params.category = filters.category;
+      if (filters.mode) params.mode = filters.mode;
+      if (filters.search) params.search = filters.search;
+      if (filters.from_date) params.from_date = filters.from_date;
+      if (filters.to_date) params.to_date = filters.to_date;
+
+      console.log("FILTER PARAMS:", params);
+
+      const res = await getMyDoubts(params);
+      const data = res?.data || res;
+      const newDoubts = data.results?.data || [];
+
+      setDoubts(newDoubts);
+      setNextPageUrl(data.next || null);
+      setTotalCount(data.count || 0);
+    } catch (error) {
+      console.error("Fetch doubts error:", error);
+      window.alert("Failed to load doubts. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [modeFilter, statusFilter, priceFilter]);
+  };
 
-  // Initial load & filter changes
+  // Pagination "See More"
+  const loadMore = () => {
+    if (nextPageUrl && !loadingMore) fetchDoubts(true);
+  };
+
+  // Refresh triggered by pull-to-refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setDoubts([]);
+    setNextPageUrl(null);
+    fetchDoubts(false);
+  }, [filters, activeQuickFilter]);
+
+  // Apply filters from modal
+  const applyFilters = () => {
+    setFilters({ ...tempFilters });
+    setDoubts([]);
+    setNextPageUrl(null);
+    setFilterModalVisible(false);
+    setTimeout(() => fetchDoubts(false), 0);
+  };
+
+  // Reset filters
+  const resetFilters = () => {
+    const empty = { status: "", category: "", mode: "", search: "", from_date: "", to_date: "" };
+    setTempFilters(empty);
+    setFilters(empty);
+    setDoubts([]);
+    setNextPageUrl(null);
+    setFilterModalVisible(false);
+    setTimeout(() => fetchDoubts(false), 0);
+  };
+
+  // Debounced search
   useEffect(() => {
-    setLoading(true);
-    fetchDoubts(undefined, true);
-  }, [fetchDoubts]);
+    const timer = setTimeout(() => setDebouncedSearch(searchText), 700);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
-  // Apply local filters (status & mode & price)
   useEffect(() => {
-    let filtered = [...doubts];
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(d => d.status === statusFilter);
-    }
-    if (modeFilter !== 'all') {
-      filtered = filtered.filter(d => d.mode === modeFilter);
-    }
-    if (priceFilter === 'fixed') {
-      filtered = filtered.filter(d => d.is_fixed_price === true);
-    } else if (priceFilter === 'bidding') {
-      filtered = filtered.filter(d => d.is_fixed_price === false);
-    }
-    setFilteredDoubts(filtered);
-  }, [doubts, statusFilter, modeFilter, priceFilter]);
+    setFilters((prev) => ({ ...prev, search: debouncedSearch }));
+  }, [debouncedSearch]);
 
-  // Infinite scroll observer
+  // Re-fetch when filters change
   useEffect(() => {
-    if (observerRef.current) observerRef.current.disconnect();
-    if (!hasMore || loadingMore) return;
+    fetchDoubts(false);
+  }, [activeQuickFilter, filters.category, filters.mode, filters.search, filters.from_date, filters.to_date]);
 
-    observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-        setLoadingMore(true);
-        fetchDoubts(nextPageUrl || undefined);
-      }
-    }, { threshold: 0.1 });
-
-    if (loadMoreRef.current) observerRef.current.observe(loadMoreRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [hasMore, loadingMore, loading, nextPageUrl, fetchDoubts]);
-
-  // ---------- WebSocket Real‑time Updates ----------
+  // Socket for real-time updates
   useEffect(() => {
-    let socket: WebSocket | null = null;
-    const connect = async () => {
+    let mounted = true;
+    const initSocket = async () => {
       const tokens = await getTokens();
       if (!tokens?.access) return;
-      socket = new WebSocket(`${WS_BASE_URL}/ws/doubts/?token=${tokens.access}`);
-      socket.onopen = () => console.log('🔥 DOUBTS WS CONNECTED');
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          handleRealtime(data);
-        } catch (err) { console.error('WS parse error', err); }
-      };
-      socket.onerror = (err) => console.error('WS error', err);
+      connectSocket(tokens.access, (event, data) => {
+        if (!mounted) return;
+        console.log("📡 DOUBTS EVENT:", event, data);
+        if (event === "DOUBT_CREATED" || event === "DOUBT_UPDATED") {
+          fetchDoubts(false);
+        }
+      });
     };
-    connect();
-    return () => { if (socket) socket.close(); };
-  }, []);
+    initSocket();
+    return () => {
+      mounted = false;
+      disconnectSocket();
+    };
+  }, [onRefresh]);
 
-  const handleRealtime = (data: any) => {
-    if (data.type === 'DOUBT_LIST') {
-      if (Array.isArray(data.doubts)) setDoubts(data.doubts);
-      return;
-    }
-    if (data.event === 'DOUBT_CREATED') {
-      const newDoubt = data.data;
-      if (newDoubt) setDoubts(prev => [newDoubt, ...prev]);
-      return;
-    }
-    if (data.event === 'DOUBT_UPDATED') {
-      const updated = data.data;
-      if (updated?.id) {
-        setDoubts(prev => prev.map(d => d.id === updated.id ? updated : d));
-      }
+  /* ---------- Pull-to-refresh logic ---------- */
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (scrollContainerRef.current && scrollContainerRef.current.scrollTop <= 0) {
+      pullingRef.current = true;
+      startYRef.current = e.touches[0].clientY;
     }
   };
 
-  // Navigation handlers
-  const handleDoubtClick = (doubtId: number) => {
-    router.push(`/student/doubts/${doubtId}`);
-  };
-  const handleViewHistory = (sessionId: number, tutorId?: number | null, tutorName?: string | null) => {
-    router.push(`/student/chat/history?sessionId=${sessionId}&tutorId=${tutorId}&tutorName=${tutorName}`);
-  };
-  const handleViewRecordings = (doubtId: number) => {
-    router.push(`/student/doubts/${doubtId}/recordings`);
-  };
-
-  // Refresh handler
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchDoubts(undefined, true);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!pullingRef.current) return;
+    const currentY = e.touches[0].clientY;
+    const delta = currentY - startYRef.current;
+    if (delta > 0 && scrollContainerRef.current?.scrollTop === 0) {
+      setPullDistance(Math.min(delta * 0.5, 80)); // dampened
+      e.preventDefault();
+    }
   };
 
-  // Loading & error states
+  const handleTouchEnd = () => {
+    if (!pullingRef.current) return;
+    pullingRef.current = false;
+    if (pullDistance > 60 && !refreshing) {
+      onRefresh();
+    }
+    setPullDistance(0);
+  };
+
+  /* ---------- Helpers ---------- */
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "open":
+        return { emoji: "🟢", color: "#10B981", bg: "#D1FAE5" };
+      case "assigned":
+        return { emoji: "🔵", color: "#3B82F6", bg: "#DBEAFE" };
+      case "completed":
+        return { emoji: "✅", color: "#6B7280", bg: "#F3F4F6" };
+      default:
+        return { emoji: "⚪", color: "#6B7280", bg: "#F3F4F6" };
+    }
+  };
+
+  const renderStars = (rating: number) => "⭐".repeat(rating);
+
+  const getExplanationStyle = (type: string) => {
+    if (type === "live_video") {
+      return { icon: "🎥", text: "Live Video Session", color: "#7C3AED", bg: "#F3E8FF" };
+    }
+    return { icon: "💬", text: "Text/Chat Session", color: "#059669", bg: "#D1FAE5" };
+  };
+
+  const handleDoubtPress = (item: Doubt) => {
+    router.push(`/student/doubts/${item.doubt_id}`);
+  };
+
+  /* ---------- Render ---------- */
   if (loading && !refreshing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
-          <p className="mt-3 text-gray-600">Loading your doubts...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !loading) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="text-5xl mb-3">⚠️</div>
-        <p className="text-red-500 text-center mb-4">{error}</p>
-        <button
-          onClick={onRefresh}
-          className="rounded-full bg-indigo-600 px-5 py-2 text-white font-semibold hover:bg-indigo-700"
-        >
-          ⟳ Retry
-        </button>
+      <div className={styles.center}>
+        <div className={styles.spinner}></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <div className="mx-auto max-w-3xl px-4 pt-6">
-        {/* Header with Refresh Button */}
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">📋 My Doubts</h1>
-          <button
-            onClick={onRefresh}
-            disabled={refreshing}
-            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 disabled:opacity-50"
-          >
-            {refreshing ? 'Refreshing...' : '⟳ Refresh'}
-          </button>
-        </div>
+    <div className={styles.container}>
+      {/* Header */}
+      <div className={styles.header}>
+        <button onClick={() => router.back()} className={styles.backButton}>
+          ←
+        </button>
+        <h1 className={styles.headerTitle}>📋 My Doubts</h1>
+        <div style={{ width: 30 }} />
+      </div>
 
-        {/* Collapsible Filters */}
-        <div className="mb-5 overflow-hidden rounded-xl bg-white shadow-sm">
-          <FilterSection title="Status" icon="📌">
-            <FilterChip label="All" value="all" emoji="📋" active={statusFilter === 'all'} onClick={() => setStatusFilter('all')} />
-            <FilterChip label="Open" value="open" emoji="🟡" active={statusFilter === 'open'} onClick={() => setStatusFilter('open')} />
-            <FilterChip label="Assigned" value="assigned" emoji="🔵" active={statusFilter === 'assigned'} onClick={() => setStatusFilter('assigned')} />
-            <FilterChip label="Completed" value="completed" emoji="✅" active={statusFilter === 'completed'} onClick={() => setStatusFilter('completed')} />
-          </FilterSection>
+      {/* Stats */}
+      <div className={styles.statsBar}>
+        <span className={styles.statsText}>Total: {totalCount} doubts</span>
+      </div>
 
-          <FilterSection title="Mode" icon="🎯">
-            <FilterChip label="All" value="all" emoji="🌐" active={modeFilter === 'all'} onClick={() => setModeFilter('all')} />
-            <FilterChip label="Pool" value="pool" emoji="🌊" active={modeFilter === 'pool'} onClick={() => setModeFilter('pool')} />
-            <FilterChip label="Specific" value="specific" emoji="🎯" active={modeFilter === 'specific'} onClick={() => setModeFilter('specific')} />
-          </FilterSection>
+      {/* Ask New Doubt */}
+      <div className={styles.askButtonContainer}>
+        <button className={styles.askButton} onClick={() => router.push("/student/post-doubt")}>
+          ✨ Ask New Doubt
+        </button>
+      </div>
 
-          <FilterSection title="Price Type" icon="💰">
-            <FilterChip label="All" value="all" emoji="💵" active={priceFilter === 'all'} onClick={() => setPriceFilter('all')} />
-            <FilterChip label="Fixed" value="fixed" emoji="🔒" active={priceFilter === 'fixed'} onClick={() => setPriceFilter('fixed')} />
-            <FilterChip label="Bidding" value="bidding" emoji="⚖️" active={priceFilter === 'bidding'} onClick={() => setPriceFilter('bidding')} />
-          </FilterSection>
-        </div>
+      {/* Search */}
+      <div className={styles.searchContainer}>
+        <input
+          type="text"
+          placeholder="Search doubts..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className={styles.searchInput}
+        />
+      </div>
 
-        {/* Doubts List */}
-        {filteredDoubts.length === 0 ? (
-          <div className="rounded-2xl bg-white p-10 text-center shadow-sm">
-            <div className="text-6xl mb-3">📭</div>
-            <p className="text-lg font-semibold text-gray-700">No doubts found</p>
-            <p className="text-gray-500">
-              {statusFilter !== 'all' || modeFilter !== 'all' || priceFilter !== 'all'
-                ? 'No doubts match the selected filters. Try changing filters.'
-                : "You haven't posted any doubts yet. Tap 'Post Doubt' to get started!"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredDoubts.map((doubt, idx) => (
-              <motion.div
-                key={doubt.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="cursor-pointer rounded-xl bg-white p-5 shadow-sm transition hover:shadow-md"
-                onClick={() => handleDoubtClick(doubt.id)}
+      {/* Quick Filters */}
+      <div className={styles.quickFilterWrapper}>
+        <div className={styles.quickFilterRow}>
+          {quickFilters.map((filter) => {
+            const active = activeQuickFilter === filter;
+            const labelMap: any = {
+              all: "📱 All",
+              live: "🟢 Live Doubts",
+              live_video: "🎥 Live Video",
+              text: "💬 Text/Chat",
+              completed: "✅ Completed",
+            };
+            return (
+              <button
+                key={filter}
+                className={`${styles.quickFilterChip} ${active ? styles.quickFilterChipActive : ""}`}
+                onClick={() => {
+                  setActiveQuickFilter(filter);
+                  setDoubts([]);
+                  setNextPageUrl(null);
+                }}
               >
-                {/* Header: Title + Status */}
-                <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-                  <h3 className="text-lg font-bold text-gray-900 line-clamp-2">{doubt.title}</h3>
-                  <div className={`flex items-center gap-1 rounded-full px-3 py-1 text-white ${getStatusColor(doubt.status)}`}>
-                    <span>{getStatusEmoji(doubt.status)}</span>
-                    <span className="text-xs font-semibold">{doubt.status.toUpperCase()}</span>
-                  </div>
-                </div>
+                <span className={`${styles.quickFilterText} ${active ? styles.quickFilterTextActive : ""}`}>
+                  {labelMap[filter]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-                {/* Meta Row: Mode + Explanation */}
-                <div className="mb-2 flex flex-wrap gap-3">
-                  <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                    <span>{getModeIcon(doubt.mode)}</span>
-                    <span>{doubt.mode === 'pool' ? 'Pool' : 'Specific Tutor'}</span>
-                  </span>
-                  <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
-                    <span>{getExplanationIcon(doubt.preferred_explanation)}</span>
-                    <span>{doubt.preferred_explanation.replace('_', ' ').toUpperCase()}</span>
-                  </span>
-                </div>
-
-                {/* Fixed Price Badge */}
-                {doubt.is_fixed_price && doubt.fixed_price !== null && (
-                  <div className="mb-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                    💰 Fixed: ₹{doubt.fixed_price}
-                  </div>
-                )}
-
-                {/* Footer: Category + Date */}
-                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
-                  <span>📚 {doubt.category}</span>
-                  <span>📅 {formatDate(doubt.created_at)}</span>
-                </div>
-
-                {/* Extra Badges */}
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {doubt.has_bids && (
-                    <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600">💰 Has bids</span>
-                  )}
-                  {doubt.has_session && (
-                    <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600">🎓 Session scheduled</span>
-                  )}
-                </div>
-
-                {/* Action Buttons for Completed Doubts */}
-                {doubt.status === 'completed' && doubt.session_id && (
-                  <div className="mt-4 flex flex-wrap gap-3 border-t border-gray-100 pt-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewHistory(doubt.session_id!, doubt.tutor_id, doubt.tutor_name);
-                      }}
-                      className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
-                    >
-                      📜 View History
-                    </button>
-                    {doubt.preferred_explanation === 'video' && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewRecordings(doubt.id);
-                        }}
-                        className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700"
-                      >
-                        🎥 View Recordings
-                      </button>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            ))}
-
-            {/* Infinite scroll sentinel */}
-            {hasMore && (
-              <div ref={loadMoreRef} className="py-4 text-center">
-                {loadingMore ? (
-                  <div className="flex justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
-                  </div>
-                ) : (
-                  <span className="text-sm text-gray-400">Scroll for more</span>
-                )}
-              </div>
-            )}
+      {/* Pull-to-refresh indicator */}
+      <div style={{ height: pullDistance, overflow: "hidden", transition: "height 0.2s" }}>
+        {pullDistance > 0 && (
+          <div className={styles.pullIndicator}>
+            {refreshing ? <div className={styles.smallSpinner}></div> : <span>↓ Pull to refresh</span>}
           </div>
         )}
       </div>
+
+      {/* Doubts List */}
+      <div
+        ref={scrollContainerRef}
+        className={styles.scrollContainer}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {doubts.length === 0 ? (
+          <div className={styles.emptyState}>
+            <span className={styles.emptyEmoji}>📭</span>
+            <h3 className={styles.emptyTitle}>
+              {activeQuickFilter === "live" ? "No Live Doubts" : "No Doubts Found"}
+            </h3>
+            <p className={styles.emptySubtitle}>
+              {activeQuickFilter === "live"
+                ? "New doubts will appear here instantly"
+                : "Try changing filters or search"}
+            </p>
+          </div>
+        ) : (
+          <>
+            {doubts.map((item) => {
+              const statusStyle = getStatusStyle(item.status);
+              const explanationStyle = getExplanationStyle(item.preferred_explanation);
+              const hasReview = !!item.review;
+
+              return (
+                <div
+                  key={item.doubt_id}
+                  className={styles.premiumCard}
+                  onClick={() => handleDoubtPress(item)}
+                >
+                  {/* Top Row */}
+                  <div className={styles.topRow}>
+                    <div className={styles.iconBox}>
+                      <span className={styles.iconEmoji}>
+                        {item.preferred_explanation === "live_video" ? "🎥" : "💬"}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <span className={styles.doubtId}>Doubt ID: {item.doubt_id}</span>
+                      <h3 className={styles.premiumTitle}>{item.title}</h3>
+                    </div>
+                    <div
+                      className={styles.completedBadge}
+                      style={{ backgroundColor: statusStyle.bg }}
+                    >
+                      <span style={{ color: statusStyle.color }} className={styles.completedText}>
+                        {item.status === "completed" ? "Completed ✅" : item.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Category & Type */}
+                  <div className={styles.metaRow}>
+                    <span className={styles.categoryPill}>{item.category}</span>
+                    <span className={styles.separator}>|</span>
+                    <span
+                      className={styles.sessionTypeBadge}
+                      style={{ backgroundColor: explanationStyle.bg }}
+                    >
+                      <span style={{ color: explanationStyle.color, fontWeight: 600, fontSize: 12 }}>
+                        {explanationStyle.icon} {explanationStyle.text}
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* Tutor & Price */}
+                  <div className={styles.infoRow}>
+                    <span className={styles.tutorText}>
+                      👨‍🏫 Tutor: {item.tutor || "Not Assigned"}
+                    </span>
+                    <span className={styles.priceBig}>₹{item.price || 0}</span>
+                  </div>
+
+                  {/* Date */}
+                  <span className={styles.dateText}>📅 {formatDate(item.created_at)}</span>
+
+                  {/* Review Section */}
+                  {item.status === "completed" && (
+                    <div className={styles.reviewCard}>
+                      {hasReview ? (
+                        <>
+                          <div className={styles.reviewLeft}>
+                            <div className={styles.ratingBox}>
+                              <span className={styles.ratingNumber}>{item.review?.rating}.0</span>
+                            </div>
+                            <div style={{ marginLeft: 14 }}>
+                              <h4 className={styles.reviewTitle}>Your Review</h4>
+                              <div className={styles.stars}>{renderStars(item.review?.rating || 0)}</div>
+                              <span className={styles.reviewDate}>
+                                📅 {formatDate(item.review?.created_at || "")}
+                              </span>
+                            </div>
+                          </div>
+                          <span className={styles.arrow}>›</span>
+                        </>
+                      ) : (
+                        <button
+                          className={styles.addReviewButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/submit-review/${item.session?.session_id}`);
+                          }}
+                        >
+                          ⭐ Add Review
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  {item.session?.status === "completed" && (
+                    <div className={styles.actionRow}>
+                      {item.session.session_type === "live_video" ? (
+                        <button
+                          className={styles.actionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/recording/${item.session?.session_id}`);
+                          }}
+                        >
+                          🎥 View Recording
+                        </button>
+                      ) : (
+                        <button
+                          className={styles.actionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(
+                              `/chat-history?sessionId=${item.session?.session_id}&tutorId=${item.tutor_id}&tutorName=${item.tutor || "Tutor"}`
+                            );
+                          }}
+                        >
+                          💬 View Chat History
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* "See More" Pagination */}
+            {nextPageUrl && (
+              <button className={styles.seeMoreButton} onClick={loadMore} disabled={loadingMore}>
+                {loadingMore ? "Loading..." : `See More (${doubts.length}/${totalCount})`}
+              </button>
+            )}
+            {loadingMore && <div className={styles.spinner} style={{ margin: "20px auto" }}></div>}
+          </>
+        )}
+      </div>
+
+      {/* Filter Modal */}
+      {filterModalVisible && (
+        <div className={styles.modalOverlay} onClick={() => setFilterModalVisible(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>Filters</h2>
+
+            <label className={styles.filterLabel}>Category</label>
+            <div className={styles.chipRow}>
+              {categoryOptions.map((cat) => (
+                <button
+                  key={cat}
+                  className={`${styles.chip} ${tempFilters.category === cat ? styles.chipActive : ""}`}
+                  onClick={() => setTempFilters((prev) => ({ ...prev, category: cat }))}
+                >
+                  {cat || "All"}
+                </button>
+              ))}
+            </div>
+
+            <label className={styles.filterLabel}>Mode</label>
+            <div className={styles.chipRow}>
+              {modeOptions.map((mode) => (
+                <button
+                  key={mode}
+                  className={`${styles.chip} ${tempFilters.mode === mode ? styles.chipActive : ""}`}
+                  onClick={() => setTempFilters((prev) => ({ ...prev, mode: mode }))}
+                >
+                  {mode || "All"}
+                </button>
+              ))}
+            </div>
+
+            <label className={styles.filterLabel}>Status</label>
+            <select
+              className={styles.select}
+              value={tempFilters.status}
+              onChange={(e) => setTempFilters((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="">All</option>
+              <option value="open">Open</option>
+              <option value="assigned">Assigned</option>
+              <option value="completed">Completed</option>
+            </select>
+
+            <label className={styles.filterLabel}>From Date</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={tempFilters.from_date}
+              onChange={(e) => setTempFilters((prev) => ({ ...prev, from_date: e.target.value }))}
+            />
+
+            <label className={styles.filterLabel}>To Date</label>
+            <input
+              type="date"
+              className={styles.dateInput}
+              value={tempFilters.to_date}
+              onChange={(e) => setTempFilters((prev) => ({ ...prev, to_date: e.target.value }))}
+            />
+
+            <div className={styles.modalActions}>
+              <button className={styles.resetButton} onClick={resetFilters}>
+                Reset
+              </button>
+              <button className={styles.applyButton} onClick={applyFilters}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Filter Button */}
+      <button className={styles.filterFab} onClick={() => setFilterModalVisible(true)}>
+        🔍
+      </button>
     </div>
   );
-}
+};
+
+export default MyDoubtsScreen;

@@ -45,3 +45,27 @@ export const disconnectChatSocket = () => {
     chatSocket = null;
   }
 };
+
+// ---------------- TYPING ----------------
+export const sendTypingStatus = (isTyping: boolean) => {
+  if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+
+  chatSocket.send(
+    JSON.stringify({
+      type: "typing",
+      is_typing: isTyping,
+    })
+  );
+};
+
+// ---------------- READ RECEIPT ----------------
+export const sendReadReceipt = (messageIds: number[]) => {
+  if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+
+  chatSocket.send(
+    JSON.stringify({
+      type: "read",
+      message_ids: messageIds,
+    })
+  );
+};

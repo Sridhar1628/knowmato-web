@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@cashfreepayments/cashfree-js": "^1.0.7",
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.15.1",
+    "canvas-confetti": "^1.9.4",
     "formik": "^2.4.9",
     "framer-motion": "^12.38.0",
     "lottie-react": "^2.4.1",

@@ -1,0 +1,539 @@
+/* ---------- Base ---------- */
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #F9FAFB;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #F9FAFB;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #E5E7EB;
+  border-top-color: #4F46E5;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Header ---------- */
+.header {
+  background: linear-gradient(135deg, #4F46E5, #3730A3);
+  padding: 18px;
+  border-bottom-left-radius: 28px;
+  border-bottom-right-radius: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.headerTitle {
+  font-size: 24px;
+  font-weight: 800;
+  color: white;
+  margin: 0;
+}
+
+.statsBar {
+  padding: 8px 16px;
+  background: #F3F4F6;
+}
+
+.statsText {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+/* ---------- Ask Button ---------- */
+.askButtonContainer {
+  padding: 18px 16px 0;
+}
+
+.askButton {
+  width: 100%;
+  height: 56px;
+  border-radius: 18px;
+  background: #4F46E5;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.25);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.askButton:hover {
+  background: #3730A3;
+}
+
+/* ---------- Search ---------- */
+.searchContainer {
+  padding: 18px 16px 0;
+}
+
+.searchInput {
+  width: 100%;
+  height: 56px;
+  background: white;
+  border: 1px solid #F3F4F6;
+  border-radius: 18px;
+  padding: 0 18px;
+  font-size: 15px;
+  color: #111827;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+/* ---------- Quick Filters ---------- */
+.quickFilterWrapper {
+  margin-top: 14px;
+}
+
+.quickFilterRow {
+  display: flex;
+  padding: 0 16px 8px;
+  overflow-x: auto;
+  gap: 10px;
+}
+
+.quickFilterChip {
+  height: 46px;
+  background: white;
+  padding: 0 18px;
+  border-radius: 16px;
+  border: 1px solid #E5E7EB;
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.quickFilterChipActive {
+  background: #4F46E5;
+  border-color: #4F46E5;
+  color: white;
+}
+
+.quickFilterText {
+  color: inherit;
+}
+
+.quickFilterTextActive {
+  color: white;
+}
+
+/* ---------- Pull Indicator ---------- */
+.pullIndicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  color: #4F46E5;
+  font-weight: 600;
+}
+
+.smallSpinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #E5E7EB;
+  border-top-color: #4F46E5;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* ---------- Scrollable List ---------- */
+.scrollContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px 120px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Doubt Card ---------- */
+.premiumCard {
+  background: white;
+  border-radius: 24px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.premiumCard:hover {
+  transform: translateY(-2px);
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.iconBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  background: #F3E8FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconEmoji {
+  font-size: 24px;
+}
+
+.doubtId {
+  font-size: 13px;
+  color: #7C3AED;
+  font-weight: 600;
+}
+
+.premiumTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 6px 0 0;
+}
+
+.completedBadge {
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+
+.completedText {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  gap: 12px;
+}
+
+.categoryPill {
+  background: #EEF2FF;
+  color: #4F46E5;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.separator {
+  color: #D1D5DB;
+}
+
+.sessionTypeBadge {
+  padding: 8px 14px;
+  border-radius: 14px;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 14px;
+}
+
+.tutorText {
+  color: #374151;
+  font-size: 14px;
+}
+
+.priceBig {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.dateText {
+  color: #6B7280;
+  font-size: 13px;
+  display: block;
+  margin-top: 14px;
+}
+
+/* ---------- Review Card ---------- */
+.reviewCard {
+  margin-top: 20px;
+  border: 1px solid #E5E7EB;
+  border-radius: 22px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reviewLeft {
+  display: flex;
+  align-items: center;
+}
+
+.ratingBox {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: #ECFDF5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ratingNumber {
+  font-size: 28px;
+  font-weight: 800;
+  color: #059669;
+}
+
+.reviewTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.stars {
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.reviewDate {
+  margin-top: 6px;
+  color: #6B7280;
+  font-size: 12px;
+}
+
+.arrow {
+  font-size: 36px;
+  color: #9CA3AF;
+}
+
+.addReviewButton {
+  width: 100%;
+  background: #4F46E5;
+  color: white;
+  font-weight: 700;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---------- Action Buttons ---------- */
+.actionRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.actionButton {
+  flex: 1;
+  height: 48px;
+  border: 1px solid #4F46E5;
+  border-radius: 14px;
+  background: transparent;
+  color: #4F46E5;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.actionButton:hover {
+  background: #EEF2FF;
+}
+
+/* ---------- See More ---------- */
+.seeMoreButton {
+  width: 100%;
+  background: #4F46E5;
+  color: white;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  margin: 16px 0;
+  cursor: pointer;
+}
+
+/* ---------- Empty State ---------- */
+.emptyState {
+  text-align: center;
+  margin-top: 80px;
+}
+
+.emptyEmoji {
+  font-size: 56px;
+}
+
+.emptyTitle {
+  margin-top: 14px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.emptySubtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #6B7280;
+  padding: 0 40px;
+}
+
+/* ---------- Filter Modal ---------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  text-align: center;
+  color: #111827;
+}
+
+.filterLabel {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+  display: block;
+  color: #374151;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border-radius: 30px;
+  background: #F3F4F6;
+  border: none;
+  color: #4B5563;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: #4F46E5;
+  color: white;
+  font-weight: 500;
+}
+
+.select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #F9FAFB;
+  margin-bottom: 8px;
+}
+
+.dateInput {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background: #F9FAFB;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 12px;
+}
+
+.resetButton {
+  flex: 1;
+  background: #F3F4F6;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  color: #4B5563;
+  cursor: pointer;
+}
+
+.applyButton {
+  flex: 1;
+  background: #4F46E5;
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- Floating Action Button (Filter) ---------- */
+.filterFab {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #4F46E5;
+  color: white;
+  font-size: 24px;
+  border: none;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+  cursor: pointer;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

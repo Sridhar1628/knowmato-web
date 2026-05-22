@@ -1,0 +1,427 @@
+/* ---------- Base ---------- */
+.container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #121212;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background: #000000cc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  color: #fff;
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+/* ---------- Top Bar (Timer + Status) ---------- */
+.topBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 20;
+}
+
+.timer {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px #00000080;
+}
+
+.connectionBadge {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.connectionDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.connectionText {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ---------- Top Overlay (Session Info + Live) ---------- */
+.topOverlay {
+  position: absolute;
+  top: 60px;
+  left: 18px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 25;
+}
+
+.sessionInfo {
+  background: rgba(15,23,42,0.72);
+  padding: 10px 16px;
+  border-radius: 20px;
+  color: #fff;
+}
+
+.sessionLabel {
+  font-size: 12px;
+  color: #CBD5E1;
+}
+
+.sessionName {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.liveBadge {
+  display: flex;
+  align-items: center;
+  background: rgba(239,68,68,0.18);
+  padding: 8px 14px;
+  border-radius: 20px;
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+  margin-right: 8px;
+}
+
+.liveText {
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ---------- Remote Video ---------- */
+.remoteContainer {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.remoteVideo {
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: #fff;
+  gap: 10px;
+}
+
+.placeholderIcon {
+  font-size: 64px;
+}
+
+/* ---------- Local Screen Share Window ---------- */
+.localScreenContainer {
+  position: absolute;
+  bottom: 120px;
+  right: 20px;
+  width: 200px;
+  height: 120px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.3);
+  z-index: 30;
+}
+
+.localScreenVideo {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+/* ---------- Local Camera Off Placeholder ---------- */
+.localCameraOff {
+  position: absolute;
+  bottom: 120px;
+  left: 20px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #1E293B;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid rgba(255,255,255,0.3);
+  z-index: 29;
+}
+
+.localInitial {
+  color: #fff;
+  font-size: 36px;
+  font-weight: 800;
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  padding: 10px 20px;
+  border-radius: 30px;
+  color: #fff;
+  z-index: 40;
+}
+
+/* ---------- Control Bar ---------- */
+.controlBar {
+  position: absolute;
+  bottom: 28px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  background: rgba(15,23,42,0.88);
+  padding: 12px 0;
+  border-radius: 32px;
+  border: 1px solid rgba(255,255,255,0.1);
+  z-index: 50;
+}
+
+.controlButton {
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: #1E293B;
+  border: none;
+  font-size: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: #fff;
+  position: relative;
+}
+
+.controlButtonActive {
+  background: #EF4444;
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.endCallButton {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  background: #EF4444;
+  border: none;
+  font-size: 28px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  color: #fff;
+}
+
+/* ---------- Chat Modal ---------- */
+.chatModalOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 100;
+}
+
+.chatModal {
+  width: 100%;
+  max-width: 400px;
+  height: 55%;
+  background: #0F172A;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  color: #fff;
+}
+
+.chatClose {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.chatMessagesContainer {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.emptyChat {
+  color: #94A3B8;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.messageBubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.ownBubble {
+  align-self: flex-end;
+  background: #4F46E5;
+  border-bottom-right-radius: 6px;
+}
+
+.otherBubble {
+  align-self: flex-start;
+  background: #1E293B;
+  border-bottom-left-radius: 6px;
+}
+
+.chatInputWrapper {
+  display: flex;
+  gap: 8px;
+}
+
+.chatInput {
+  flex: 1;
+  background: #1E293B;
+  color: #fff;
+  border: none;
+  border-radius: 18px;
+  padding: 12px 16px;
+  font-size: 15px;
+}
+
+.sendButton {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: #4F46E5;
+  border: none;
+  font-size: 20px;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ---------- Confirm Modal ---------- */
+.confirmOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+}
+
+.confirmBox {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 360px;
+  width: 90%;
+  text-align: center;
+}
+
+.confirmBox h4 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.confirmBox p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirmReject {
+  background: #F3F4F6;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirmAccept {
+  background: #4F46E5;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}

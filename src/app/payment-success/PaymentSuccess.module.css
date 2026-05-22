@@ -1,0 +1,241 @@
+.container {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: linear-gradient(
+    180deg,
+    #f8fafc 0%,
+    #eef4ff 100%
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* CARD */
+/* -------------------------------------------------------------------------- */
+
+.card {
+  width: 100%;
+  max-width: 430px;
+
+  background: white;
+
+  border-radius: 28px;
+
+  padding: 40px 28px;
+
+  text-align: center;
+
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+
+  animation: fadeIn 0.4s ease;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ICONS */
+/* -------------------------------------------------------------------------- */
+
+.successIcon,
+.failedIcon {
+  width: 100px;
+  height: 100px;
+
+  margin: 0 auto 24px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 42px;
+
+  animation: popIn 0.5s ease;
+}
+
+.successIcon {
+  background: #dcfce7;
+}
+
+.failedIcon {
+  background: #fee2e2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TITLE */
+/* -------------------------------------------------------------------------- */
+
+.title {
+  font-size: 30px;
+  font-weight: 800;
+
+  color: #0f172a;
+
+  margin-bottom: 14px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MESSAGE */
+/* -------------------------------------------------------------------------- */
+
+.message {
+  font-size: 15px;
+  line-height: 1.7;
+
+  color: #64748b;
+
+  margin-bottom: 28px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BALANCE CARD */
+/* -------------------------------------------------------------------------- */
+
+.balanceCard {
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #1d4ed8
+  );
+
+  border-radius: 22px;
+
+  padding: 22px;
+
+  color: white;
+
+  margin-bottom: 28px;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
+}
+
+.balanceCard h2 {
+  margin-top: 12px;
+
+  font-size: 36px;
+  font-weight: 800;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BUTTON */
+/* -------------------------------------------------------------------------- */
+
+.btn {
+  width: 100%;
+
+  border: none;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  background: linear-gradient(
+    135deg,
+    #2563eb,
+    #1d4ed8
+  );
+
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+
+  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.2);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* -------------------------------------------------------------------------- */
+/* SPINNER */
+/* -------------------------------------------------------------------------- */
+
+.spinner {
+  width: 70px;
+  height: 70px;
+
+  margin: 0 auto 28px;
+
+  border-radius: 50%;
+
+  border: 6px solid #dbeafe;
+  border-top: 6px solid #2563eb;
+
+  animation: spin 1s linear infinite;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ANIMATIONS */
+/* -------------------------------------------------------------------------- */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .card {
+    padding: 32px 22px;
+  }
+
+  .title {
+    font-size: 25px;
+  }
+
+  .balanceCard h2 {
+    font-size: 30px;
+  }
+
+  .btn {
+    font-size: 15px;
+  }
+}

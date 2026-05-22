@@ -1,0 +1,235 @@
+.container {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: linear-gradient(
+    180deg,
+    #fff5f5 0%,
+    #fef2f2 100%
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* CARD */
+/* -------------------------------------------------------------------------- */
+
+.card {
+  width: 100%;
+  max-width: 430px;
+
+  background: white;
+
+  border-radius: 28px;
+
+  padding: 40px 28px;
+
+  text-align: center;
+
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+
+  animation: fadeIn 0.4s ease;
+}
+
+/* -------------------------------------------------------------------------- */
+/* FAILED ICON */
+/* -------------------------------------------------------------------------- */
+
+.failedIcon {
+  width: 100px;
+  height: 100px;
+
+  margin: 0 auto 24px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 42px;
+
+  background: #fee2e2;
+
+  animation: shake 0.5s ease;
+}
+
+/* -------------------------------------------------------------------------- */
+/* TITLE */
+/* -------------------------------------------------------------------------- */
+
+.title {
+  font-size: 30px;
+  font-weight: 800;
+
+  color: #0f172a;
+
+  margin-bottom: 16px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* MESSAGE */
+/* -------------------------------------------------------------------------- */
+
+.message {
+  font-size: 15px;
+  line-height: 1.7;
+
+  color: #64748b;
+
+  margin-bottom: 32px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* BUTTON GROUP */
+/* -------------------------------------------------------------------------- */
+
+.btnGroup {
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  margin-bottom: 24px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* RETRY BUTTON */
+/* -------------------------------------------------------------------------- */
+
+.retryBtn {
+  width: 100%;
+
+  border: none;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  background: linear-gradient(
+    135deg,
+    #dc2626,
+    #b91c1c
+  );
+
+  color: white;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+
+  box-shadow: 0 12px 25px rgba(220, 38, 38, 0.22);
+}
+
+.retryBtn:hover {
+  transform: translateY(-2px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* WALLET BUTTON */
+/* -------------------------------------------------------------------------- */
+
+.walletBtn {
+  width: 100%;
+
+  border: 2px solid #e2e8f0;
+
+  padding: 18px;
+
+  border-radius: 18px;
+
+  background: white;
+
+  color: #0f172a;
+
+  font-size: 16px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+}
+
+.walletBtn:hover {
+  background: #f8fafc;
+}
+
+/* -------------------------------------------------------------------------- */
+/* HELP BOX */
+/* -------------------------------------------------------------------------- */
+
+.helpBox {
+  font-size: 13px;
+
+  color: #94a3b8;
+
+  line-height: 1.6;
+}
+
+/* -------------------------------------------------------------------------- */
+/* ANIMATIONS */
+/* -------------------------------------------------------------------------- */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-6px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  75% {
+    transform: translateX(-4px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* MOBILE */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .card {
+    padding: 32px 22px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .retryBtn,
+  .walletBtn {
+    font-size: 15px;
+  }
+}
