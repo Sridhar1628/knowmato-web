@@ -1,7 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter} from "next/navigation";
 import { getMyDoubts } from "@/services/v1Service";
 import { apiGet } from "@/services/apiService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
@@ -44,7 +46,8 @@ interface FilterOptions {
 
 const MyDoubtsScreen = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [sessionId, setSessionId] =
+  useState("");
 
   // Data
   const [doubts, setDoubts] = useState<Doubt[]>([]);
@@ -158,6 +161,18 @@ const MyDoubtsScreen = () => {
     setFilterModalVisible(false);
     setTimeout(() => fetchDoubts(false), 0);
   };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(
+        window.location.search
+      );
+
+      setSessionId(
+        params.get("sessionId") || ""
+      );
+    }
+  }, []);
 
   // Debounced search
   useEffect(() => {
