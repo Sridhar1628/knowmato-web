@@ -1,7 +1,9 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { getTokens } from "@/services/storageService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getOnlineTutors } from "@/services/v1Service";
@@ -18,12 +20,24 @@ type Tutor = {
 
 export default function MatchingScreen() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const doubtId = searchParams.get("doubtId") || "";
+  const [doubtId, setDoubtId] =
+  useState("");
 
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(
+        window.location.search
+      );
+
+      setDoubtId(
+        params.get("doubtId") || ""
+      );
+    }
+  }, []);
 
   // Fetch online tutors on mount
   useEffect(() => {
