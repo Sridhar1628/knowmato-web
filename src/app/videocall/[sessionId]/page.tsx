@@ -117,7 +117,10 @@ const VideoCallScreen: React.FC = () => {
           "user-published",
           async (
             user: any,
-            mediaType: "audio" | "video"
+            mediaType:
+              | "audio"
+              | "video"
+              | "datachannel"
           ) => {
             await client.subscribe(user, mediaType);
 
