@@ -1,9 +1,7 @@
 "use client";
 
-import AgoraRTC from "agora-rtc-sdk-ng";
-
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getTokens } from "@/services/storageService";
 import {
   connectChatSocket,
@@ -16,6 +14,7 @@ import styles from "./VideoCall.module.css";
 // ----- Agora SDK (client-only import to avoid SSR issues) -----
 
 const APP_ID = "19789ef2ac6e48e89404f52c1c3231a5";
+let AgoraRTC: any = null;
 
 // ----- Types -----
 interface Message {
@@ -27,9 +26,22 @@ interface Message {
 
 const VideoCallScreen: React.FC = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionIdParam = searchParams.get("sessionId") || "";
-  const sessionId = Number(sessionIdParam);
+  const params = useParams();
+
+  const sessionIdParam =
+    Array.isArray(params.sessionId)
+      ? params.sessionId[0]
+      : params.sessionId;
+
+  const sessionId =
+    sessionIdParam
+      ? Number(sessionIdParam)
+      : null;
+
+  console.log(
+    "🔥 SESSION ID:",
+    sessionId
+  );
 
   // ----- User -----
   const [userRole, setUserRole] = useState<"student" | "tutor">("student");
@@ -86,9 +98,24 @@ const VideoCallScreen: React.FC = () => {
   // Initialisation: load user, start call
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (!sessionId) return;
+    if (
+      sessionId === null ||
+      Number.isNaN(sessionId)
+    ) {
+      console.log(
+        "❌ INVALID SESSION ID"
+      );
+      return;
+    }
 
     const initCall = async () => {
+      const AgoraModule = await import(
+        "agora-rtc-sdk-ng"
+      );
+
+      AgoraRTC = AgoraModule.default;
+
+      console.log("✅ Agora SDK Loaded");
       try {
         setIsLoading(true);
 
@@ -112,17 +139,23 @@ const VideoCallScreen: React.FC = () => {
         const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
         clientRef.current = client;
 
-        // ---- Remote user joined ----
+        // ---- Remote user unpublished ----
         client.on(
           "user-published",
-          async (
-            user: any,
-            mediaType:
-              | "audio"
-              | "video"
-              | "datachannel"
-          ) => {
+          async (user, mediaType) => {
+
+            console.log(
+              "🔥 USER PUBLISHED:",
+              user.uid,
+              mediaType
+            );
+
             await client.subscribe(user, mediaType);
+
+            console.log(
+              "✅ SUBSCRIBED TO:",
+              mediaType
+            );
 
             setRemoteUid(Number(user.uid));
 
@@ -134,24 +167,29 @@ const VideoCallScreen: React.FC = () => {
               mediaType === "video" &&
               user.videoTrack
             ) {
-              user.videoTrack.play("remote-player");
+
+              console.log(
+                "📺 PLAYING REMOTE VIDEO"
+              );
+
+              user.videoTrack.play(
+                "remote-video-container"
+              );
             }
 
             if (
               mediaType === "audio" &&
               user.audioTrack
             ) {
+
+              console.log(
+                "🔊 PLAYING REMOTE AUDIO"
+              );
+
               user.audioTrack.play();
             }
           }
         );
-
-        // ---- Remote user unpublished ----
-        client.on("user-unpublished", (user: any, mediaType: string) => {
-          if (mediaType === "video") {
-            setRemoteVideoMuted(true);
-          }
-        });
 
         // ---- User left ----
         client.on("user-left", () => {
@@ -176,19 +214,67 @@ const VideoCallScreen: React.FC = () => {
         });
 
         // 5. Create microphone track only (camera OFF)
-        const micAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        setMicTrack(micAudioTrack);
+        console.log("🎤 REQUESTING CAMERA/MIC");
 
-        // 6. Join channel
-        console.log("Joining Agora...");
+        let microphoneTrack;
+        let cameraTrack;
 
-        await client.join(APP_ID, channel_name, token, uid);
+        try {
 
-        console.log("Joined Agora");
+          const tracks =
+            await AgoraRTC.createMicrophoneAndCameraTracks();
 
-        console.log("Publishing tracks...");
+          microphoneTrack = tracks[0];
+          cameraTrack = tracks[1];
 
-        await client.publish([micAudioTrack]);
+          console.log("✅ CAMERA/MIC CREATED");
+          console.log("🚀 JOINING CHANNEL:", channel_name);
+          console.log("🚀 UID:", uid);
+
+        } catch (err) {
+
+          console.error(
+            "❌ TRACK CREATION FAILED:",
+            err
+          );
+
+          return;
+        }
+
+        setMicTrack(microphoneTrack);
+
+        console.log("🚀 JOINING CHANNEL:", channel_name);
+        console.log("🚀 TOKEN:", token);
+        console.log("🚀 UID:", uid);
+
+        console.log("📡 CALLING client.join()");
+
+        await client.join(
+          APP_ID,
+          channel_name,
+          token,
+          uid
+        );
+
+        console.log("✅ JOIN SUCCESS");
+
+        console.log("✅ JOINED CHANNEL");
+
+        cameraTrack.play("local-video-container");
+
+        console.log("📷 LOCAL CAMERA STARTED");
+
+        console.log("📡 PUBLISHING TRACKS");
+
+        await client.publish([
+          microphoneTrack,
+          cameraTrack,
+        ]);
+
+
+        console.log("📡 TRACKS PUBLISHED");
+
+        console.log("✅ Audio + Video published");
 
         console.log("Published tracks"); // only audio published
         setJoined(true);
@@ -275,7 +361,7 @@ const VideoCallScreen: React.FC = () => {
       const client = clientRef.current;
       if (client) {
         client.removeAllListeners();
-        client.leave();
+        await client.leave();
       }
       micTrack?.close();
       screenTrack?.close();
@@ -508,9 +594,18 @@ const VideoCallScreen: React.FC = () => {
         </div>
       </div>
 
+      {/* Local Video Preview */}
+      <div className={styles.localPreviewWrapper}>
+        <div
+          id="local-video-container"
+          className={styles.localPreviewVideo}
+        />
+      </div>
+
       {/* Remote Video Area */}
       <div className={styles.remoteContainer}>
         {remoteUid ? (
+          
           <div id="remote-video-container" className={styles.remoteVideo}></div>
         ) : remoteVideoMuted ? (
           <div className={styles.placeholder}>

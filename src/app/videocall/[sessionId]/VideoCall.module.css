@@ -425,3 +425,21 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+.localPreviewWrapper {
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  width: 140px;
+  height: 200px;
+  border-radius: 20px;
+  overflow: hidden;
+  z-index: 200;
+  background: #111827;
+  border: 2px solid rgba(255,255,255,0.15);
+}
+
+.localPreviewVideo {
+  width: 100%;
+  height: 100%;
+}

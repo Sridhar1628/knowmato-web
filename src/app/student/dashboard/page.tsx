@@ -110,7 +110,7 @@ export default function DashboardPage() {
 
   if (loading && !refreshing) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-[100dvh] items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
           <p className="mt-4 text-gray-600">Loading your dashboard...</p>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Hero Banner */}
-        <div className="relative mb-6 flex flex-col-reverse items-center justify-between overflow-hidden rounded-2xl bg-[#0f0f23] p-8 md:flex-row">
+        <div className="relative mb-6 flex flex-col-reverse items-center justify-between overflow-x-hidden rounded-2xl bg-[#0f0f23] p-8 md:flex-row">
           <div className="z-10 text-center md:text-left">
             <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
               Human Intelligence.<br />Faster. Smarter. Better.
@@ -234,7 +234,7 @@ export default function DashboardPage() {
             <h3 className="text-lg font-bold text-gray-800">My Recent Sessions</h3>
             <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
           </div>
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="overflow-x-hidden rounded-xl border border-gray-200 bg-white">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -324,7 +324,7 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-4">
              {DUMMY_NEWS.map((news) => (
-               <div key={news.id} className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+               <div key={news.id} className="overflow-x-hidden rounded-xl border border-gray-100 shadow-sm">
                  <div className="h-32 w-full bg-gray-200 bg-cover bg-center" style={{ backgroundImage: `url(${news.image})` }} />
                  <div className="p-3">
                    <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">{news.headline}</p>

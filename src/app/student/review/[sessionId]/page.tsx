@@ -172,7 +172,7 @@ export default function SubmitReviewPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-min-h-[100dvh] items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
           <p className="mt-3 text-gray-600">Loading session details...</p>
@@ -183,7 +183,7 @@ export default function SubmitReviewPage() {
 
   if (!sessionDetails) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+      <div className="flex min-min-h-[100dvh] flex-col items-center justify-center bg-gray-50 p-4">
         <div className="text-6xl mb-3">😞</div>
         <p className="text-gray-600 mb-4">Could not load session info.</p>
         <button
@@ -197,16 +197,16 @@ export default function SubmitReviewPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gray-50 overflow-hidden">
+    <div className="relative min-min-h-[100dvh] bg-gray-50 overflow-x-hidden">
       {/* Animated Gradient Background */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 opacity-90" />
       
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="flex min-min-h-[100dvh] items-center justify-center px-4 py-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-hidden"
+          className="w-full max-w-lg rounded-3xl bg-white shadow-2xl overflow-x-hidden"
         >
           <div className="p-6 sm:p-8">
             {/* Header */}

@@ -168,7 +168,7 @@ function OTPContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#F9F7FE] via-white to-[#F0F4FF] px-4">
+    <div className="relative flex min-min-h-[100dvh] w-full items-center justify-center overflow-x-hidden bg-gradient-to-br from-[#F9F7FE] via-white to-[#F0F4FF] px-4">
       <Toaster position="bottom-center" />
 
       {/* Floating Emojis with Animation */}
@@ -265,7 +265,7 @@ function OTPContent() {
 
         {/* Timer Progress Bar */}
         {timer > 0 && (
-          <div className="relative mb-4 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="relative mb-4 h-1 w-full overflow-x-hidden rounded-full bg-gray-100">
             <div
               className="h-full rounded-full bg-indigo-500 transition-all duration-1000 ease-linear"
               style={{ width: `${(timer / 30) * 100}%` }}
@@ -278,7 +278,7 @@ function OTPContent() {
         <button
           onClick={() => handleVerifyOtp(otp.join(''))}
           disabled={loading || otp.join('').length !== OTP_LENGTH}
-          className={`relative mb-5 w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl ${
+          className={`relative mb-5 w-full overflow-x-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl ${
             loading || otp.join('').length !== OTP_LENGTH ? 'opacity-60' : 'hover:scale-[1.02]'
           }`}
         >

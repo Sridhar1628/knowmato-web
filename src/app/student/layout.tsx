@@ -6,7 +6,7 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex min-h-[100dvh] bg-gray-50">
       {/* Persistent Left Sidebar */}
       <DashboardSidebar />
 

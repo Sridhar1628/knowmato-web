@@ -70,7 +70,7 @@ export default function TutorDashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-min-h-[100dvh] bg-gray-50">
       {/* Header Section */}
       <div className="bg-white shadow-sm px-6 py-4 border-b border-gray-100">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
