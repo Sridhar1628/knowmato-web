@@ -142,7 +142,10 @@ const VideoCallScreen: React.FC = () => {
         // ---- Remote user unpublished ----
         client.on(
           "user-published",
-          async (user, mediaType) => {
+          async (
+            user: any,
+            mediaType: "video" | "audio"
+          ) => {
 
             console.log(
               "🔥 USER PUBLISHED:",
@@ -192,7 +195,9 @@ const VideoCallScreen: React.FC = () => {
         );
 
         // ---- User left ----
-        client.on("user-left", () => {
+        client.on(
+          "user-left",
+          (user: any) => {
           setRemoteUid(null);
           setShowJoinToast(true);
           setToastMessage("User left");
@@ -326,7 +331,9 @@ const VideoCallScreen: React.FC = () => {
         // Stop screen share
         await client.unpublish(screenTrack);
         if (Array.isArray(screenTrack)) {
-          screenTrack.forEach((track) => track.close());
+          screenTrack.forEach(
+          (track: any) => track.close()
+        );
         } else {
           screenTrack?.close();
         }
