@@ -5,13 +5,6 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,88 +12,15 @@
   }
 }
 
-/* =========================
-   GLOBAL RESET
-========================= */
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* =========================
-   HTML + BODY FIX
-========================= */
-
 html,
 body {
   width: 100%;
+  min-height: 100vh;
   overflow-x: hidden;
-  scroll-behavior: smooth;
 }
-
-/* =========================
-   MOBILE VIEWPORT FIX
-========================= */
 
 body {
-  min-height: 100vh;
-  min-height: 100dvh;
-
   background: var(--background);
   color: var(--foreground);
-
   font-family: Arial, Helvetica, sans-serif;
-
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  text-rendering: optimizeLegibility;
-}
-
-/* =========================
-   MEDIA FIXES
-========================= */
-
-img,
-video,
-canvas,
-svg {
-  max-width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* =========================
-   BUTTON + INPUT FIXES
-========================= */
-
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
-
-/* =========================
-   TOUCH FIXES
-========================= */
-
-button,
-a {
-  touch-action: manipulation;
-}
-
-/* =========================
-   SAFE SCROLLING
-========================= */
-
-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
 }

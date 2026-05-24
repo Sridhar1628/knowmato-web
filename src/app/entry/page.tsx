@@ -9,7 +9,7 @@ import { motion, useAnimation, useInView } from 'framer-motion';
 // ============================================
 const AnimatedGradient = () => {
   return (
-    <div className="fixed inset-0 -z-10 overflow-x-hidden">
+    <div className="fixed inset-0 -z-10 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-animate bg-gradient-to-r from-[#6366F1] via-[#8B5CF6] to-[#EC4899] bg-[length:300%_300%] animate-gradient" />
       <div className="absolute inset-0 bg-black/5" />
     </div>
@@ -176,7 +176,7 @@ export default function EntryPage() {
   const handleRegister = () => router.push('/register');
 
   return (
-    <div className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-x-hidden">
+    <div className="relative flex h-screen w-full items-center justify-center overflow-hidden">
       {/* Animated Gradient Background */}
       <AnimatedGradient />
 

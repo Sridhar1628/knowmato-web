@@ -263,7 +263,7 @@ function PostDoubtContent() {
   );
 
   return (
-    <div className="min-min-h-[100dvh] bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4">
         <div className="flex flex-col gap-6 lg:flex-row">
           

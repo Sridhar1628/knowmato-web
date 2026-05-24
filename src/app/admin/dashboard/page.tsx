@@ -84,7 +84,7 @@ export default function AdminDashboard() {
 
   if (loading && !refreshing) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
           <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-min-h-[100dvh] bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Gradient Header */}
       <div className="bg-gradient-to-r from-gray-800 to-gray-900 pb-6 pt-10 shadow-lg">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">

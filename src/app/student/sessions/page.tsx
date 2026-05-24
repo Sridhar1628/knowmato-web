@@ -214,7 +214,7 @@ export default function StudentSessionsPage() {
 
   if (loading && !refreshing) {
     return (
-      <div className="flex min-min-h-[100dvh] items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
           <p className="mt-3 text-gray-600">Loading your sessions...</p>
@@ -224,7 +224,7 @@ export default function StudentSessionsPage() {
   }
 
   return (
-    <div className="min-min-h-[100dvh] bg-gray-50 py-6">
+    <div className="min-h-screen bg-gray-50 py-6">
       <div className="mx-auto max-w-3xl px-4">
         {/* Search Bar */}
         <div className="mb-4">

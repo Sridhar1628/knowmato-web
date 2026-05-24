@@ -136,7 +136,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-min-h-[100dvh] w-full overflow-x-hidden bg-gradient-to-br from-[#F9F7FE] via-white to-[#F0F4FF]">
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-[#F9F7FE] via-white to-[#F0F4FF]">
       <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
 
       {/* Floating Emojis */}
@@ -146,7 +146,7 @@ export default function LoginPage() {
       <FloatingEmoji emoji="🚀" bottom="25%" left="8%" duration={6} delay={0.8} />
 
       {/* Main Content */}
-      <div className="flex min-min-h-[100dvh] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -268,7 +268,7 @@ export default function LoginPage() {
                     type="submit"
                     disabled={isLoading}
                     whileTap={{ scale: 0.97 }}
-                    className="relative w-full overflow-x-hidden rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 py-3 font-semibold text-white shadow-md transition hover:shadow-lg disabled:opacity-70"
+                    className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 py-3 font-semibold text-white shadow-md transition hover:shadow-lg disabled:opacity-70"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center gap-2">
