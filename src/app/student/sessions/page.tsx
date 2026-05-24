@@ -101,7 +101,7 @@ export default function StudentSessionsPage() {
         const activeSessions = sessions.filter(s => s.status === 'active');
         activeSessions.forEach(session => {
           const socket = new WebSocket(
-            `ws://127.0.0.1:8000/ws/session/${session.session_id}/?token=${tokens.access}`
+            `wss://api.knowmato.in/ws/session/${session.session_id}/?token=${tokens.access}`
           );
           socket.onopen = () => console.log(`🔥 Session WS Connected: ${session.session_id}`);
           socket.onmessage = (event) => {
@@ -117,7 +117,7 @@ export default function StudentSessionsPage() {
         const payload = JSON.parse(atob(tokens.access.split('.')[1]));
         const userId = payload.user_id;
         userSocket = new WebSocket(
-          `ws://127.0.0.1:8000/ws/user/${userId}/?token=${tokens.access}`
+          `wss://api.knowmato.in/ws/user/${userId}/?token=${tokens.access}`
         );
         userSocket.onopen = () => console.log('🔥 USER WS CONNECTED');
         userSocket.onmessage = (event) => {

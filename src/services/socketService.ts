@@ -7,7 +7,7 @@ export const connectSocket = (
 ) => {
   if (socket) socket.close();
 
-  const url = `ws://127.0.0.1:8000/ws/user/${userId}/?token=${token}`;
+  const url = `wss://api.knowmato.in/ws/user/${userId}/?token=${token}`;
 
   socket = new WebSocket(url);
 

@@ -9,7 +9,7 @@ export const connectChatSocket = (
     chatSocket.close();
   }
 
-  const url = `ws://127.0.0.1:8000/ws/chat/${sessionId}/?token=${token}`;
+  const url = `wss://api.knowmato.in/ws/chat/${sessionId}/?token=${token}`;
 
   chatSocket = new WebSocket(url);
 
