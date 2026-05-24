@@ -8,7 +8,8 @@ import toast from "react-hot-toast";
 export default function SubmitReviewPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("sessionId") || "";
+  const sessionIdParam = searchParams.get("sessionId");
+  const sessionId = sessionIdParam ? Number(sessionIdParam) : 0;
 
   const [rating, setRating] = useState(5);
   const [feedback, setFeedback] = useState("");
