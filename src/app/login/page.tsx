@@ -111,8 +111,20 @@ export default function LoginPage() {
 
         toast.success('Login successful 🎉');
 
-        // ✅ Redirect
-        router.push('/student/dashboard');
+        // ✅ Role-based redirect
+        if (res.role === 'student') {
+          router.push('/student/dashboard');
+
+        } else if (res.role === 'tutor') {
+          router.push('/tutor/dashboard');
+
+        } else if (res.role === 'admin') {
+          router.push('/admin/dashboard');
+
+        } else {
+          // fallback
+          router.push('/');
+        }
 
         return;
       }
