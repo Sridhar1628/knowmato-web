@@ -12,7 +12,7 @@ import { getTokens } from '@/services/storageService';
 import toast from 'react-hot-toast';
 import DashboardSidebar from '@/components/DashboardSidebar';
 
-export default function StudentLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const dispatch = useDispatch();
   const router = useRouter();
@@ -28,13 +28,14 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     try {
       const res = await getStudentDashboard();
       const data = res.data || res;
+      // update wallet if present
       setWallet({ real: data.real_balance ?? 0, bonus: data.bonus_balance ?? 0 });
     } catch (error) {
       console.error('Layout fetch error:', error);
     }
   }, []);
 
-  // Socket setup (shared across student pages)
+  // Socket setup (shared across dashboard pages)
   useEffect(() => {
     const initSocket = async () => {
       try {
@@ -46,7 +47,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               setWallet({ real: data.real_balance ?? 0, bonus: data.bonus_balance ?? 0 });
               break;
             case 'NOTIFICATION':
-              setNotificationCount(prev => prev + 1);
+              setNotificationCount((prev) => prev + 1);
               break;
             default:
               break;
@@ -129,13 +130,11 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
       {/* Main layout: sidebar + content */}
       <div className="flex">
-        {/* Responsive Sidebar with required props */}
+        {/* Responsive Sidebar */}
         <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* Main content area */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
-          {children}
-        </main>
+        {/* Main content area: takes remaining width */}
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

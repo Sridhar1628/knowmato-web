@@ -39,6 +39,14 @@ const AddMoneyPage = () => {
   const [offers, setOffers] = useState<WalletOffer[]>([]);
   const [selectedOffer, setSelectedOffer] = useState<WalletOffer | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const params = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : ""
+  );
+  const fromApp = params.get("from_app");
+
+  if (fromApp === "true") {
+    localStorage.setItem("from_app", "true");
+  }
 
   /* -------------------------------------------------------------------------- */
   /* FETCH DATA */

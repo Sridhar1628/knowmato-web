@@ -63,8 +63,28 @@ const PaymentSuccessPage = () => {
       setSuccess(true);
 
       setMessage(
-        "Your payment was received successfully. Your wallet will update automatically within a few seconds."
+        "Payment successful"
       );
+
+      const fromApp =
+        localStorage.getItem(
+          "from_app"
+        );
+
+      if (fromApp === "true") {
+
+        setTimeout(() => {
+
+          localStorage.removeItem(
+            "from_app"
+          );
+
+          window.location.href =
+            "knowmato://payment-success";
+
+        }, 2000);
+
+      }
 
     } catch (err) {
       console.log(

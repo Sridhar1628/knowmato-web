@@ -1,17 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { clearTokens } from '@/services/storageService';
-import { logout } from '@/redux/slices/authSlice';
 import { getStudentDashboard } from '@/services/v1Service';
-import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
-import { getTokens } from '@/services/storageService';
 import toast from 'react-hot-toast';
 
-// --- Dummy Data for UI (Replace with real API) ---
+// Dummy data (unchanged)
 interface DummyTutor {
   id: number; name: string; expertise: string; rating: number; sessions: string;
 }
@@ -52,68 +48,33 @@ const DUMMY_NEWS: DummyNews[] = [
 
 export default function DashboardPage() {
   const user = useSelector((state: RootState) => state.auth.user);
-  const dispatch = useDispatch();
   const router = useRouter();
-
-  const [wallet, setWallet] = useState({ real: 0, bonus: 0 });
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [notificationCount] = useState<number>(0);
 
-  const displayName = user?.first_name || user?.display_name || user?.email?.split('@')[0] || 'Student';
-
-  // Fetch dashboard data 
   const fetchDashboardData = useCallback(async () => {
     try {
       const res = await getStudentDashboard();
       const data = res.data || res;
       setCurrentPrice(data.current_price ?? null);
-      // You can also set stats & recent doubts here if your API provides them
     } catch (error) {
       console.error('Dashboard fetch error:', error);
       toast.error('Could not load dashboard data.');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, []);
-
-  useEffect(() => {
-    const initSocket = async () => {
-      try {
-        const tokens = await getTokens();
-        if (!tokens?.access) return;
-
-        connectSocket(tokens.access, (event: string, data: any) => {
-          switch (event) {
-            case 'DOUBT_LIST': fetchDashboardData(); break;
-            case 'SESSION_STARTED': router.push(`/student/chat?sessionId=${data.session_id}`); break;
-            case 'SESSION_ENDED': router.push(`/student/submit-review?sessionId=${data.session_id}`); break;
-            case 'DIRECT_ACCEPTED': router.push(`/student/chat?sessionId=${data.session_id}`); break;
-            case 'DIRECT_REJECTED': toast.error('Tutor rejected, finding another...'); break;
-            case 'WALLET_UPDATE': setWallet({ real: data.real_balance ?? 0, bonus: data.bonus_balance ?? 0 }); break;
-            default: break;
-          }
-        });
-      } catch (error) {
-        console.log('Socket init error:', error);
-      }
-    };
-    initSocket();
-    return () => disconnectSocket();
-  }, [fetchDashboardData, router]);
 
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  if (loading && !refreshing) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+          <p className="mt-2 text-sm text-gray-500">Loading your dashboard...</p>
         </div>
       </div>
     );
@@ -121,41 +82,19 @@ export default function DashboardPage() {
 
   return (
     <div className="flex gap-6">
-      {/* MAIN CONTENT COLUMN (Left) */}
-      <div className="flex-1">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="relative w-1/2">
-            <input 
-              type="text" 
-              placeholder="Search for topics, tutors or doubts..." 
-              className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <span className="absolute right-3 top-2 text-gray-400">⌘ K</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100">
-              🔔 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">2</span>
-            </button>
-            <button className="rounded-lg bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">💰 ₹{wallet.real + wallet.bonus}</button>
-            <div className="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
-                {displayName.charAt(0).toUpperCase()}
-              </span>
-              <span className="text-xs font-semibold text-indigo-900">{displayName}</span>
-            </div>
-          </div>
-        </div>
-
+      {/* MAIN CONTENT COLUMN */}
+      <div className="flex-1 min-w-0">
         {/* Hero Banner */}
-        <div className="relative mb-6 flex flex-col-reverse items-center justify-between overflow-hidden rounded-2xl bg-[#0f0f23] p-8 md:flex-row">
+        <div className="relative mb-6 flex flex-col-reverse items-center justify-between overflow-hidden rounded-2xl bg-[#0f0f23] p-6 md:p-8 md:flex-row">
           <div className="z-10 text-center md:text-left">
-            <h1 className="text-3xl font-bold leading-tight text-white md:text-4xl">
+            <h1 className="text-2xl font-bold leading-tight text-white md:text-3xl lg:text-4xl">
               Human Intelligence.<br />Faster. Smarter. Better.
             </h1>
-            <p className="mt-2 text-sm text-gray-400">Connect with verified experts in less than 60 seconds and get your doubts solved instantly.</p>
+            <p className="mt-2 text-sm text-gray-400">
+              Connect with verified experts in less than 60 seconds and get your doubts solved instantly.
+            </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <button 
+              <button
                 onClick={() => router.push('/student/post-doubt')}
                 className="rounded-full bg-indigo-600 px-6 py-2.5 font-semibold text-white shadow-md hover:bg-indigo-500"
               >
@@ -167,13 +106,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="relative mb-4 md:mb-0">
-             <div className="h-40 w-40 rounded-xl bg-gradient-to-b from-indigo-500 to-purple-600 opacity-50 blur-xl" />
-             <div className="absolute inset-0 flex items-center justify-center text-6xl text-white opacity-80">🧑‍💻</div>
+            <div className="h-32 w-32 rounded-xl bg-gradient-to-b from-indigo-500 to-purple-600 opacity-50 blur-xl md:h-40 md:w-40" />
+            <div className="absolute inset-0 flex items-center justify-center text-5xl text-white opacity-80 md:text-6xl">🧑‍💻</div>
           </div>
         </div>
 
         {/* Ask a Doubt Widget */}
-        <div className="mb-8 rounded-xl bg-white p-6 shadow-sm">
+        <div className="mb-8 rounded-xl bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-gray-800">Ask a Doubt</h3>
@@ -205,27 +144,27 @@ export default function DashboardPage() {
 
         {/* Continue Learning */}
         <div className="mb-8">
-           <div className="mb-4 flex items-center justify-between">
-             <h3 className="text-lg font-bold text-gray-800">Continue Learning</h3>
-             <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
-           </div>
-           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-             {DUMMY_COURSES.map((course) => (
-               <div key={course.id} className="rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition">
-                 <div className="mb-3 flex items-center gap-2">
-                   <span className="text-2xl">{course.icon}</span>
-                   <span className={`text-xs font-bold ${course.color}`}>{course.title.split(' ')[0]}</span>
-                 </div>
-                 <p className="mb-3 text-xs font-semibold text-gray-700">{course.title}</p>
-                 <div className="flex items-center justify-between">
-                   <span className="text-[10px] text-gray-500">{course.progress}% Completed</span>
-                   <div className="h-2 w-16 rounded-full bg-gray-100">
-                     <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${course.progress}%` }}></div>
-                   </div>
-                 </div>
-               </div>
-             ))}
-           </div>
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-800">Continue Learning</h3>
+            <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
+          </div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {DUMMY_COURSES.map((course) => (
+              <div key={course.id} className="rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-2xl">{course.icon}</span>
+                  <span className={`text-xs font-bold ${course.color}`}>{course.title.split(' ')[0]}</span>
+                </div>
+                <p className="mb-3 text-xs font-semibold text-gray-700">{course.title}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-gray-500">{course.progress}% Completed</span>
+                  <div className="h-2 w-16 rounded-full bg-gray-100">
+                    <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${course.progress}%` }}></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Recent Sessions Table */}
@@ -235,56 +174,58 @@ export default function DashboardPage() {
             <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
           </div>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Doubt</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tutor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rating</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {DUMMY_SESSIONS.length === 0 ? (
-                  <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500">No recent sessions found.</td></tr>
-                ) : (
-                  DUMMY_SESSIONS.map((session) => (
-                    <tr key={session.id}>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {session.doubt_title}
-                        <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">Java</span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-2">
-                           <div className="h-6 w-6 rounded-full bg-gray-200"></div>
-                           <span className="font-medium text-gray-900">{session.tutor_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <span>{session.type === 'Live Video' ? '🟣' : '💬'}</span>
-                          <span>{session.type}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">
-                          {session.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">⭐ {session.rating ?? 'N/A'}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{session.date}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Doubt</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tutor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rating</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {DUMMY_SESSIONS.length === 0 ? (
+                    <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500">No recent sessions found.</td></tr>
+                  ) : (
+                    DUMMY_SESSIONS.map((session) => (
+                      <tr key={session.id}>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {session.doubt_title}
+                          <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">Java</span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-2">
+                             <div className="h-6 w-6 rounded-full bg-gray-200"></div>
+                             <span className="font-medium text-gray-900">{session.tutor_name}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <span>{session.type === 'Live Video' ? '🟣' : '💬'}</span>
+                            <span>{session.type}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">
+                            {session.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">⭐ {session.rating ?? 'N/A'}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{session.date}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* RIGHT SIDEBAR (Only visible on Desktop) */}
+      {/* RIGHT SIDEBAR (Visible only on large screens) */}
       <aside className="hidden w-80 flex-col gap-6 lg:flex">
         {/* Live Tutors */}
         <div>
@@ -323,18 +264,18 @@ export default function DashboardPage() {
             <button className="text-xs text-indigo-600 hover:underline">View All</button>
           </div>
           <div className="space-y-4">
-             {DUMMY_NEWS.map((news) => (
-               <div key={news.id} className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
-                 <div className="h-32 w-full bg-gray-200 bg-cover bg-center" style={{ backgroundImage: `url(${news.image})` }} />
-                 <div className="p-3">
-                   <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">{news.headline}</p>
-                   <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500">
-                     <span>{news.category}</span>
-                     <span>• {news.time}</span>
-                   </div>
-                 </div>
-               </div>
-             ))}
+            {DUMMY_NEWS.map((news) => (
+              <div key={news.id} className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+                <div className="h-32 w-full bg-gray-200 bg-cover bg-center" style={{ backgroundImage: `url(${news.image})` }} />
+                <div className="p-3">
+                  <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">{news.headline}</p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500">
+                    <span>{news.category}</span>
+                    <span>• {news.time}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </aside>
