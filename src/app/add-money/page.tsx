@@ -50,6 +50,24 @@ const AddMoneyPage = () => {
     }
   }, [selectedAmount, offers]);
 
+  useEffect(() => {
+
+    const params = new URLSearchParams(window.location.search);
+
+    const token = params.get("token");
+
+    if (token) {
+
+      localStorage.setItem(
+        "access_token",
+        token
+      );
+
+      console.log("TOKEN SAVED");
+    }
+
+  }, []);
+
   const fetchWalletData = async () => {
     try {
       const res = await getTransactionHistory();

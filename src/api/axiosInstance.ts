@@ -1,54 +1,36 @@
-import axios from 'axios';
-import { BASE_URL } from '../config/env';
-import { getTokens, clearTokens } from '../services/storageService';
+import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: BASE_URL,
+  baseURL: "https://api.knowmato.in/api",
   timeout: 10000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// 🔐 REQUEST INTERCEPTOR
 axiosInstance.interceptors.request.use(
-  async config => {
-    try {
-      const tokens = getTokens();
 
-      if (tokens?.access) {
-        config.headers.Authorization = `Bearer ${tokens.access}`;
+  async (config) => {
+
+    if (typeof window !== "undefined") {
+
+      const token =
+        localStorage.getItem(
+          "access_token"
+        );
+
+      if (token) {
+
+        config.headers.Authorization =
+          `Bearer ${token}`;
+
       }
-    } catch (error) {
-      console.log('Token attach error:', error);
     }
 
     return config;
   },
-  error => Promise.reject(error)
-);
 
-// ❗ RESPONSE INTERCEPTOR
-axiosInstance.interceptors.response.use(
-  response => response,
-  async error => {
-    const originalRequest = error.config;
-
-    // 🔥 HANDLE TOKEN EXPIRED (FUTURE READY)
-    if (error.response?.status === 401) {
-      console.log('Unauthorized - token expired');
-
-      // 🚀 OPTIONAL (future):
-      // try refresh token here
-
-      // 🔐 fallback: logout user
-      await clearTokens();
-
-      console.log('User logged out due to invalid token');
-    }
-
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export default axiosInstance;
