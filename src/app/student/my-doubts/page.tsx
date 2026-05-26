@@ -4,8 +4,6 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMyDoubts } from '@/services/v1Service';
 import { apiGet } from '@/services/apiService';
-import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
-import { getTokens } from '@/services/storageService';
 
 /* ---------- TYPES ---------- */
 interface Doubt {
@@ -46,6 +44,7 @@ const MyDoubtsScreen = () => {
 
   // Data
   const [doubts, setDoubts] = useState<Doubt[]>([]);
+  const [allDoubts, setAllDoubts] = useState<Doubt[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -54,6 +53,9 @@ const MyDoubtsScreen = () => {
   const [activeQuickFilter, setActiveQuickFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  const hasFetched =
+  useRef(false);
 
   // Filters
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -81,30 +83,39 @@ const MyDoubtsScreen = () => {
         const res = await apiGet(nextPageUrl);
         const data = res?.data || res;
         const newDoubts = data.results?.data || [];
-        setDoubts(prev => [...prev, ...newDoubts]);
-        setNextPageUrl(data.next || null);
+        setAllDoubts(prev => [
+
+          ...prev,
+          ...newDoubts,
+
+        ]);
+        setNextPageUrl(
+
+          data.next
+            ?.replace(
+              'http://',
+              'https://'
+            ) || null
+
+        );
         return;
       }
 
       const params: any = { page: 1 };
-
-      if (activeQuickFilter === 'completed') params.status = 'completed';
-      if (activeQuickFilter === 'live') params.status = 'assigned';
-      if (activeQuickFilter === 'live_video') params.preferred_explanation = 'live_video';
-      if (activeQuickFilter === 'text') params.preferred_explanation = 'text';
-
-      if (filters.category) params.category = filters.category;
-      if (filters.mode) params.mode = filters.mode;
-      if (filters.search) params.search = filters.search;
-      if (filters.from_date) params.from_date = filters.from_date;
-      if (filters.to_date) params.to_date = filters.to_date;
-
       const res = await getMyDoubts(params);
       const data = res?.data || res;
       const newDoubts = data.results?.data || [];
 
-      setDoubts(newDoubts);
-      setNextPageUrl(data.next || null);
+      setAllDoubts(newDoubts);
+      setNextPageUrl(
+
+        data.next
+          ?.replace(
+            'http://',
+            'https://'
+          ) || null
+
+      );
       setTotalCount(data.count || 0);
     } catch (error) {
       console.error('Fetch doubts error:', error);
@@ -114,7 +125,9 @@ const MyDoubtsScreen = () => {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [nextPageUrl, activeQuickFilter, filters]);
+  }, [
+    nextPageUrl,
+  ]);
 
   // Load more
   const loadMore = () => {
@@ -123,30 +136,44 @@ const MyDoubtsScreen = () => {
 
   // Manual refresh
   const onRefresh = () => {
+
     setRefreshing(true);
-    setDoubts([]);
-    setNextPageUrl(null);
+
     fetchDoubts(false);
+
   };
 
   // Apply filters from modal
   const applyFilters = () => {
-    setFilters({ ...tempFilters });
-    setDoubts([]);
-    setNextPageUrl(null);
+
+    setFilters({
+      ...tempFilters
+    });
+
     setFilterModalVisible(false);
-    setTimeout(() => fetchDoubts(false), 0);
+
   };
 
   // Reset filters
   const resetFilters = () => {
-    const empty = { status: '', category: '', mode: '', search: '', from_date: '', to_date: '' };
+
+    const empty = {
+
+      status: '',
+      category: '',
+      mode: '',
+      search: '',
+      from_date: '',
+      to_date: '',
+
+    };
+
     setTempFilters(empty);
+
     setFilters(empty);
-    setDoubts([]);
-    setNextPageUrl(null);
+
     setFilterModalVisible(false);
-    setTimeout(() => fetchDoubts(false), 0);
+
   };
 
   // Debounced search
@@ -159,31 +186,223 @@ const MyDoubtsScreen = () => {
     setFilters(prev => ({ ...prev, search: debouncedSearch }));
   }, [debouncedSearch]);
 
-  // Re-fetch when filters or quick filter change
+
   useEffect(() => {
+
+    let filtered =
+      [...allDoubts];
+
+      console.log(
+        'FILTERED:',
+        filtered.length
+      );
+
+    // -----------------------------------
+    // QUICK FILTERS
+    // -----------------------------------
+
+    if (
+      activeQuickFilter ===
+      'completed'
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.status ===
+            'completed'
+        );
+    }
+
+    if (
+      activeQuickFilter ===
+      'live'
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.status ===
+            'assigned'
+        );
+    }
+
+    if (
+      activeQuickFilter ===
+      'live_video'
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.preferred_explanation ===
+            'live_video'
+        );
+    }
+
+    if (
+      activeQuickFilter ===
+      'text'
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.preferred_explanation ===
+            'text'
+        );
+    }
+
+    // -----------------------------------
+    // CATEGORY
+    // -----------------------------------
+
+    if (
+      filters.category
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.category ===
+            filters.category
+        );
+    }
+
+    // -----------------------------------
+    // MODE
+    // -----------------------------------
+
+    if (
+      filters.mode
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.mode ===
+            filters.mode
+        );
+    }
+
+    // -----------------------------------
+    // STATUS
+    // -----------------------------------
+
+    if (
+      filters.status
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+            item.status ===
+            filters.status
+        );
+    }
+
+    // -----------------------------------
+    // SEARCH
+    // -----------------------------------
+
+    if (
+      filters.search
+    ) {
+
+      const search =
+        filters.search
+          .toLowerCase();
+
+      filtered =
+        filtered.filter(
+          item =>
+
+            item.title
+              .toLowerCase()
+              .includes(search)
+        );
+    }
+
+    // -----------------------------------
+    // DATE FILTER
+    // -----------------------------------
+
+    if (
+      filters.from_date
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+
+            new Date(
+              item.created_at
+            ) >=
+
+            new Date(
+              filters.from_date
+            )
+        );
+    }
+
+    if (
+      filters.to_date
+    ) {
+
+      filtered =
+        filtered.filter(
+          item =>
+
+            new Date(
+              item.created_at
+            ) <=
+
+            new Date(
+              filters.to_date
+            )
+        );
+    }
+
+    // -----------------------------------
+    // UPDATE UI
+    // -----------------------------------
+
+    setDoubts(filtered);
+
+    setTotalCount(
+      filtered.length
+    );
+
+  }, [
+
+    allDoubts,
+
+    activeQuickFilter,
+
+    filters.category,
+
+    filters.mode,
+
+    filters.search,
+
+    filters.from_date,
+
+    filters.to_date,
+
+  ]);
+
+  useEffect(() => {
+
+    if (
+      hasFetched.current
+    ) return;
+
+    hasFetched.current = true;
+
     fetchDoubts(false);
-  }, [activeQuickFilter, filters.category, filters.mode, filters.search, filters.from_date, filters.to_date, fetchDoubts]);
 
-  // Socket for real-time updates
-  useEffect(() => {
-    let mounted = true;
-    const initSocket = async () => {
-      const tokens = await getTokens();
-      if (!tokens?.access) return;
-      connectSocket(tokens.access, (event, data) => {
-        if (!mounted) return;
-        if (event === 'DOUBT_CREATED' || event === 'DOUBT_UPDATED') {
-          onRefresh();
-        }
-      });
-    };
-    initSocket();
-    return () => {
-      mounted = false;
-      disconnectSocket();
-    };
-  }, [onRefresh]);
-
+  }, []);
+  
   /* ---------- Helpers ---------- */
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -289,9 +508,11 @@ const MyDoubtsScreen = () => {
             <button
               key={filter}
               onClick={() => {
-                setActiveQuickFilter(filter);
-                setDoubts([]);
-                setNextPageUrl(null);
+
+                setActiveQuickFilter(
+                  filter
+                );
+
               }}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
                 active

@@ -80,7 +80,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col gap-6 xl:flex-row">
       {/* MAIN CONTENT COLUMN */}
       <div className="flex-1 min-w-0">
         {/* Hero Banner */}
@@ -225,7 +225,7 @@ export default function DashboardPage() {
       </div>
 
       {/* RIGHT SIDEBAR (Visible only on large screens) */}
-      <aside className="hidden w-80 flex-col gap-6 lg:flex">
+      <aside className="hidden xl:flex xl:w-80 xl:flex-col xl:gap-6">
         {/* Live Tutors */}
         <div>
           <div className="mb-4 flex items-center justify-between">

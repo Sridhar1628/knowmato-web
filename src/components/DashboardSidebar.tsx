@@ -62,9 +62,19 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 transform bg-[#0f0f23] text-white transition-transform duration-300 ease-in-out md:static md:flex md:translate-x-0 ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`
+          fixed inset-y-0 left-0 z-50
+          flex w-64 flex-col
+          bg-[#0f0f23] text-white
+          transition-transform duration-300 ease-in-out
+
+          ${open ? 'translate-x-0' : '-translate-x-full'}
+
+          md:relative
+          md:translate-x-0
+          md:shrink-0
+          md:min-h-screen
+        `}
       >
         {/* Brand & close button (mobile) */}
         <div className="flex h-16 items-center justify-between border-b border-gray-700/50 px-4">
