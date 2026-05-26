@@ -1,20 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { clearTokens } from '@/services/storageService';
-import { logout } from '@/redux/slices/authSlice';
 import { getStudentDashboard } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
 import { getTokens } from '@/services/storageService';
-import toast from 'react-hot-toast';
 import DashboardSidebar from '@/components/DashboardSidebar';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
-  const dispatch = useDispatch();
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -66,9 +62,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Header */}
+      {/* TOP HEADER – only once */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm">
-        {/* Left section: hamburger + logo (mobile) */}
+        {/* Left: hamburger (mobile) + logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -99,7 +95,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
 
-        {/* Right section: notifications, wallet, user */}
+        {/* Right: notifications, wallet, user */}
         <div className="flex items-center gap-2 sm:gap-4">
           <button className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,22 +116,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
               {displayName.charAt(0).toUpperCase()}
             </span>
-            <span className="hidden sm:inline text-xs font-semibold text-indigo-900">
-              {displayName}
-            </span>
+            <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{displayName}</span>
           </div>
         </div>
       </header>
 
-      {/* Main layout: sidebar + content */}
+      {/* MAIN LAYOUT: sidebar + page content */}
       <div className="flex">
-        {/* Responsive Sidebar with required props */}
         <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-        {/* Main content area */}
-        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">
-          {children}
-        </main>
+        <main className="flex-1 p-4 md:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

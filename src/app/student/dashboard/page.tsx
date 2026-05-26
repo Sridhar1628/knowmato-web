@@ -47,7 +47,6 @@ const DUMMY_NEWS: DummyNews[] = [
 ];
 
 export default function DashboardPage() {
-  const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
