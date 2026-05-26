@@ -140,7 +140,7 @@ export default function TutorDoubtsPage() {
           if (session_type === "live_video") {
             router.push(`/videocall?sessionId=${session_id}`);
           } else {
-            router.push(`/chat?sessionId=${session_id}`);
+            router.push(`/chat/${session_id}`);
           }
         }, 800);
       }
@@ -315,7 +315,7 @@ export default function TutorDoubtsPage() {
                 if (video) {
                   router.push(`/videocall?sessionId=${item.session_id}`);
                 } else {
-                  router.push(`/chat?sessionId=${item.session_id}`);
+                  router.push(`/chat/${item.session_id}`);
                 }
               }}
               className="flex-1 bg-emerald-500 text-white py-3 rounded-xl font-semibold hover:bg-emerald-600 transition"
