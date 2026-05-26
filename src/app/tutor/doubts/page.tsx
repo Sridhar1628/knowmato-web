@@ -138,7 +138,7 @@ export default function TutorDoubtsPage() {
 
         setTimeout(() => {
           if (session_type === "live_video") {
-            router.push(`/videocall?sessionId=${session_id}`);
+            router.push(`/videocall/${session_id}`);
           } else {
             router.push(`/chat/${session_id}`);
           }
@@ -313,7 +313,7 @@ export default function TutorDoubtsPage() {
               onClick={() => {
                 if (!item.session_id) return;
                 if (video) {
-                  router.push(`/videocall?sessionId=${item.session_id}`);
+                  router.push(`/videocall/${item.session_id}`);
                 } else {
                   router.push(`/chat/${item.session_id}`);
                 }
