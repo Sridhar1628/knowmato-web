@@ -247,7 +247,7 @@ export default function TutorLayout({
           ) {
 
             router.push(
-              `/video-call/${data.session_id}`
+              `/videocall/${data.session_id}`
             );
 
           } else {
