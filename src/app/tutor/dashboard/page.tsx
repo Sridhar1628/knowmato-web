@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector} from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/redux/store";
-import { clearTokens } from "@/services/storageService";
-import { logout } from "@/redux/slices/authSlice";
 import { getTutorDashboard } from "@/services/v1Service";
 import { subscribeSocket } from "@/services/socketEventBus";
-import { SocketEvents } from "@/services/versionSocketEvents";
+
 
 // ---------- Type definitions (mirroring Android) ----------
 interface DashboardStats {
@@ -37,13 +35,11 @@ interface PendingRequest {
 
 export default function TutorDashboard() {
   const user = useSelector((state: RootState) => state.auth.user);
-  const dispatch = useDispatch();
   const router = useRouter();
 
   // ---------- State ----------
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [stats, setStats] = useState<DashboardStats>({
     totalSessions: 0,
@@ -51,13 +47,40 @@ export default function TutorDashboard() {
     totalEarnings: 0,
   });
 
-  const [wallet, setWallet] = useState({
-    real_balance: 0,
-    bonus_balance: 0,
-  });
-
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [activeSessions, setActiveSessions] = useState<ActiveSession[]>([]);
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeSocket(
+        (event, data) => {
+
+          console.log(
+            '📡 WEB EVENT:',
+            event,
+            data
+          );
+
+          if (
+            event ===
+            'PRESENCE_UPDATE'
+          ) {
+
+            console.log(
+              '🟢 PRESENCE:',
+              data
+            );
+
+            // UPDATE UI HERE
+          }
+
+        }
+      );
+
+    return unsubscribe;
+
+  }, []);
 
   // ---------- Dashboard Fetch ----------
   const fetchDashboard = useCallback(async () => {
@@ -85,40 +108,7 @@ export default function TutorDashboard() {
     }
   }, []);
 
-  // ---------- Socket Listener for Wallet Updates ----------
-  useEffect(() => {
-    const unsubscribe = subscribeSocket((event, data) => {
-      console.log("📡 DASHBOARD SOCKET EVENT:", event, data);
-
-      if (event === SocketEvents.NEW_DOUBT_REQUEST) {
-        // Future: increment badge or refetch
-      }
-
-      if (event === "WALLET_UPDATE") {
-        console.log("💰 Wallet update received:", data);
-        setWallet({
-          real_balance: data.real_balance || 0,
-          bonus_balance: data.bonus_balance || 0,
-        });
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  // ---------- Tab visibility refetch (like AppState) ----------
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        console.log("🟢 Tab active – refreshing dashboard");
-        fetchDashboard();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [fetchDashboard]);
-
-  // ---------- Initial Load ----------
+    // ---------- Initial Load ----------
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
@@ -129,16 +119,6 @@ export default function TutorDashboard() {
     await fetchDashboard();
   };
 
-  // ---------- Logout ----------
-  const handleLogout = async () => {
-    try {
-      await clearTokens();
-      dispatch(logout());
-      router.push("/entry");
-    } catch (error) {
-      console.error("Logout Error:", error);
-    }
-  };
 
   // ---------- Helpers ----------
   const displayName = user?.display_name || user?.email?.split("@")[0] || "Tutor";
@@ -178,110 +158,8 @@ export default function TutorDashboard() {
     );
   }
 
-  // ---------- Sidebar Overlay ----------
-  const Sidebar = () => (
-    <div className="fixed inset-0 z-40 flex">
-      {/* backdrop */}
-      <div
-        className="fixed inset-0 bg-black opacity-50 transition-opacity"
-        onClick={() => setSidebarOpen(false)}
-      />
-      {/* sidebar */}
-      <div className="relative w-72 max-w-[75vw] bg-white shadow-xl p-6 flex flex-col animate-slideInLeft">
-        {/* Close & User Info */}
-        <div className="flex justify-between items-start mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-2xl">
-              👨‍🏫
-            </div>
-            <div>
-              <div className="font-bold text-gray-800">{displayName}</div>
-              <div className="text-sm text-gray-500">{displayEmail}</div>
-            </div>
-          </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="text-gray-400 hover:text-gray-600 text-xl"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Navigation Links */}
-        <nav className="flex flex-col gap-2 flex-1">
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              router.push("/tutor/doubts");
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition"
-          >
-            <span>📚</span> Browse Doubts
-          </button>
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              router.push("/tutor/requests");
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition"
-          >
-            <span>📩</span> View Requests
-          </button>
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              router.push("/tutor/sessions");
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition"
-          >
-            <span>🎥</span> My Sessions
-          </button>
-          <button
-            onClick={() => {
-              setSidebarOpen(false);
-              alert("No new notifications.");
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 transition"
-          >
-            <span>🔔</span> Notifications
-          </button>
-        </nav>
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 transition mt-auto"
-        >
-          <span>🚪</span> Logout
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar (conditional) */}
-      {sidebarOpen && <Sidebar />}
-
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white shadow-md px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition"
-        >
-          <span className="text-xl">👤</span>
-        </button>
-        <div className="text-center">
-          <div className="text-sm opacity-80">Welcome back</div>
-          <div className="text-xl font-bold">{displayName}</div>
-        </div>
-        <button
-          onClick={() => alert("No new notifications.")}
-          className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition"
-        >
-          <span className="text-xl">🔔</span>
-        </button>
-      </div>
 
       {/* Online Status Banner */}
       <div className="bg-green-500 mx-4 mt-4 py-2 px-6 rounded-full text-center text-white font-semibold text-sm">
@@ -303,19 +181,6 @@ export default function TutorDashboard() {
           <div className="bg-white p-4 rounded-2xl shadow-sm text-center">
             <div className="text-2xl font-bold text-indigo-600">{stats.completedSessions}</div>
             <div className="text-xs text-gray-500 mt-1">Completed</div>
-          </div>
-        </div>
-
-        {/* Wallet Card (real/bonus) */}
-        <div className="bg-white p-5 rounded-2xl shadow-sm mb-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-3">💰 Wallet</h3>
-          <div className="flex justify-between mb-2">
-            <span className="text-gray-600">Real Balance</span>
-            <span className="font-bold text-indigo-600">₹{wallet.real_balance.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Bonus Balance</span>
-            <span className="font-bold text-indigo-600">₹{wallet.bonus_balance}</span>
           </div>
         </div>
 
@@ -422,14 +287,6 @@ export default function TutorDashboard() {
           className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full shadow-md transition mx-auto block mb-4"
         >
           {refreshing ? "Refreshing..." : "🔄 Refresh"}
-        </button>
-
-        {/* Logout (for quick access) */}
-        <button
-          onClick={handleLogout}
-          className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-full shadow-md transition mx-auto block"
-        >
-          🚪 Sign Out
         </button>
       </div>
     </div>

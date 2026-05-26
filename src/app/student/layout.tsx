@@ -24,7 +24,21 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     try {
       const res = await getStudentDashboard();
       const data = res.data || res;
-      setWallet({ real: data.real_balance ?? 0, bonus: data.bonus_balance ?? 0 });
+      if (data.wallet) {
+
+        setWallet({
+
+          real: parseFloat(
+            data.wallet.real_balance || '0'
+          ),
+
+          bonus: parseFloat(
+            data.wallet.bonus_balance || '0'
+          ),
+
+        });
+
+      }
     } catch (error) {
       console.error('Layout fetch error:', error);
     }
@@ -39,7 +53,19 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         connectSocket(tokens.access, (event: string, data: any) => {
           switch (event) {
             case 'WALLET_UPDATE':
-              setWallet({ real: data.real_balance ?? 0, bonus: data.bonus_balance ?? 0 });
+
+              setWallet({
+
+                real: parseFloat(
+                  data.real_balance || '0'
+                ),
+
+                bonus: parseFloat(
+                  data.bonus_balance || '0'
+                ),
+
+              });
+
               break;
             case 'NOTIFICATION':
               setNotificationCount(prev => prev + 1);
@@ -54,6 +80,105 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     };
     initSocket();
     return () => disconnectSocket();
+  }, []);
+
+  useEffect(() => {
+
+    const handleVisibilityChange =
+      async () => {
+
+        // TAB ACTIVE AGAIN
+        if (
+          document.visibilityState ===
+          'visible'
+        ) {
+
+          console.log(
+            '🌐 TAB ACTIVE AGAIN'
+          );
+
+          try {
+
+            const tokens =
+              await getTokens();
+
+            if (
+              tokens?.access
+            ) {
+
+              disconnectSocket();
+
+              setTimeout(() => {
+
+                connectSocket(
+                  tokens.access,
+
+                  (
+                    event: string,
+                    data: any
+                  ) => {
+
+                    switch (event) {
+
+                      case 'WALLET_UPDATE':
+
+                        setWallet({
+
+                          real: parseFloat(
+                            data.real_balance || '0'
+                          ),
+
+                          bonus: parseFloat(
+                            data.bonus_balance || '0'
+                          ),
+
+                        });
+
+                        break;
+
+                      case 'NOTIFICATION':
+
+                        setNotificationCount(
+                          prev => prev + 1
+                        );
+
+                        break;
+
+                      default:
+                        break;
+                    }
+
+                  }
+                );
+
+              }, 500);
+            }
+
+          } catch (err) {
+
+            console.log(
+              'Reconnect error:',
+              err
+            );
+
+          }
+        }
+      };
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    );
+
+    return () => {
+
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      );
+
+    };
+
   }, []);
 
   useEffect(() => {
@@ -108,16 +233,22 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             )}
           </button>
 
-          <button className="hidden sm:flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600">
+          <button
+            onClick={() => router.push('/student/wallet')}
+            className="hidden sm:flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600 transition hover:bg-indigo-100"
+          >
             💰 ₹{wallet.real + wallet.bonus}
           </button>
 
-          <div className="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5">
+          <button
+            onClick={() => router.push('/profile')}
+            className="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5"
+          >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
               {displayName.charAt(0).toUpperCase()}
             </span>
             <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{displayName}</span>
-          </div>
+          </button>
         </div>
       </header>
 
