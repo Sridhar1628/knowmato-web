@@ -247,13 +247,13 @@ export default function TutorLayout({
           ) {
 
             router.push(
-              `/tutor/video-call/${data.session_id}`
+              `/video-call/${data.session_id}`
             );
 
           } else {
 
             router.push(
-              `/tutor/chat/${data.session_id}`
+              `/chat/${data.session_id}`
             );
 
           }

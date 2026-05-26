@@ -195,9 +195,9 @@ export default function TutorRequestsPage() {
 
         // Navigate to chat/video call
         if (sessionType === "text" || sessionType === "chat") {
-          router.push(`/chat?sessionId=${sessionId}`);
+          router.push(`/chat/${sessionId}`);
         } else {
-          router.push(`/videocall?sessionId=${sessionId}`);
+          router.push(`/videocall/${sessionId}`);
         }
       }
     });
