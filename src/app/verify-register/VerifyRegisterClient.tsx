@@ -2,195 +2,602 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { verifyRegisterOtp } from "@/services/authService";
-import toast, { Toaster } from "react-hot-toast";
+import {
+  useState,
+} from "react";
+
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
+import {
+  verifyRegisterOtp,
+} from "@/services/authService";
+
+import toast, {
+  Toaster,
+} from "react-hot-toast";
+
 import confetti from "canvas-confetti";
-import styles from "./VerifyRegisterScreen.module.css";
+
+import {
+  motion,
+} from "framer-motion";
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function VerifyRegisterPage() {
+
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const identifier = searchParams.get("identifier") || "";
 
-  const [emailOtp, setEmailOtp] = useState("");
-  const [phoneOtp, setPhoneOtp] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [hasShake, setHasShake] = useState(false);
+  const searchParams =
+    useSearchParams();
 
-  // Auto-submit when both fields are 6 digits
-  useEffect(() => {
-    if (
-      emailOtp.length === 6 &&
-      phoneOtp.length === 6 &&
-      !isLoading &&
-      identifier
-    ) {
-      handleVerify();
-    }
-  }, [emailOtp, phoneOtp]);
+  const identifier =
+    searchParams.get(
+      "identifier"
+    ) || "";
 
-  const handleVerify = async () => {
-    if (!emailOtp || !phoneOtp) {
-      setHasShake(true);
-      setTimeout(() => setHasShake(false), 500);
-      toast.error("Please enter both email and phone OTPs", {
-        duration: 4000,
-        position: "bottom-center",
-      });
-      return;
-    }
+  const [emailOtp, setEmailOtp] =
+    useState("");
 
-    setIsLoading(true);
-    try {
-      await verifyRegisterOtp({
-        identifier,
-        email_otp: emailOtp,
-        phone_otp: phoneOtp,
-      });
+  // ============================================
+  // TEMPORARILY DISABLED
+  // PHONE OTP
+  // ============================================
 
-      // Confetti
-      confetti({
-        particleCount: 200,
-        spread: 80,
-        origin: { y: 0.6 },
-      });
+  /*
+  const [phoneOtp, setPhoneOtp] =
+    useState("");
+  */
 
-      toast.success("Account verified! Redirecting to login...", {
-        duration: 3000,
-      });
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
-    } catch (error: any) {
-      let errorMsg = "Verification failed. Please check your OTPs.";
-      if (error?.response?.data?.error) {
-        errorMsg = error.response.data.error;
-      } else if (error?.message) {
-        errorMsg = error.message;
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const [resendLoading, setResendLoading] =
+    useState(false);
+
+  // ============================================
+  // AUTO VERIFY
+  // ============================================
+
+  const handleAutoVerify =
+    async (otp: string) => {
+
+      if (
+        otp.length !== 6 ||
+        isLoading
+      ) {
+
+        return;
       }
-      toast.error(errorMsg, {
-        duration: 4000,
-      });
-      setHasShake(true);
-      setTimeout(() => setHasShake(false), 500);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleResend = async () => {
-    setResendLoading(true);
-    try {
-      // If you have a resend endpoint, call it here
-      // await resendOtp({ identifier });
-      toast.success("New OTPs sent to your email and phone.", {
-        duration: 3000,
-      });
-    } catch (error) {
-      toast.error("Failed to resend OTP. Please try again.", {
-        duration: 4000,
-      });
-    } finally {
-      setResendLoading(false);
-    }
-  };
+      await handleVerify(otp);
+    };
+
+  // ============================================
+  // VERIFY
+  // ============================================
+
+  const handleVerify =
+    async (
+      otpOverride?: string
+    ) => {
+
+      const finalOtp =
+        otpOverride || emailOtp;
+
+      if (!finalOtp) {
+
+        toast.error(
+          "Please enter email OTP",
+          {
+            duration: 4000,
+            position:
+              "bottom-center",
+          }
+        );
+
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+
+        // ========================================
+        // VERIFY EMAIL OTP ONLY
+        // ========================================
+
+        await verifyRegisterOtp({
+
+          identifier,
+
+          email_otp: finalOtp,
+
+          // ====================================
+          // TEMPORARILY DISABLED
+          // PHONE OTP
+          // ====================================
+
+          /*
+          phone_otp: phoneOtp,
+          */
+        });
+
+        // ========================================
+        // CONFETTI
+        // ========================================
+
+        confetti({
+
+          particleCount: 180,
+
+          spread: 90,
+
+          origin: {
+            y: 0.6,
+          },
+        });
+
+        toast.success(
+          "Email verified successfully 🎉",
+          {
+            duration: 3000,
+          }
+        );
+
+        // ========================================
+        // REDIRECT
+        // ========================================
+
+        setTimeout(() => {
+
+          router.push(
+            "/login"
+          );
+
+        }, 2000);
+
+      } catch (error: any) {
+
+        console.error(
+          "Verification error:",
+          error
+        );
+
+        let errorMsg =
+          "Verification failed";
+
+        if (
+          error?.response
+            ?.data?.message
+        ) {
+
+          errorMsg =
+            error.response
+              .data.message;
+
+        } else if (
+          error?.response
+            ?.data?.error
+        ) {
+
+          errorMsg =
+            error.response
+              .data.error;
+
+        } else if (
+          error?.message
+        ) {
+
+          errorMsg =
+            error.message;
+        }
+
+        toast.error(
+          errorMsg,
+          {
+            duration: 4000,
+            position:
+              "bottom-center",
+          }
+        );
+
+      } finally {
+
+        setIsLoading(false);
+      }
+    };
+
+  // ============================================
+  // RESEND
+  // ============================================
+
+  const handleResend =
+    async () => {
+
+      setResendLoading(true);
+
+      try {
+
+        // ========================================
+        // OPTIONAL:
+        // CALL RESEND API HERE
+        // ========================================
+
+        /*
+        await resendOtp({
+          identifier
+        });
+        */
+
+        toast.success(
+          "New OTP sent to your email 📧",
+          {
+            duration: 3000,
+          }
+        );
+
+      } catch (error) {
+
+        toast.error(
+          "Failed to resend OTP",
+          {
+            duration: 4000,
+          }
+        );
+
+      } finally {
+
+        setResendLoading(false);
+      }
+    };
+
+  // ============================================
+  // UI
+  // ============================================
 
   return (
+
     <>
+
       <Toaster />
-      <div className={styles.container}>
-        <div
-          className={`${styles.card} ${hasShake ? styles.shake : ""}`}
+
+      {/* BACKGROUND */}
+
+      <div
+        className="
+          fixed
+          inset-0
+          -z-10
+          bg-[radial-gradient(circle_at_top_left,_#6366F1,_transparent_35%),radial-gradient(circle_at_bottom_right,_#8B5CF6,_transparent_35%),linear-gradient(to_bottom_right,_#0F172A,_#111827,_#1E293B)]
+        "
+      />
+
+      {/* MAIN */}
+
+      <div
+        className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          px-4
+        "
+      >
+
+        <motion.div
+
+          initial={{
+            opacity: 0,
+            y: 40,
+          }}
+
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
+
+          transition={{
+            duration: 0.5,
+          }}
+
+          className="
+            w-full
+            max-w-md
+          "
         >
-          <h1 className={styles.title}>📧 + 📱 Verify Account</h1>
-          <p className={styles.subtitle}>
-            We&apos;ve sent OTPs to your email and phone number.
-          </p>
 
-          {/* Email OTP */}
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Email OTP</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              className={styles.input}
-              placeholder="Enter 6-digit OTP from email"
-              value={emailOtp}
-              onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
-              disabled={isLoading}
-              autoFocus
-            />
-            <a
-              href="mailto:"
-              className={styles.helperLink}
-              target="_blank"
-              rel="noopener noreferrer"
+          {/* CARD */}
+
+          <div
+            className="
+              rounded-[32px]
+              border
+              border-white/10
+              bg-white/10
+              p-8
+              shadow-2xl
+              backdrop-blur-2xl
+            "
+          >
+
+            {/* HEADER */}
+
+            <div
+              className="
+                mb-8
+                text-center
+              "
             >
-              📧 Open email app
-            </a>
-          </div>
 
-          {/* Phone OTP */}
-          <div className={styles.inputGroup}>
-            <label className={styles.label}>Phone OTP</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              className={styles.input}
-              placeholder="Enter 6-digit OTP from SMS"
-              value={phoneOtp}
-              onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ""))}
+              <motion.div
+
+                animate={{
+                  rotate: [0, 10, 0],
+                }}
+
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  repeatDelay: 2,
+                }}
+
+                className="
+                  mb-4
+                  text-6xl
+                "
+              >
+
+                📧
+
+              </motion.div>
+
+              <h1
+                className="
+                  text-4xl
+                  font-black
+                  tracking-tight
+                  text-white
+                "
+              >
+
+                Verify Email
+
+              </h1>
+
+              <p
+                className="
+                  mt-3
+                  text-sm
+                  text-indigo-100
+                "
+              >
+
+                We sent a 6-digit OTP
+                to your email address
+
+              </p>
+
+              <p
+                className="
+                  mt-2
+                  break-all
+                  text-xs
+                  text-gray-300
+                "
+              >
+
+                {identifier}
+
+              </p>
+
+            </div>
+
+            {/* EMAIL OTP */}
+
+            <div
+              className="
+                mb-5
+              "
+            >
+
+              <label
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-medium
+                  text-white
+                "
+              >
+
+                Email OTP
+
+              </label>
+
+              <input
+
+                type="text"
+
+                inputMode="numeric"
+
+                maxLength={6}
+
+                placeholder="Enter 6-digit OTP"
+
+                value={emailOtp}
+
+                onChange={(e) => {
+
+                  const value =
+                    e.target.value.replace(
+                      /\D/g,
+                      ""
+                    );
+
+                  setEmailOtp(value);
+
+                  handleAutoVerify(
+                    value
+                  );
+                }}
+
+                disabled={isLoading}
+
+                autoFocus
+
+                className="
+                  w-full
+                  rounded-2xl
+                  border
+                  border-white/10
+                  bg-white/10
+                  px-5
+                  py-4
+                  text-center
+                  text-2xl
+                  tracking-[10px]
+                  text-white
+                  outline-none
+                  backdrop-blur-xl
+                  transition
+                  focus:border-indigo-400
+                  focus:ring-2
+                  focus:ring-indigo-500/30
+                "
+              />
+
+              <a
+                href="mailto:"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="
+                  mt-3
+                  inline-block
+                  text-sm
+                  text-indigo-300
+                  hover:text-indigo-200
+                "
+              >
+
+                📬 Open Email App
+
+              </a>
+
+            </div>
+
+            {/* ==================================== */}
+            {/* TEMPORARILY DISABLED */}
+            {/* PHONE OTP */}
+            {/* ==================================== */}
+
+            {/*
+            <div>
+              Phone OTP UI here
+            </div>
+            */}
+
+            {/* VERIFY BUTTON */}
+
+            <motion.button
+
+              whileTap={{
+                scale: 0.98,
+              }}
+
+              onClick={() =>
+                handleVerify()
+              }
+
               disabled={isLoading}
-            />
-            <p className={styles.autoDetectHint}>
-              📲 Check your phone for the SMS code.
-            </p>
+
+              className="
+                w-full
+                rounded-2xl
+                bg-gradient-to-r
+                from-indigo-500
+                via-purple-500
+                to-pink-500
+                py-4
+                font-bold
+                text-white
+                shadow-lg
+                transition
+                hover:scale-[1.01]
+                hover:shadow-purple-500/30
+                disabled:opacity-70
+              "
+            >
+
+              {isLoading
+
+                ? "Verifying..."
+
+                : "Verify Email ✅"}
+
+            </motion.button>
+
+            {/* RESEND */}
+
+            <button
+
+              onClick={handleResend}
+
+              disabled={resendLoading}
+
+              className="
+                mt-5
+                w-full
+                text-sm
+                text-indigo-300
+                transition
+                hover:text-indigo-200
+              "
+            >
+
+              {resendLoading
+
+                ? "Sending..."
+
+                : "Didn't receive OTP? Resend"}
+
+            </button>
+
+            {/* BACK */}
+
+            <button
+
+              onClick={() =>
+                router.push(
+                  "/login"
+                )
+              }
+
+              className="
+                mt-4
+                w-full
+                text-sm
+                text-gray-400
+                transition
+                hover:text-gray-300
+              "
+            >
+
+              ← Back to Login
+
+            </button>
+
           </div>
 
-          {/* Verify Button */}
-          <button
-            className={`${styles.button} ${isLoading ? styles.buttonDisabled : ""}`}
-            onClick={handleVerify}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className={styles.spinner} />
-            ) : (
-              "Verify & Activate ✅"
-            )}
-          </button>
+        </motion.div>
 
-          {/* Resend */}
-          <button
-            className={styles.resendLink}
-            onClick={handleResend}
-            disabled={resendLoading}
-          >
-            {resendLoading ? (
-              <span className={styles.spinnerSmall} />
-            ) : (
-              "Didn't receive OTP? Resend"
-            )}
-          </button>
-
-          {/* Back to Login */}
-          <a
-            href="/login"
-            className={styles.backLink}
-            onClick={(e) => {
-              e.preventDefault();
-              router.push("/login");
-            }}
-          >
-            ← Back to Login
-          </a>
-        </div>
       </div>
+
     </>
   );
 }

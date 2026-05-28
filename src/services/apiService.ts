@@ -19,3 +19,15 @@ export const apiDelete = async (url: string) => {
   const response = await axiosInstance.delete(url);
   return response.data;
 };
+
+export const apiPatch = async (
+  url: string,
+  data?: any
+) => {
+
+  return axiosInstance.patch(
+    url,
+    data
+  );
+
+};

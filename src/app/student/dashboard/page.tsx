@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { getStudentDashboard } from '@/services/v1Service';
+import { getStudentDashboard, getOnlineTutors, getCurrentAffairs, CurrentAffair } from '@/services/v1Service';
 import toast from 'react-hot-toast';
 
-// Dummy data (unchanged)
-interface DummyTutor {
-  id: number; name: string; expertise: string; rating: number; sessions: string;
-}
+import PostDoubtModal from '@/components/dashboard/PostDoubtModal';
+
+
 interface DummyCourse {
   id: number; title: string; progress: number; icon: string; color: string;
 }
@@ -21,12 +20,27 @@ interface DummyNews {
   id: number; headline: string; category: string; time: string; image: string;
 }
 
-const DUMMY_TUTORS: DummyTutor[] = [
-  { id: 1, name: 'Expert_2207', expertise: 'Java, DSA, Spring Boot', rating: 4.9, sessions: '1.2k' },
-  { id: 2, name: 'CodeMaster', expertise: 'Python, Django, ML', rating: 4.8, sessions: '980' },
-  { id: 3, name: 'DataWizard', expertise: 'Data Structures, C++', rating: 4.9, sessions: '1.5k' },
-  { id: 4, name: 'AlgoExpert', expertise: 'Algorithms, Competitive Programming', rating: 4.7, sessions: '750' },
-];
+interface OnlineTutor {
+
+  id: number;
+
+  display_name: string;
+
+  skills: string;
+
+  experience: number;
+
+  average_rating: number;
+
+  total_reviews: number;
+
+  is_verified: boolean;
+
+  is_top_tutor: boolean;
+
+  is_online: boolean;
+}
+
 
 const DUMMY_COURSES: DummyCourse[] = [
   { id: 1, title: 'Python List Comprehension', progress: 75, icon: '🐍', color: 'text-blue-600' },
@@ -51,18 +65,101 @@ export default function DashboardPage() {
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const res = await getStudentDashboard();
-      const data = res.data || res;
-      setCurrentPrice(data.current_price ?? null);
-    } catch (error) {
-      console.error('Dashboard fetch error:', error);
-      toast.error('Could not load dashboard data.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [onlineTutors, setOnlineTutors] = useState<OnlineTutor[]>([]);
+  const [
+
+    currentAffairs,
+
+    setCurrentAffairs
+
+  ] = useState<
+    CurrentAffair[]
+  >([]);
+
+  const [
+
+    showPostModal,
+
+    setShowPostModal,
+
+  ] = useState(false);
+
+  const [
+
+    quickDoubt,
+
+    setQuickDoubt,
+
+  ] = useState('');
+
+
+
+  const fetchDashboardData =
+    useCallback(async () => {
+
+      try {
+
+        // DASHBOARD
+
+        const res =
+          await getStudentDashboard();
+
+        const data =
+          res.data || res;
+
+        setCurrentPrice(
+          data.current_price ?? null
+        );
+
+        // ====================================
+        // CURRENT AFFAIRS
+        // ====================================
+
+        const currentAffairsRes =
+
+          await getCurrentAffairs();
+
+        const affairsData =
+
+          currentAffairsRes?.data || [];
+
+        setCurrentAffairs(
+          affairsData
+        );
+
+        // ====================================
+        // ONLINE TUTORS
+        // ====================================
+
+        const tutorsRes =
+          await getOnlineTutors();
+
+        const tutorsData =
+          tutorsRes?.data || [];
+
+        setOnlineTutors(
+          tutorsData
+        );
+
+      } catch (error) {
+
+        console.error(
+          'Dashboard fetch error:',
+          error
+        );
+
+        toast.error(
+          'Could not load dashboard data.'
+        );
+
+
+
+      } finally {
+
+        setLoading(false);
+      }
+
+    }, []);
 
   useEffect(() => {
     fetchDashboardData();
@@ -122,20 +219,84 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-            <textarea className="w-full bg-transparent text-sm focus:outline-none" rows={3} placeholder="Type your doubt here..."></textarea>
+            <textarea
+
+              value={quickDoubt}
+
+              onChange={(e) =>
+                setQuickDoubt(
+                  e.target.value
+                )
+              }
+
+              placeholder="
+                Describe your doubt...
+                Example:
+                My React useEffect keeps rerendering infinitely
+              "
+
+              className="
+                min-h-[120px]
+                w-full
+                rounded-3xl
+                border
+                border-white/10
+                bg-white/5
+                p-5
+                text-white
+                placeholder:text-gray-400
+                outline-none
+                transition
+                focus:border-indigo-500
+                focus:ring-4
+                focus:ring-indigo-500/20
+              "
+            />
+
             <div className="mt-3 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-3">
               <div className="flex gap-2">
-                <button className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs shadow-sm hover:bg-gray-50">📎 Upload Image</button>
-                <button className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs shadow-sm hover:bg-gray-50">📄 Upload File</button>
+                
               </div>
               <div className="flex items-center gap-3">
-                <select className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-xs focus:outline-none">
-                  <option>Select Subject</option>
-                  <option>Python</option>
-                  <option>Java</option>
-                  <option>Data Structures</option>
-                </select>
-                <button className="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500">Find Experts →</button>
+                
+                <button
+
+                  onClick={() => {
+
+                    if (
+                      !quickDoubt.trim()
+                    ) {
+
+                      toast.error(
+                        'Please describe your doubt first'
+                      );
+
+                      return;
+                    }
+
+                    setShowPostModal(true);
+                  }}
+
+                  className="
+                    rounded-2xl
+                    bg-gradient-to-r
+                    from-indigo-600
+                    to-purple-600
+                    px-6
+                    py-3
+                    text-sm
+                    font-bold
+                    text-white
+                    shadow-lg
+                    transition
+                    hover:scale-[1.02]
+                  "
+                >
+
+                  Find Experts 🚀
+
+                </button>
+
               </div>
             </div>
           </div>
@@ -232,52 +393,402 @@ export default function DashboardPage() {
             <h3 className="text-base font-bold text-gray-800">Live Tutors Online</h3>
             <button className="text-xs text-indigo-600 hover:underline">View All</button>
           </div>
+
           <div className="space-y-3">
-            {DUMMY_TUTORS.map((tutor) => (
-              <div key={tutor.id} className="flex items-center justify-between rounded-lg border border-gray-100 p-3 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-lg font-bold text-indigo-600">
-                    {tutor.name.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-800">{tutor.name}</p>
-                    <p className="text-[10px] text-gray-500">{tutor.expertise}</p>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-500">
-                      <span>⭐ {tutor.rating}</span>
-                      <span>• {tutor.sessions} sessions</span>
-                    </div>
-                  </div>
-                </div>
-                <button className="rounded-lg border border-indigo-600 px-3 py-1 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50">
-                  Request
-                </button>
+
+            {onlineTutors.length === 0 && (
+
+              <div
+                className="
+                  rounded-xl
+                  border
+                  border-dashed
+                  border-gray-200
+                  bg-white
+                  p-6
+                  text-center
+                "
+              >
+
+                <p
+                  className="
+                    text-sm
+                    text-gray-500
+                  "
+                >
+
+                  No tutors online right now
+
+                </p>
+
               </div>
+            )}
+
+            {onlineTutors.map((tutor) => (
+              <div
+                key={tutor.id}
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  rounded-xl
+                  border
+                  border-gray-100
+                  bg-white
+                  p-3
+                  shadow-sm
+                  transition
+                  hover:shadow-md
+                "
+              >
+
+                <div className="flex items-center gap-3">
+
+                  {/* AVATAR */}
+
+                  <div
+                    className="
+                      flex
+                      h-11
+                      w-11
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-gradient-to-br
+                      from-indigo-500
+                      to-purple-500
+                      text-sm
+                      font-bold
+                      text-white
+                    "
+                  >
+
+                    {tutor.display_name.charAt(0)}
+
+                  </div>
+
+                  {/* INFO */}
+
+                  <div>
+
+                    <div className="flex items-center gap-1">
+
+                      <p
+                        className="
+                          text-sm
+                          font-bold
+                          text-gray-800
+                        "
+                      >
+
+                        {tutor.display_name}
+
+                      </p>
+
+                      {tutor.is_verified && (
+                        <span title="Verified">
+                          ✅
+                        </span>
+                      )}
+
+                      {tutor.is_top_tutor && (
+                        <span title="Top Tutor">
+                          ⭐
+                        </span>
+                      )}
+
+                    </div>
+
+                    <p
+                      className="
+                        max-w-[180px]
+                        truncate
+                        text-[11px]
+                        text-gray-500
+                      "
+                    >
+
+                      {tutor.skills}
+
+                    </p>
+
+                    <div
+                      className="
+                        mt-1
+                        flex
+                        items-center
+                        gap-2
+                        text-[10px]
+                        text-gray-500
+                      "
+                    >
+
+                      <span>
+                        ⭐ {tutor.average_rating || 0}
+                      </span>
+
+                      <span>
+                        • {tutor.total_reviews} reviews
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* ACTION */}
+
+                <button
+                  className="
+                    rounded-lg
+                    bg-indigo-50
+                    px-3
+                    py-1.5
+                    text-[11px]
+                    font-bold
+                    text-indigo-600
+                    transition
+                    hover:bg-indigo-100
+                  "
+                >
+
+                  Request
+
+                </button>
+
+              </div>
+
             ))}
           </div>
         </div>
 
-        {/* Current Affairs */}
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-bold text-gray-800">Current Affairs</h3>
-            <button className="text-xs text-indigo-600 hover:underline">View All</button>
+        {/* ====================================== */}
+        {/* CURRENT AFFAIRS */}
+        {/* ====================================== */}
+
+        <div
+          className="
+            mt-8
+            rounded-2xl
+            bg-white
+            p-5
+            shadow-sm
+          "
+        >
+
+          {/* HEADER */}
+
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              justify-between
+            "
+          >
+
+            <div>
+
+              <h2
+                className="
+                  text-lg
+                  font-bold
+                  text-gray-800
+                "
+              >
+
+                📰 Current Affairs
+
+              </h2>
+
+              <p
+                className="
+                  text-xs
+                  text-gray-500
+                "
+              >
+
+                Stay updated with latest tech & AI news
+
+              </p>
+
+            </div>
+
           </div>
-          <div className="space-y-4">
-            {DUMMY_NEWS.map((news) => (
-              <div key={news.id} className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
-                <div className="h-32 w-full bg-gray-200 bg-cover bg-center" style={{ backgroundImage: `url(${news.image})` }} />
-                <div className="p-3">
-                  <p className="text-xs font-bold text-gray-900 leading-tight line-clamp-2">{news.headline}</p>
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-gray-500">
-                    <span>{news.category}</span>
-                    <span>• {news.time}</span>
+
+          {/* EMPTY */}
+
+          {currentAffairs.length === 0 && (
+
+            <div
+              className="
+                rounded-xl
+                border
+                border-dashed
+                border-gray-200
+                p-6
+                text-center
+              "
+            >
+
+              <p
+                className="
+                  text-sm
+                  text-gray-500
+                "
+              >
+
+                No current affairs available
+
+              </p>
+
+            </div>
+          )}
+
+          {/* LIST */}
+
+          <div
+            className="
+              space-y-4
+            "
+          >
+
+            {currentAffairs.map(
+              (item) => (
+
+                <div
+
+                  key={item.id}
+
+                  className="
+                    overflow-hidden
+                    rounded-2xl
+                    border
+                    border-gray-100
+                    bg-gray-50
+                    transition
+                    hover:shadow-md
+                  "
+                >
+
+                  {/* IMAGE */}
+
+                  {item.image_url && (
+
+                    <img
+
+                      src={item.image_url}
+
+                      alt={item.title}
+
+                      className="
+                        h-44
+                        w-full
+                        object-cover
+                      "
+                    />
+                  )}
+
+                  {/* CONTENT */}
+
+                  <div
+                    className="
+                      p-4
+                    "
+                  >
+
+                    {/* CATEGORY */}
+
+                    <span
+                      className="
+                        inline-block
+                        rounded-full
+                        bg-indigo-100
+                        px-3
+                        py-1
+                        text-[10px]
+                        font-bold
+                        uppercase
+                        tracking-wide
+                        text-indigo-700
+                      "
+                    >
+
+                      {item.category}
+
+                    </span>
+
+                    {/* TITLE */}
+
+                    <h3
+                      className="
+                        mt-3
+                        text-base
+                        font-bold
+                        text-gray-800
+                      "
+                    >
+
+                      {item.title}
+
+                    </h3>
+
+                    {/* DESCRIPTION */}
+
+                    <p
+                      className="
+                        mt-2
+                        line-clamp-3
+                        text-sm
+                        leading-6
+                        text-gray-600
+                      "
+                    >
+
+                      {item.description}
+
+                    </p>
+
+                    {/* DATE */}
+
+                    <p
+                      className="
+                        mt-3
+                        text-xs
+                        text-gray-400
+                      "
+                    >
+
+                      {new Date(
+                        item.created_at
+                      ).toLocaleDateString()}
+
+                    </p>
+
                   </div>
+
                 </div>
-              </div>
-            ))}
+              )
+            )}
+
           </div>
+
         </div>
+
       </aside>
+      <PostDoubtModal
+
+        open={showPostModal}
+
+        description={quickDoubt}
+
+        onClose={() =>
+          setShowPostModal(false)
+        }
+      />
+
+
     </div>
   );
 }

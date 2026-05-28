@@ -1,6 +1,6 @@
 // services/v1Service.ts
 
-import { apiGet, apiPost, apiPut, apiDelete } from './apiService';
+import { apiGet, apiPost, apiPut, apiDelete, apiPatch } from './apiService';
 
 const apiGetWithParams = async <T = any>(
   url: string,
@@ -501,6 +501,407 @@ export const toggleTutorBadge =
         tutor_id: tutorId,
         action,
       }
+    );
+
+};
+
+// ======================================================
+// 👨‍🏫 TUTOR PROFILE
+// ======================================================
+
+export interface TutorProfile {
+
+  id: number;
+
+  display_name: string;
+
+  email: string;
+
+  role: string;
+
+  bio: string;
+
+  skills: string;
+
+  experience: number;
+
+  is_verified: boolean;
+
+  average_rating: number;
+
+  total_reviews: number;
+
+  is_top_tutor: boolean;
+
+  is_online: boolean;
+
+  last_seen: string | null;
+}
+
+// ======================================================
+// 👨‍🏫 GET MY TUTOR PROFILE
+// ======================================================
+
+export const getTutorProfile =
+  async (): Promise<TutorProfile> => {
+
+    return await apiGet(
+      '/accounts/tutor/profile/'
+    );
+
+};
+
+// ======================================================
+// ✏️ UPDATE TUTOR PROFILE
+// ======================================================
+
+export interface UpdateTutorProfileRequest {
+
+  bio?: string;
+
+  skills?: string;
+
+  experience?: number;
+}
+
+export const updateTutorProfile =
+  async (
+    data: UpdateTutorProfileRequest
+  ) => {
+
+    return await apiPut(
+      '/accounts/tutor/profile/',
+      data
+    );
+
+};
+
+// ======================================================
+// 👨‍💼 ADMIN - GET ALL TUTORS
+// ======================================================
+
+export interface AdminTutorProfile {
+
+  id: number;
+
+  display_name: string;
+
+  email: string;
+
+  role: string;
+
+  bio: string;
+
+  skills: string;
+
+  experience: number;
+
+  is_verified: boolean;
+
+  average_rating: number;
+
+  total_reviews: number;
+
+  is_top_tutor: boolean;
+
+  is_online: boolean;
+
+  last_seen: string | null;
+}
+
+export const getAdminTutors =
+  async (): Promise<AdminTutorProfile[]> => {
+
+    return await apiGet(
+      '/accounts/admin/tutors/'
+    );
+
+};
+
+// ======================================================
+// ✅ ADMIN VERIFY / TOP TUTOR
+// ======================================================
+
+export interface VerifyTutorRequest {
+
+  is_verified?: boolean;
+
+  is_top_tutor?: boolean;
+}
+
+export const verifyTutor =
+  async (
+    tutorId: number,
+    data: VerifyTutorRequest
+  ) => {
+
+    return await apiPut(
+      `/accounts/admin/tutors/${tutorId}/verify/`,
+      data
+    );
+
+};
+
+// ======================================================
+// 📰 CURRENT AFFAIRS
+// ======================================================
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface CurrentAffair {
+
+  id: number;
+
+  title: string;
+
+  description: string;
+
+  category:
+    | 'technology'
+    | 'science'
+    | 'business'
+    | 'education'
+    | 'ai'
+    | 'programming'
+    | 'general';
+
+  image: string | null;
+
+  image_url: string | null;
+
+  is_published: boolean;
+
+  created_at: string;
+}
+
+export interface CurrentAffairsResponse {
+
+  message: string;
+
+  data: CurrentAffair[];
+}
+
+// ============================================
+// STUDENT
+// GET CURRENT AFFAIRS
+// ============================================
+
+export const getCurrentAffairs =
+  async (): Promise<CurrentAffairsResponse> => {
+
+    return await apiGet(
+      '/v1/current-affairs/'
+    );
+
+};
+
+// ============================================
+// ADMIN
+// GET ALL CURRENT AFFAIRS
+// ============================================
+
+export const getAdminCurrentAffairs =
+  async (): Promise<CurrentAffairsResponse> => {
+
+    return await apiGet(
+      '/v1/admin/current-affairs/'
+    );
+
+};
+
+// ============================================
+// ADMIN
+// CREATE CURRENT AFFAIR
+// ============================================
+
+export interface CreateCurrentAffairPayload {
+
+  title: string;
+
+  description: string;
+
+  category: string;
+
+  is_published: boolean;
+
+  image?: File | null;
+}
+
+export const createCurrentAffair =
+  async (
+    data: CreateCurrentAffairPayload
+  ) => {
+
+    const formData =
+      new FormData();
+
+    formData.append(
+      'title',
+      data.title
+    );
+
+    formData.append(
+      'description',
+      data.description
+    );
+
+    formData.append(
+      'category',
+      data.category
+    );
+
+    formData.append(
+      'is_published',
+      String(data.is_published)
+    );
+
+    // IMAGE
+
+    if (data.image) {
+
+      formData.append(
+        'image',
+        data.image
+      );
+    }
+
+    return await apiPost(
+
+      '/v1/admin/current-affairs/create/',
+
+      formData,
+
+      {
+        headers: {
+          'Content-Type':
+            'multipart/form-data',
+        },
+      }
+    );
+
+};
+
+// ============================================
+// ADMIN
+// UPDATE CURRENT AFFAIR
+// ============================================
+
+export interface UpdateCurrentAffairPayload {
+
+  title?: string;
+
+  description?: string;
+
+  category?: string;
+
+  is_published?: boolean;
+
+  image?: File | null;
+}
+
+export const updateCurrentAffair =
+  async (
+
+    affairId: number,
+
+    data: UpdateCurrentAffairPayload
+
+  ) => {
+
+    const formData =
+      new FormData();
+
+    // TITLE
+
+    if (data.title !== undefined) {
+
+      formData.append(
+        'title',
+        data.title
+      );
+    }
+
+    // DESCRIPTION
+
+    if (
+      data.description !== undefined
+    ) {
+
+      formData.append(
+        'description',
+        data.description
+      );
+    }
+
+    // CATEGORY
+
+    if (
+      data.category !== undefined
+    ) {
+
+      formData.append(
+        'category',
+        data.category
+      );
+    }
+
+    // PUBLISH
+
+    if (
+      data.is_published !== undefined
+    ) {
+
+      formData.append(
+
+        'is_published',
+
+        String(
+          data.is_published
+        )
+      );
+    }
+
+    // IMAGE
+
+    if (data.image) {
+
+      formData.append(
+        'image',
+        data.image
+      );
+    }
+
+    return await apiPut(
+
+      `/v1/admin/current-affairs/${affairId}/`,
+
+      formData,
+
+      {
+        headers: {
+          'Content-Type':
+            'multipart/form-data',
+        },
+      }
+    );
+
+};
+
+// ============================================
+// ADMIN
+// DELETE CURRENT AFFAIR
+// ============================================
+
+export const deleteCurrentAffair =
+  async (
+    affairId: number
+  ) => {
+
+    return await apiDelete(
+
+      `/v1/admin/current-affairs/${affairId}/`
     );
 
 };

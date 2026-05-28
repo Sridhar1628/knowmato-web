@@ -225,11 +225,12 @@ export default function EntryPage() {
           animate={registerLinkControls}
           className="text-center"
         >
+          Don't have an account?
           <button
             onClick={handleRegister}
             className="text-base font-medium text-white underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-white/50 rounded-full px-4 py-2 transition-all"
           >
-            Don't have an account? <span className="font-bold">Register</span>
+             <span className="font-bold">Register</span>
           </button>
         </motion.div>
       </div>
