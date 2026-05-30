@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://kno/api",
+  baseURL: "https://api.knowmato.in/api",
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
