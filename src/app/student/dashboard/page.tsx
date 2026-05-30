@@ -4,21 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { getStudentDashboard, getOnlineTutors, getCurrentAffairs, CurrentAffair } from '@/services/v1Service';
+import { getStudentDashboard, getOnlineTutors, getCurrentAffairs, CurrentAffair , getMyDoubts} from '@/services/v1Service';
 import toast from 'react-hot-toast';
 
 import PostDoubtModal from '@/components/dashboard/PostDoubtModal';
 
-
-interface DummyCourse {
-  id: number; title: string; progress: number; icon: string; color: string;
-}
-interface DummySession {
-  id: number; doubt_title: string; tutor_name: string; type: 'Live Video' | 'Text/Chat'; status: 'Completed' | 'In Progress'; rating: number | null; date: string;
-}
-interface DummyNews {
-  id: number; headline: string; category: string; time: string; image: string;
-}
 
 interface OnlineTutor {
 
@@ -41,24 +31,34 @@ interface OnlineTutor {
   is_online: boolean;
 }
 
+interface RecentDoubt {
 
-const DUMMY_COURSES: DummyCourse[] = [
-  { id: 1, title: 'Python List Comprehension', progress: 75, icon: '🐍', color: 'text-blue-600' },
-  { id: 2, title: 'Java Collections Framework', progress: 50, icon: '☕', color: 'text-orange-600' },
-  { id: 3, title: 'Data Structures in C++', progress: 30, icon: '⚙️', color: 'text-purple-600' },
-  { id: 4, title: 'JavaScript Promises', progress: 20, icon: '📜', color: 'text-yellow-600' },
-];
+  doubt_id: number;
 
-const DUMMY_SESSIONS: DummySession[] = [
-  { id: 101, doubt_title: 'Explain Binary Search in Java', tutor_name: 'Expert_2207', type: 'Live Video', status: 'Completed', rating: 5.0, date: '08 May 2026' },
-  { id: 102, doubt_title: 'Array in Python', tutor_name: 'Expert_2207', type: 'Text/Chat', status: 'Completed', rating: 4.0, date: '08 May 2026' },
-];
+  title: string;
 
-const DUMMY_NEWS: DummyNews[] = [
-  { id: 1, headline: "India's Startup Ecosystem Reaches New Heights in 2026", category: 'Tech & Business', time: '2h ago', image: 'https://via.placeholder.com/400x200/333/fff?text=India+Startup' },
-  { id: 2, headline: 'ISRO Successfully Launches EOS-08 Satellite', category: 'Science', time: '3h ago', image: 'https://via.placeholder.com/400x200/333/fff?text=ISRO' },
-  { id: 3, headline: 'Global AI Summit 2026: Key Highlights', category: 'Technology', time: '5h ago', image: 'https://via.placeholder.com/400x200/333/fff?text=AI+Summit' },
-];
+  category: string;
+
+  preferred_explanation: string;
+
+  status: string;
+
+  mode: string;
+
+  tutor: string | null;
+
+  created_at: string;
+
+  session?: {
+
+    session_id: number;
+
+    status: string;
+
+    session_type: string;
+  };
+}
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -91,6 +91,16 @@ export default function DashboardPage() {
     setQuickDoubt,
 
   ] = useState('');
+
+  const [
+
+    recentDoubts,
+
+    setRecentDoubts,
+
+  ] = useState<
+    RecentDoubt[]
+  >([]);
 
 
 
@@ -125,6 +135,27 @@ export default function DashboardPage() {
 
         setCurrentAffairs(
           affairsData
+        );
+
+        // ====================================
+        // RECENT DOUBTS
+        // ====================================
+
+        const doubtsRes =
+          await getMyDoubts({
+            page: 1,
+          });
+
+        const doubtsData =
+
+          doubtsRes?.results?.data ||
+
+          doubtsRes?.data ||
+
+          [];
+
+        setRecentDoubts(
+          doubtsData.slice(0, 6)
         );
 
         // ====================================
@@ -240,16 +271,17 @@ export default function DashboardPage() {
                 w-full
                 rounded-3xl
                 border
-                border-white/10
-                bg-white/5
+                border-gray-200
+                bg-white
                 p-5
-                text-white
+                text-gray-800
                 placeholder:text-gray-400
+                shadow-sm
                 outline-none
-                transition
+                transition-all
                 focus:border-indigo-500
                 focus:ring-4
-                focus:ring-indigo-500/20
+                focus:ring-indigo-100
               "
             />
 
@@ -302,91 +334,302 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Continue Learning */}
-        <div className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-800">Continue Learning</h3>
-            <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
-          </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {DUMMY_COURSES.map((course) => (
-              <div key={course.id} className="rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition">
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="text-2xl">{course.icon}</span>
-                  <span className={`text-xs font-bold ${course.color}`}>{course.title.split(' ')[0]}</span>
-                </div>
-                <p className="mb-3 text-xs font-semibold text-gray-700">{course.title}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-500">{course.progress}% Completed</span>
-                  <div className="h-2 w-16 rounded-full bg-gray-100">
-                    <div className="h-2 rounded-full bg-indigo-500" style={{ width: `${course.progress}%` }}></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <div
+          className="
+            rounded-3xl
+            bg-white
+            p-5
+            shadow-sm
+          "
+        >
 
-        {/* Recent Sessions Table */}
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-800">My Recent Sessions</h3>
-            <button className="text-xs font-medium text-indigo-600 hover:underline">View All</button>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Doubt</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Tutor</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Rating</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {DUMMY_SESSIONS.length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-sm text-gray-500">No recent sessions found.</td></tr>
-                  ) : (
-                    DUMMY_SESSIONS.map((session) => (
-                      <tr key={session.id}>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {session.doubt_title}
-                          <span className="ml-2 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">Java</span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-2">
-                             <div className="h-6 w-6 rounded-full bg-gray-200"></div>
-                             <span className="font-medium text-gray-900">{session.tutor_name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <span>{session.type === 'Live Video' ? '🟣' : '💬'}</span>
-                            <span>{session.type}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold leading-5 text-green-800">
-                            {session.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">⭐ {session.rating ?? 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{session.date}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+          {/* HEADER */}
+
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              justify-between
+            "
+          >
+
+            <div>
+
+              <h2
+                className="
+                  text-lg
+                  font-bold
+                  text-gray-800
+                "
+              >
+
+                📚 Recent Doubts
+
+              </h2>
+
+              <p
+                className="
+                  text-xs
+                  text-gray-500
+                "
+              >
+
+                Your latest learning sessions
+
+              </p>
+
             </div>
+
+            <button
+
+              onClick={() =>
+                router.push(
+                  '/student/my-doubts'
+                )
+              }
+
+              className="
+                text-sm
+                font-semibold
+                text-indigo-600
+              "
+            >
+
+              View All
+
+            </button>
+
           </div>
+
+          {/* EMPTY */}
+
+          {recentDoubts.length === 0 ? (
+
+            <div
+              className="
+                rounded-2xl
+                border
+                border-dashed
+                border-gray-200
+                p-8
+                text-center
+              "
+            >
+
+              <p
+                className="
+                  text-sm
+                  text-gray-500
+                "
+              >
+
+                No doubts posted yet
+
+              </p>
+
+            </div>
+
+          ) : (
+
+            <div
+              className="
+                flex
+                gap-4
+                overflow-x-auto
+                pb-2
+                scrollbar-hide
+              "
+            >
+
+              {recentDoubts.map(
+                (doubt) => (
+
+                  <button
+
+                    key={doubt.doubt_id}
+
+                    onClick={() =>
+
+                      router.push(
+                        `/student/my-doubts/${doubt.doubt_id}`
+                      )
+                    }
+
+                    className="
+                      min-w-[280px]
+                      flex-shrink-0
+                      rounded-2xl
+                      border
+                      border-gray-100
+                      bg-white
+                      p-4
+                      text-left
+                      shadow-sm
+                      transition-all
+                      hover:-translate-y-1
+                      hover:border-indigo-200
+                      hover:shadow-md
+                    "
+                  >
+
+                    {/* CATEGORY */}
+
+                    <div
+                      className="
+                        mb-3
+                        flex
+                        items-center
+                        justify-between
+                      "
+                    >
+
+                      <span
+                        className="
+                          rounded-full
+                          bg-indigo-100
+                          px-3
+                          py-1
+                          text-[10px]
+                          font-bold
+                          uppercase
+                          tracking-wide
+                          text-indigo-700
+                        "
+                      >
+
+                        {doubt.category}
+
+                      </span>
+
+                      <span
+                        className={`
+                          rounded-full
+                          px-2
+                          py-1
+                          text-[10px]
+                          font-bold
+
+                          ${
+                            doubt.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }
+                        `}
+                      >
+
+                        {doubt.status}
+
+                      </span>
+
+                    </div>
+
+                    {/* TITLE */}
+
+                    <h3
+                      className="
+                        line-clamp-2
+                        text-base
+                        font-bold
+                        text-gray-800
+                      "
+                    >
+
+                      {doubt.title}
+
+                    </h3>
+
+                    {/* TUTOR */}
+
+                    <p
+                      className="
+                        mt-2
+                        text-sm
+                        text-gray-500
+                      "
+                    >
+
+                      👨‍🏫 {doubt.tutor || 'Waiting for tutor'}
+                    </p>
+
+                    {/* SESSION */}
+
+                    <div
+                      className="
+                        mt-3
+                        flex
+                        items-center
+                        gap-2
+                        text-xs
+                        text-gray-500
+                      "
+                    >
+
+                      <span>
+
+                        {doubt.session?.session_type ===
+                        'live_video'
+
+                          ? '🎥 Live Video'
+
+                          : '💬 Chat'}
+
+                      </span>
+
+                      <span>•</span>
+
+                      <span>
+
+                        {doubt.mode === 'specific'
+
+                          ? 'Specific Tutor'
+
+                          : 'Doubt Pool'}
+
+                      </span>
+
+                    </div>
+
+                    {/* DATE */}
+
+                    <p
+                      className="
+                        mt-4
+                        text-xs
+                        text-gray-400
+                      "
+                    >
+
+                      {new Date(
+                        doubt.created_at
+                      ).toLocaleDateString()}
+
+                    </p>
+
+                  </button>
+                )
+              )}
+
+            </div>
+
+          )}
+
         </div>
       </div>
 
       {/* RIGHT SIDEBAR (Visible only on large screens) */}
-      <aside className="hidden xl:flex xl:w-80 xl:flex-col xl:gap-6">
+      <aside
+        className="
+          hidden
+          xl:flex
+          xl:w-80
+          xl:flex-col
+          xl:gap-6
+          xl:sticky
+          xl:top-20
+          self-start
+        "
+      >
         {/* Live Tutors */}
         <div>
           <div className="mb-4 flex items-center justify-between">
@@ -394,7 +637,14 @@ export default function DashboardPage() {
             <button className="text-xs text-indigo-600 hover:underline">View All</button>
           </div>
 
-          <div className="space-y-3">
+          <div
+            className="
+              max-h-[350px]
+              space-y-3
+              overflow-y-auto
+              pr-2
+            "
+          >
 
             {onlineTutors.length === 0 && (
 
@@ -569,11 +819,10 @@ export default function DashboardPage() {
 
         <div
           className="
-            mt-8
-            rounded-2xl
-            bg-white
-            p-5
-            shadow-sm
+            max-h-[650px]
+            space-y-4
+            overflow-y-auto
+            pr-2
           "
         >
 

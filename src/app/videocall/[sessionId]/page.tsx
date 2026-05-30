@@ -394,7 +394,7 @@ const VideoCallScreen: React.FC = () => {
       router.replace("/tutor/sessions");
     } else {
       if (completed) {
-        router.replace(`/submit-review/${sessionId}`);
+        router.replace(`/student/submit-review/${sessionId}`);
       } else {
         router.replace("/student/sessions");
       }

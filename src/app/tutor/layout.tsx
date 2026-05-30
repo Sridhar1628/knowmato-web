@@ -591,7 +591,7 @@ export default function TutorLayout({
               } else {
 
                 router.push(
-                  '/tutor/available-doubts'
+                  '/tutor/doubts'
                 );
 
               }

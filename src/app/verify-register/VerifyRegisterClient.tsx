@@ -124,7 +124,7 @@ export default function VerifyRegisterPage() {
           // ====================================
 
           /*
-          phone_otp: phoneOtp,
+          phone_otp?: phoneOtp,
           */
         });
 

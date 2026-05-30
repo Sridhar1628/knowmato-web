@@ -101,7 +101,7 @@ const ChatScreen = () => {
     try {
       const res = await axiosInstance.get(`/v1/session/${sessionId}/`);
       if (currentUserId === Number(res.data.student_id)) {
-        router.replace(`/submit-review/${sessionId}`);
+        router.replace(`/student/submit-review/${sessionId}`);
       } else {
         router.replace("/tutor/sessions"); // adjust to your tutor sessions route
       }

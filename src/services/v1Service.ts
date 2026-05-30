@@ -42,6 +42,21 @@ export const getTutorDashboard = async () => {
   return await apiGet('/v1/tutor/dashboard/');
 };
 
+export interface availableTutor {
+  id: number;
+  name: string;
+  is_online: boolean;
+  is_verified: boolean;
+  average_rating: number;
+  total_reviews: number;
+  is_top_tutor: boolean;
+  skills: string;
+}
+
+export const getAvailableTutors = async () => {
+  return await apiGet('/accounts/tutors/available');
+}
+
 export interface StudentSession {
   session_id: number;
   doubt: string;
@@ -57,16 +72,57 @@ export interface StudentSession {
 }
 
 // 📜 Doubt History
-export const getMyDoubts = async (params: {
-  status?: string;
-  category?: string;
-  mode?: string;
-  search?: string;
-  from_date?: string;
-  to_date?: string;
-  page?: number;
-}) => {
-  return await apiGet(`/v1/student/doubts/?page=${params?.page || 1}`);
+export const getMyDoubts = async (
+  params: {
+    status?: string;
+    category?: string;
+    mode?: string;
+    search?: string;
+    from_date?: string;
+    to_date?: string;
+    page?: number;
+  }
+) => {
+
+  const query =
+    new URLSearchParams();
+
+  query.append(
+    "page",
+    String(params?.page || 1)
+  );
+
+  if (params?.search) {
+    query.append(
+      "search",
+      params.search
+    );
+  }
+
+  if (params?.status) {
+    query.append(
+      "status",
+      params.status
+    );
+  }
+
+  if (params?.category) {
+    query.append(
+      "category",
+      params.category
+    );
+  }
+
+  if (params?.mode) {
+    query.append(
+      "mode",
+      params.mode
+    );
+  }
+
+  return await apiGet(
+    `/v1/student/doubts/?${query.toString()}`
+  );
 };
 
 export const getDoubtDetails = async (doubtId: number) => {
@@ -905,3 +961,67 @@ export const deleteCurrentAffair =
     );
 
 };
+
+
+// ======================================================
+// 🔐 FORGOT PASSWORD
+// ======================================================
+
+export interface ForgotPasswordRequest {
+
+  email: string;
+
+}
+
+export interface VerifyForgotPasswordOTPRequest {
+
+  email: string;
+
+  otp: string;
+
+}
+
+export interface ResetPasswordRequest {
+
+  email: string;
+
+  otp: string;
+
+  new_password: string;
+
+}
+
+export const forgotPassword = async (
+  data: ForgotPasswordRequest
+) => {
+
+  return await apiPost(
+    '/accounts/forgot-password/',
+    data
+  );
+
+};
+
+export const verifyForgotPasswordOTP =
+  async (
+    data: VerifyForgotPasswordOTPRequest
+  ) => {
+
+    return await apiPost(
+      '/accounts/forgot-password/verify-otp/',
+      data
+    );
+
+  };
+
+export const resetPassword =
+  async (
+    data: ResetPasswordRequest
+  ) => {
+
+    return await apiPost(
+      '/accounts/forgot-password/reset/',
+      data
+    );
+
+  };

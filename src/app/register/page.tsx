@@ -398,6 +398,8 @@ export default function RegisterPage() {
                 phone: "",
 
                 password: "",
+
+                role:"student",
               }}
 
               validationSchema={

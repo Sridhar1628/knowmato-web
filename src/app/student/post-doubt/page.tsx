@@ -8,6 +8,7 @@ import {
   postDoubt,
   getCurrentPrice,
   paymentSuccess,
+  getMyDoubts
 } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
 import { getTokens } from '@/services/storageService';
@@ -21,22 +22,56 @@ interface Tutor {
   is_online?: boolean;
 }
 
-// Categories with Icons
-const CATEGORIES = [
-  { label: 'Programming', icon: '</>', value: 'Programming' },
-  { label: 'Data Structures', icon: '🗂️', value: 'Data Structures' },
-  { label: 'Web Development', icon: '🌐', value: 'Web Development' },
-  { label: 'Database', icon: '💽', value: 'Database' },
-  { label: 'Aptitude', icon: '📝', value: 'Aptitude' },
-  { label: 'More', icon: '...', value: 'Other' },
-];
+interface RecentDoubt {
 
-// Dummy data for "Recent Doubts Posted" (Right Sidebar)
-const RECENT_DOUBTS = [
-  { id: 1, type: 'Live Video', title: 'React useEffect Hook', category: 'JavaScript', time: '2 min ago' },
-  { id: 2, type: 'Text / Chat', title: 'Time Complexity of Binary Search', category: 'Data Structures', time: '5 min ago' },
-  { id: 3, type: 'Upload & Solve', title: 'Python List Comprehension', category: 'Python', time: '8 min ago' },
-  { id: 4, type: 'Live Video', title: 'SQL Join Explained', category: 'Database', time: '10 min ago' },
+  doubt_id: number;
+
+  title: string;
+
+  category: string;
+
+  status: string;
+
+  mode: string;
+
+  created_at: string;
+
+}
+
+const DEFAULT_CATEGORIES = [
+
+  'Programming',
+
+  'Python',
+
+  'Java',
+
+  'JavaScript',
+
+  'React',
+
+  'Django',
+
+  'Data Structures',
+
+  'Algorithms',
+
+  'Database',
+
+  'SQL',
+
+  'Machine Learning',
+
+  'Artificial Intelligence',
+
+  'Cloud Computing',
+
+  'DevOps',
+
+  'Interview Preparation',
+
+  'Other',
+
 ];
 
 function PostDoubtContent() {
@@ -48,7 +83,21 @@ function PostDoubtContent() {
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [
+
+    category,
+
+    setCategory,
+
+  ] = useState('');
+
+  const [
+
+    customCategory,
+
+    setCustomCategory,
+
+  ] = useState('');
   const [mode, setMode] = useState<'pool' | 'specific'>('pool');
   const [preferredExplanation, setPreferredExplanation] = useState<'text' | 'live_video'>('text');
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
@@ -56,6 +105,22 @@ function PostDoubtContent() {
   const [loadingTutors, setLoadingTutors] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showTutorModal, setShowTutorModal] = useState(false);
+
+  const [
+
+    recentDoubts,
+
+    setRecentDoubts,
+
+  ] = useState<
+    RecentDoubt[]
+  >([]);
+
+  useEffect(() => {
+
+    fetchRecentDoubts();
+
+  }, []);
 
   // Pre‑fill tutor from query params (as in Android)
   useEffect(() => {
@@ -103,6 +168,43 @@ function PostDoubtContent() {
       disconnectSocket();
     };
   }, []);
+
+  const fetchRecentDoubts =
+    async () => {
+
+      try {
+
+        const res =
+          await getMyDoubts({
+            page: 1,
+          });
+
+        console.log(
+          'Recent doubts:',
+          res
+        );
+
+        const doubtsData =
+
+          res?.results?.data ||
+
+          res?.data ||
+
+          [];
+
+        setRecentDoubts(
+          doubtsData.slice(0, 5)
+        );
+
+      } catch (error) {
+
+        console.error(
+          'Recent doubts error:',
+          error
+        );
+
+      }
+    };
 
   const fetchTutors = async () => {
     setLoadingTutors(true);
@@ -263,7 +365,7 @@ function PostDoubtContent() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-[1600px] px-6 pt-0 pb-6">
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* --- MAIN FORM (LEFT) --- */}
         <div className="flex-1">
@@ -287,124 +389,380 @@ function PostDoubtContent() {
               </div>
             </div>
 
-            {/* 1. Doubt Title */}
-            <div className="mb-6">
-              <h3 className="mb-1 text-sm font-semibold text-gray-800">1. Doubt Title</h3>
-              <input
-                type="text"
-                placeholder="e.g., React useEffect Hook not working as expected"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                maxLength={200}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-              <p className="mt-1 text-right text-xs text-gray-400">{title.length}/200</p>
-            </div>
+            {/* ===================================== */}
+            {/* TITLE + CATEGORY */}
+            {/* ===================================== */}
 
-            {/* 2. Select Subject / Category */}
-            <div className="mb-6">
-              <h3 className="mb-3 text-sm font-semibold text-gray-800">2. Select Subject / Category</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setCategory(cat.value)}
-                    className={`flex flex-col items-center justify-center rounded-xl border p-3 transition ${
-                      category === cat.value
-                        ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className={`text-xl mb-1 ${category === cat.value ? 'text-indigo-600' : 'text-gray-600'}`}>{cat.icon}</span>
-                    <span className={`text-[10px] font-medium ${category === cat.value ? 'text-indigo-600' : 'text-gray-500'}`}>{cat.label}</span>
-                  </button>
-                ))}
+            <div
+              className="
+                mb-6
+                grid
+                gap-4
+                lg:grid-cols-2
+              "
+            >
+
+              {/* TITLE */}
+
+              <div>
+
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    font-semibold
+                    text-gray-800
+                  "
+                >
+                  1. Doubt Title
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="
+                    e.g. React useEffect Hook
+                    not working as expected
+                  "
+                  value={title}
+                  onChange={(e) =>
+                    setTitle(e.target.value)
+                  }
+                  maxLength={200}
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-gray-50
+                    px-4
+                    py-3
+                    text-gray-900
+                    placeholder:text-gray-500
+                    focus:border-indigo-500
+                    focus:outline-none
+                  "
+                />
+
+                <p
+                  className="
+                    mt-1
+                    text-right
+                    text-xs
+                    text-gray-400
+                  "
+                >
+                  {title.length}/200
+                </p>
+
               </div>
+
+              {/* CATEGORY */}
+
+              <div>
+
+                <label
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    font-semibold
+                    text-gray-800
+                  "
+                >
+                  2. Category
+                </label>
+
+                <select
+                  value={category}
+                  onChange={(e) =>
+                    setCategory(
+                      e.target.value
+                    )
+                  }
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-gray-50
+                    px-4
+                    py-3
+                    text-gray-900
+                    focus:border-indigo-500
+                    focus:outline-none
+                  "
+                >
+                  <option value="">
+                    Select Category
+                  </option>
+
+                  {DEFAULT_CATEGORIES.map(
+                    (cat) => (
+                      <option
+                        key={cat}
+                        value={cat}
+                      >
+                        {cat}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                {category === 'Other' && (
+
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={(e) =>
+                      setCustomCategory(
+                        e.target.value
+                      )
+                    }
+                    placeholder="
+                      Enter custom category
+                    "
+                    className="
+                      mt-3
+                      w-full
+                      rounded-xl
+                      border
+                      border-gray-200
+                      bg-gray-50
+                      px-4
+                      py-3
+                      text-gray-900
+                      placeholder:text-gray-500
+                      focus:border-indigo-500
+                      focus:outline-none
+                    "
+                  />
+
+                )}
+
+              </div>
+
             </div>
 
-            {/* 3. Describe Your Doubt */}
+            {/* ===================================== */}
+            {/* DESCRIPTION */}
+            {/* ===================================== */}
+
             <div className="mb-6">
-              <h3 className="mb-1 text-sm font-semibold text-gray-800">3. Describe Your Doubt</h3>
+
+              <label
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-semibold
+                  text-gray-800
+                "
+              >
+                3. Describe Your Doubt
+              </label>
+
               <textarea
-                rows={4}
-                placeholder="Type your doubt in detail..."
+                rows={3}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) =>
+                  setDescription(
+                    e.target.value
+                  )
+                }
+                placeholder="
+                  Explain your problem
+                  in detail...
+                "
                 maxLength={2000}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="
+                  w-full
+                  rounded-xl
+                  border
+                  border-gray-200
+                  bg-gray-50
+                  px-4
+                  py-3
+                  text-gray-900
+                  placeholder:text-gray-500
+                  focus:border-indigo-500
+                  focus:outline-none
+                "
               />
-              <p className="mt-1 text-right text-xs text-gray-400">{description.length}/2000</p>
-              <p className="mt-1 text-xs text-gray-400">Provide as much detail as possible for better help</p>
+
+              <div
+                className="
+                  mt-2
+                  flex
+                  justify-between
+                  text-xs
+                  text-gray-400
+                "
+              >
+
+                <span>
+                  More details = faster help
+                </span>
+
+                <span>
+                  {description.length}/2000
+                </span>
+
+              </div>
+
             </div>
 
-            {/* 4. Preferred Explanation Method */}
-            <div className="mb-6">
-              <h3 className="mb-1 text-sm font-semibold text-gray-800">4. Preferred Explanation Method</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button
-                  onClick={() => setPreferredExplanation('live_video')}
-                  className={`flex items-center gap-4 rounded-xl border p-4 transition ${
-                    preferredExplanation === 'live_video'
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`rounded-lg p-2 ${preferredExplanation === 'live_video' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                    <span className="text-xl">📹</span>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Live Video</p>
-                    <p className="text-xs text-gray-500">Talk to expert face-to-face</p>
-                  </div>
-                </button>
+            {/* ===================================== */}
+            {/* EXPLANATION + MODE */}
+            {/* ===================================== */}
 
-                <button
-                  onClick={() => setPreferredExplanation('text')}
-                  className={`flex items-center gap-4 rounded-xl border p-4 transition ${
-                    preferredExplanation === 'text'
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`rounded-lg p-2 ${preferredExplanation === 'text' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                    <span className="text-xl">💬</span>
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">Text / Chat</p>
-                    <p className="text-xs text-gray-500">Get answer in chat</p>
-                  </div>
-                </button>
-              </div>
-            </div>
+            <div
+              className="
+                mb-6
+                grid
+                gap-4
+                lg:grid-cols-2
+              "
+            >
 
-            {/* 5. Select Mode */}
-            <div className="mb-6">
-              <h3 className="mb-2 text-sm font-semibold text-gray-800">5. Select Mode</h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <button
-                  onClick={() => setMode('pool')}
-                  className={`rounded-xl border p-4 text-left transition ${
-                    mode === 'pool'
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
+              {/* EXPLANATION */}
+
+              <div>
+
+                <h3
+                  className="
+                    mb-2
+                    text-sm
+                    font-semibold
+                    text-gray-800
+                  "
                 >
-                  <p className="font-semibold text-gray-800">Doubt Pool</p>
-                  <p className="text-xs text-gray-500">Get answers from multiple tutors</p>
-                </button>
-                
-                <button
-                  onClick={() => setMode('specific')}
-                  className={`rounded-xl border p-4 text-left transition ${
-                    mode === 'specific'
-                      ? 'border-indigo-600 bg-indigo-50'
-                      : 'border-gray-200 bg-white hover:bg-gray-50'
-                  }`}
-                >
-                  <p className="font-semibold text-gray-800">Specific Tutor</p>
-                  <p className="text-xs text-gray-500">Choose a tutor directly</p>
-                </button>
+                  4. Preferred Explanation
+                </h3>
+
+                <div className="space-y-3">
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreferredExplanation(
+                        'live_video'
+                      )
+                    }
+                    className={`
+                      w-full
+                      rounded-xl
+                      border
+                      p-4
+                      text-left
+                      text-gray-900
+                      transition-all
+                      ${
+                        preferredExplanation === 'live_video'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    📹 Live Video
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreferredExplanation(
+                        'text'
+                      )
+                    }
+                    className={`
+                      w-full
+                      rounded-xl
+                      border
+                      p-4
+                      text-left
+                      text-gray-900
+                      transition-all
+                      ${
+                        preferredExplanation === 'text'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    💬 Text / Chat
+                  </button>
+
+                </div>
+
               </div>
+
+              {/* MODE */}
+
+              <div>
+
+                <h3
+                  className="
+                    mb-2
+                    text-sm
+                    font-semibold
+                    text-gray-800
+                  "
+                >
+                  5. Mode
+                </h3>
+
+                <div className="space-y-3">
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMode('pool')
+                    }
+                    className={`
+                      w-full
+                      rounded-xl
+                      border
+                      p-4
+                      text-left
+                      text-gray-900
+                      transition-all
+                      ${
+                        mode === 'pool'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    📢 Doubt Pool
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMode('specific')
+                    }
+                    className={`
+                      w-full
+                      rounded-xl
+                      border
+                      p-4
+                      text-left
+                      text-gray-900
+                      transition-all
+                      ${
+                        mode === 'specific'
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-200 bg-white hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    👨‍🏫 Specific Tutor
+                  </button>
+
+                </div>
+
+              </div>
+
             </div>
 
             {/* 6. Select Tutor (only in Specific Mode) */}
@@ -559,25 +917,66 @@ function PostDoubtContent() {
           <div className="rounded-2xl bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800">Recent Doubts Posted</h3>
-              <button className="text-xs font-semibold text-indigo-600 hover:underline">View All</button>
+              <button
+
+                onClick={() =>
+                  router.push(
+                    '/student/my-doubts'
+                  )
+                }
+
+                className="
+                  text-xs
+                  font-semibold
+                  text-indigo-600
+                  hover:underline
+                "
+              >
+                View All
+              </button>
             </div>
             <div className="space-y-4">
-              {RECENT_DOUBTS.map((doubt) => (
-                <div key={doubt.id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+              {recentDoubts.map((doubt) => (
+                <div key={doubt.doubt_id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
                   <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500">
-                    <span className="text-indigo-600">⬇️</span> {doubt.type}
+                    <span className="text-indigo-600">⬇️</span> {doubt.mode === 'specific'
+                                                                                  ? 'Specific Tutor'
+                                                                                  : 'Doubt Pool'}
                   </div>
                   <p className="text-sm font-semibold text-gray-800">{doubt.title}</p>
                   <div className="mt-1 flex items-center justify-between text-[10px] text-gray-400">
                     <span>{doubt.category}</span>
-                    <span>• {doubt.time}</span>
+                    <span>• {new Date(
+                                        doubt.created_at
+                                      ).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 w-full rounded-lg bg-indigo-50 py-2 text-center text-xs font-semibold text-indigo-600 hover:bg-indigo-100 transition">
+            <button
+
+              onClick={() =>
+                router.push(
+                  '/student/my-doubts'
+                )
+              }
+
+              className="
+                mt-4
+                w-full
+                rounded-lg
+                bg-indigo-50
+                py-2
+                text-center
+                text-xs
+                font-semibold
+                text-indigo-600
+                transition
+                hover:bg-indigo-100
+              "
+            >
               View All Doubts
-            </div>
+            </button>
           </div>
         </div>
 

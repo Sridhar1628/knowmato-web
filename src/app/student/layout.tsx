@@ -13,12 +13,67 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [wallet, setWallet] = useState({ real: 0, bonus: 0 });
-  const [notificationCount, setNotificationCount] = useState(2); // dummy
+  const [
 
-  const displayName =
-    user?.first_name || user?.display_name || user?.email?.split('@')[0] || 'Student';
+    search,
+
+    setSearch
+
+  ] = useState('');
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [wallet, setWallet] = useState<{
+    real: number;
+    bonus: number;
+  } | null>(null);
+
+  const [
+
+    cachedName,
+
+    setCachedName,
+
+  ] = useState('');
+
+  useEffect(() => {
+
+    const storedName =
+      localStorage.getItem(
+        'display_name'
+      );
+
+    if (storedName) {
+
+      setCachedName(
+        storedName
+      );
+
+    }
+
+  }, []);
+
+  useEffect(() => {
+
+    const name =
+
+      user?.first_name ||
+
+      user?.display_name ||
+
+      user?.email?.split('@')[0];
+
+    if (name) {
+
+      localStorage.setItem(
+        'display_name',
+        name
+      );
+
+      setCachedName(name);
+
+    }
+
+  }, [user]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -66,9 +121,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
               });
 
-              break;
-            case 'NOTIFICATION':
-              setNotificationCount(prev => prev + 1);
               break;
             default:
               break;
@@ -136,14 +188,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
                         break;
 
-                      case 'NOTIFICATION':
-
-                        setNotificationCount(
-                          prev => prev + 1
-                        );
-
-                        break;
-
                       default:
                         break;
                     }
@@ -188,7 +232,24 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* TOP HEADER – only once */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm">
+      <header
+        className="
+          sticky
+          top-0
+          z-30
+          flex
+          h-16
+          items-center
+          justify-between
+          border-b
+          border-gray-200
+          bg-white
+          px-4
+          shadow-sm
+
+          lg:ml-72
+        "
+      >
         {/* Left: hamburger (mobile) + logo */}
         <div className="flex items-center gap-3">
           <button
@@ -200,44 +261,75 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="hidden md:flex items-center gap-2">
-            <div className="rounded-lg bg-indigo-600 p-1">
-              <span className="text-lg text-white">⚡</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-[#0f0f23]">Instant Skill</span>
-          </div>
         </div>
 
         {/* Center: Search */}
         <div className="hidden flex-1 max-w-md mx-4 sm:block">
           <div className="relative">
             <input
+
               type="text"
-              placeholder="Search for topics, tutors or doubts..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+
+              value={search}
+
+              onChange={(e) =>
+                setSearch(
+                  e.target.value
+                )
+              }
+
+              onKeyDown={(e) => {
+
+                if (
+                  e.key === 'Enter' &&
+                  search.trim()
+                ) {
+
+                  router.push(
+                    `/student/search?q=${encodeURIComponent(
+                      search.trim()
+                    )}`
+                  );
+
+                }
+
+              }}
+
+              placeholder="
+                Search for topics,
+                tutors or doubts...
+              "
+
+              className="
+                w-full
+                rounded-lg
+                border
+                border-gray-300
+                bg-white
+                py-2
+                pl-4
+                pr-10
+                text-sm
+                font-medium
+                text-black
+                placeholder:text-gray-400
+                focus:outline-none
+                focus:ring-2
+                focus:ring-indigo-500
+              "
             />
             <span className="absolute right-3 top-2 text-xs text-gray-400 hidden sm:inline">⌘ K</span>
           </div>
         </div>
 
         {/* Right: notifications, wallet, user */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button className="relative rounded-full p-2 text-gray-600 hover:bg-gray-100">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            {notificationCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                {notificationCount}
-              </span>
-            )}
-          </button>
-
-          <button
+        <div className="flex items-center gap-2 sm:gap-4">          <button
             onClick={() => router.push('/student/wallet')}
             className="hidden sm:flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600 transition hover:bg-indigo-100"
           >
-            💰 ₹{wallet.real + wallet.bonus}
+            💰 ₹{wallet
+              ? wallet.real + wallet.bonus
+              : '...'}
           </button>
 
           <button
@@ -245,9 +337,9 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             className="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
-              {displayName.charAt(0).toUpperCase()}
+              {cachedName.charAt(0).toUpperCase()}
             </span>
-            <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{displayName}</span>
+            <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{cachedName ||'Student'}</span>
           </button>
         </div>
       </header>
@@ -255,7 +347,17 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       {/* MAIN LAYOUT: sidebar + page content */}
       <div className="flex min-h-[calc(100vh-4rem)]">
         <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
+        <main
+          className="
+            min-w-0
+            flex-1
+            overflow-x-hidden
+            p-4
+            md:p-6
+
+            lg:ml-72
+          "
+        >{children}</main>
       </div>
     </div>
   );

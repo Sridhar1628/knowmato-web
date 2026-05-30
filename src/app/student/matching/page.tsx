@@ -23,6 +23,26 @@ export default function MatchingScreen() {
   const [doubtId, setDoubtId] =
   useState("");
 
+  const [
+
+    acceptedTutor,
+
+    setAcceptedTutor,
+
+  ] = useState<any>(null);
+
+  const [
+
+    connectionStage,
+
+    setConnectionStage,
+
+  ] = useState<
+    'matching' |
+    'accepted' |
+    'connecting'
+  >('matching');
+
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
@@ -87,28 +107,53 @@ export default function MatchingScreen() {
                 case "SESSION_STARTED":
                 case "DIRECT_ACCEPTED": {
 
-                const sessionId = data?.session_id;
+                  const sessionId =
+                    data?.session_id;
 
-                if (!sessionId) {
-                    console.warn("Session ID missing in acceptance event");
+                  if (!sessionId) {
                     return;
-                }
+                  }
 
-                const sessionType = (
-                    data?.session_type || ""
-                ).toLowerCase();
+                  setAcceptedTutor(data);
 
-                console.log(
-                    `✅ Session started (${sessionType}) with ID: ${sessionId}`
-                );
+                  setConnectionStage(
+                    "accepted"
+                  );
 
-                if (sessionType === "live_video") {
-                    router.replace(`/videocall/${sessionId}`);
-                } else {
-                    router.replace(`/chat/${sessionId}`);
-                }
+                  setTimeout(() => {
 
-                break;
+                    setConnectionStage(
+                      "connecting"
+                    );
+
+                  }, 2500);
+
+                  setTimeout(() => {
+
+                    const sessionType = (
+                      data?.session_type || ""
+                    ).toLowerCase();
+
+                    if (
+                      sessionType ===
+                      "live_video"
+                    ) {
+
+                      router.replace(
+                        `/videocall/${sessionId}`
+                      );
+
+                    } else {
+
+                      router.replace(
+                        `/chat/${sessionId}`
+                      );
+
+                    }
+
+                  }, 5000);
+
+                  break;
                 }
 
                 case "DIRECT_REJECTED":
@@ -178,6 +223,95 @@ export default function MatchingScreen() {
           Go Back
         </button>
       </div>
+    );
+  }
+
+  if (
+  connectionStage ===
+  "accepted"
+) {
+
+  return (
+
+      <div
+        className={
+          styles.container
+        }
+      >
+
+        <div
+          className={
+            styles.successAnimation
+          }
+        >
+
+          <div
+            className={
+              styles.bigCheck
+            }
+          >
+            ✅
+          </div>
+
+          <h1>
+            Tutor Accepted!
+          </h1>
+
+          <p>
+            {
+              acceptedTutor?.display_name ||
+              "A tutor"
+            }
+            {" "}
+            accepted your request
+          </p>
+
+        </div>
+
+      </div>
+
+    );
+  }
+
+  if (
+  connectionStage ===
+  "connecting"
+) {
+
+  return (
+
+      <div
+        className={
+          styles.container
+        }
+      >
+
+        <div
+          className={
+            styles.connectingAnimation
+          }
+        >
+
+          <div
+            className={
+              styles.handshake
+            }
+          >
+            🤝
+          </div>
+
+          <h1>
+            Connecting...
+          </h1>
+
+          <p>
+            Preparing your session
+          </p>
+
+        </div>
+
+      </div>
+
     );
   }
 

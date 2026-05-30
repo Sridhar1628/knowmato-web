@@ -10,7 +10,7 @@ export interface RegisterData {
 export interface VerifyRegisterData {
   identifier: string;    // email or phone
   email_otp: string;
-  phone_otp: string;
+  phone_otp?: string;
 }
 
 export const loginWithOtp = async (data: {

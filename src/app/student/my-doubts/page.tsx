@@ -437,7 +437,7 @@ const MyDoubtsScreen = () => {
   };
 
   const handleDoubtPress = (item: Doubt) => {
-    router.push(`/student/doubts/${item.doubt_id}`);
+    router.push(`/student/my-doubts/${item.doubt_id}`);
   };
 
   /* ---------- Render ---------- */
@@ -624,7 +624,7 @@ const MyDoubtsScreen = () => {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            router.push(`/submit-review/${item.session?.session_id}`);
+                            router.push(`/student/submit-review/${item.session?.session_id}`);
                           }}
                           className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition"
                         >
@@ -632,6 +632,65 @@ const MyDoubtsScreen = () => {
                         </button>
                       )}
                     </div>
+                  )}
+
+                  {/* ====================================== */}
+                  {/* JOIN ACTIVE SESSION */}
+                  {/* ====================================== */}
+
+                  {item.status === 'assigned' &&
+                  item.session &&
+                  item.session.status !== 'completed' && (
+
+                    <div className="mt-4">
+
+                      <button
+
+                        onClick={(e) => {
+
+                          e.stopPropagation();
+
+                          const session = item.session;
+                          if (!session) return;
+
+                          if (session.session_type === 'live_video') {
+
+                            router.push(
+                              `/videocall/${session.session_id}`
+                            );
+
+                          } else {
+
+                            router.push(
+                              `/chat/${session.session_id}`
+                            );
+
+                          }
+
+                        }}
+
+                        className="
+                          w-full
+                          rounded-xl
+                          bg-gradient-to-r
+                          from-green-500
+                          to-emerald-600
+                          py-3
+                          text-sm
+                          font-bold
+                          text-white
+                          shadow-md
+                          transition
+                          hover:scale-[1.01]
+                        "
+                      >
+
+                        🚀 Join Session
+
+                      </button>
+
+                    </div>
+
                   )}
 
                   {/* Action Buttons */}

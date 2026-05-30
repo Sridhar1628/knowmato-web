@@ -64,7 +64,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
       <aside
         className={`
           fixed inset-y-0 left-0 z-50
-          flex w-64 flex-col
+          flex w-72 flex-col
           bg-[#0f0f23] text-white
           transition-transform duration-300 ease-in-out
 
@@ -74,6 +74,10 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
           md:translate-x-0
           md:shrink-0
           md:min-h-screen
+          lg:fixed
+          lg:left-0
+          lg:top-0
+          lg:h-screen
         `}
       >
         {/* Brand & close button (mobile) */}
@@ -103,7 +107,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
           ))}
         </nav>
 
-        {/* Upgrade to Pro */}
+        {/* Upgrade to Pro 
         <div className="border-t border-gray-700/50 p-4">
           <div className="rounded-xl bg-gradient-to-br from-indigo-900 to-purple-900 p-4 text-center">
             <div className="mb-2 text-2xl">👑</div>
@@ -116,6 +120,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
             </button>
           </div>
         </div>
+        */}
       </aside>
     </>
   );
