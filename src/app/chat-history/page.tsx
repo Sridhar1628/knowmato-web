@@ -3,7 +3,9 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiGet } from "@/services/apiService";
-import { useAuth } from "@/hooks/useAuth"; // adapt to your auth context/store
+import { useAuth } from "@/hooks/useAuth";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import styles from "./ChatHistory.module.css";
 
 // ---------------------------------------------------------------------------
@@ -33,7 +35,11 @@ const StudentChatHistoryScreen = () => {
   const tutorName = searchParams.get("tutorName") || "Tutor";
 
   // Current user (adjust to your auth mechanism)
-  const { user: currentUser } = useAuth(); // expects { id, ... }
+  const { loading: authLoading } = useAuth();
+
+  const currentUser = useSelector(
+    (state: RootState) => state.auth.user
+  );
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +81,9 @@ const StudentChatHistoryScreen = () => {
   // Render a single message (left for others, right for own)
   // ---------------------------------------------------------------------------
   const renderMessage = (item: Message) => {
-    const isOwn = Number(item.sender_id) === Number(currentUser?.id);
+    const isOwn =
+        currentUser &&
+        Number(item.sender_id) === Number(currentUser.id);
 
     return (
       <div
@@ -140,7 +148,7 @@ const StudentChatHistoryScreen = () => {
   // ---------------------------------------------------------------------------
   // Loading state
   // ---------------------------------------------------------------------------
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className={styles.loader}>
         <div className={styles.spinner} />
