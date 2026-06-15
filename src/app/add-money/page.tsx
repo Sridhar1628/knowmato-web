@@ -10,6 +10,15 @@ import {
 } from "@/services/v1Service";
 import styles from "./AddMoney.module.css";
 
+import {
+  connectSocket,
+  disconnectSocket,
+} from '@/services/versionSocketService';
+
+import {
+  getTokens,
+} from '@/services/storageService';
+
 /* -------------------------------------------------------------------------- */
 /* TYPES */
 /* -------------------------------------------------------------------------- */
@@ -53,6 +62,87 @@ const AddMoneyPage = () => {
   /* -------------------------------------------------------------------------- */
 
   useEffect(() => {
+
+    const initSocket = async () => {
+
+      try {
+
+        const tokens =
+          await getTokens();
+
+        if (!tokens?.access) {
+          return;
+        }
+
+        connectSocket(
+
+          tokens.access,
+
+          (
+            event: string,
+            data: any
+          ) => {
+
+            if (
+              event ===
+              'WALLET_UPDATE'
+            ) {
+
+              setWalletBalance(
+
+                Number(
+                  data.real_balance || 0
+                ) +
+
+                Number(
+                  data.bonus_balance || 0
+                )
+
+              );
+
+            }
+
+          }
+
+        );
+
+      } catch (err) {
+
+        console.log(
+          'Socket Error:',
+          err
+        );
+
+      }
+
+    };
+
+    initSocket();
+
+    return () =>
+      disconnectSocket();
+
+  }, []);
+
+  useEffect(() => {
+
+    const loadPage = async () => {
+
+      await Promise.all([
+
+        fetchWalletData(),
+
+        fetchOffers(),
+
+      ]);
+
+    };
+
+    loadPage();
+
+  }, []);
+
+  useEffect(() => {
     if (offers.length > 0) {
       findBestOffer(selectedAmount, offers);
     }
@@ -77,20 +167,53 @@ const AddMoneyPage = () => {
   }, []);
 
   const fetchWalletData = async () => {
+
     try {
-      const res = await getTransactionHistory();
-      const data = res?.results || res;
+
+      const res =
+        await getTransactionHistory();
+
+      console.log(
+        '💰 WALLET RESPONSE:',
+        res
+      );
+
+      const data =
+        res?.results || res;
+
+      console.log(
+        '💰 WALLET DATA:',
+        data
+      );
 
       if (!data?.wallet) {
-        console.log("Invalid wallet response:", res);
+
+        console.log(
+          'Invalid wallet response:',
+          res
+        );
+
         return;
+
       }
+
       setWalletBalance(
-        Number(data?.wallet?.total_balance || 0)
+
+        Number(
+          data.wallet.total_balance || 0
+        )
+
       );
+
     } catch (err) {
-      console.log("Wallet Fetch Error:", err);
+
+      console.log(
+        'Wallet Fetch Error:',
+        err
+      );
+
     }
+
   };
 
   const fetchOffers = async () => {

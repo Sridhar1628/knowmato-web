@@ -66,6 +66,24 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const [onlineTutors, setOnlineTutors] = useState<OnlineTutor[]>([]);
+
+  const [
+
+    selectedTutor,
+
+    setSelectedTutor,
+
+  ] = useState<OnlineTutor | null>(
+    null
+  );
+
+  const [
+
+    showTutorProfile,
+
+    setShowTutorProfile,
+
+  ] = useState(false);
   const [
 
     currentAffairs,
@@ -677,8 +695,16 @@ export default function DashboardPage() {
             {onlineTutors.map((tutor) => (
               <div
                 key={tutor.id}
+                onClick={() => {
+
+                  setSelectedTutor(tutor);
+
+                  setShowTutorProfile(true);
+
+                }}
                 className="
                   flex
+                  cursor-pointer
                   items-center
                   justify-between
                   rounded-xl
@@ -790,6 +816,17 @@ export default function DashboardPage() {
                 {/* ACTION */}
 
                 <button
+                  onClick={(e) => {
+
+                    e.stopPropagation();
+
+                    router.push(
+                      `/student/post-doubt?tutorId=${tutor.id}&tutorName=${encodeURIComponent(
+                        tutor.display_name
+                      )}`
+                    );
+
+                  }}
                   className="
                     rounded-lg
                     bg-indigo-50
@@ -1026,6 +1063,267 @@ export default function DashboardPage() {
         </div>
 
       </aside>
+
+      {showTutorProfile && selectedTutor && (
+
+        <div
+          className="
+            fixed
+            inset-0
+            z-50
+            flex
+            items-center
+            justify-center
+            bg-black/50
+          "
+          onClick={() =>
+            setShowTutorProfile(false)
+          }
+        >
+
+          <div
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+            className="
+              w-full
+              max-w-md
+              rounded-3xl
+              bg-white
+              p-6
+              shadow-xl
+            "
+          >
+
+            <div className="text-center">
+
+              <div
+                className="
+                  mx-auto
+                  flex
+                  h-20
+                  w-20
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-gradient-to-br
+                  from-indigo-500
+                  to-purple-500
+                  text-3xl
+                  font-bold
+                  text-white
+                "
+              >
+
+                {selectedTutor.display_name.charAt(0)}
+
+              </div>
+
+              <h2
+                className="
+                  mt-4
+                  text-2xl
+                  font-bold
+                  text-gray-800
+                "
+              >
+
+                {selectedTutor.display_name}
+
+              </h2>
+
+              <p
+                className="
+                  mt-1
+                  text-sm
+                  text-gray-500
+                "
+              >
+
+                {selectedTutor.skills}
+
+              </p>
+
+              <div
+                className="
+                  mt-3
+                  flex
+                  justify-center
+                  gap-2
+                "
+              >
+
+                {selectedTutor.is_online && (
+                  <span
+                    className="
+                      rounded-full
+                      bg-green-100
+                      px-3
+                      py-1
+                      text-xs
+                      font-bold
+                      text-green-700
+                    "
+                  >
+                    🟢 Online
+                  </span>
+                )}
+
+                {selectedTutor.is_verified && (
+                  <span
+                    className="
+                      rounded-full
+                      bg-blue-100
+                      px-3
+                      py-1
+                      text-xs
+                      font-bold
+                      text-blue-700
+                    "
+                  >
+                    ✅ Verified
+                  </span>
+                )}
+
+                {selectedTutor.is_top_tutor && (
+                  <span
+                    className="
+                      rounded-full
+                      bg-yellow-100
+                      px-3
+                      py-1
+                      text-xs
+                      font-bold
+                      text-yellow-700
+                    "
+                  >
+                    ⭐ Top Tutor
+                  </span>
+                )}
+
+              </div>
+
+            </div>
+
+            <div
+              className="
+                mt-6
+                grid
+                grid-cols-3
+                gap-4
+                text-center
+              "
+            >
+
+              <div>
+
+                <p
+                  className="
+                    text-xl
+                    font-bold
+                  "
+                >
+
+                  {selectedTutor.experience}
+
+                </p>
+
+                <p
+                  className="
+                    text-xs
+                    text-gray-500
+                  "
+                >
+
+                  Years
+
+                </p>
+
+              </div>
+
+              <div>
+
+                <p
+                  className="
+                    text-xl
+                    font-bold
+                  "
+                >
+
+                  ⭐ {selectedTutor.average_rating}
+
+                </p>
+
+                <p
+                  className="
+                    text-xs
+                    text-gray-500
+                  "
+                >
+
+                  Rating
+
+                </p>
+
+              </div>
+
+              <div>
+
+                <p
+                  className="
+                    text-xl
+                    font-bold
+                  "
+                >
+
+                  {selectedTutor.total_reviews}
+
+                </p>
+
+                <p
+                  className="
+                    text-xs
+                    text-gray-500
+                  "
+                >
+
+                  Reviews
+
+                </p>
+
+              </div>
+
+            </div>
+
+            <button
+              onClick={() =>
+                router.push(
+                  `/student/post-doubt?tutorId=${selectedTutor.id}&tutorName=${encodeURIComponent(
+                    selectedTutor.display_name
+                  )}`
+                )
+              }
+              className="
+                mt-6
+                w-full
+                rounded-2xl
+                bg-indigo-600
+                py-3
+                font-bold
+                text-white
+                hover:bg-indigo-700
+              "
+            >
+
+              🚀 Request Doubt
+
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
       <PostDoubtModal
 
         open={showPostModal}

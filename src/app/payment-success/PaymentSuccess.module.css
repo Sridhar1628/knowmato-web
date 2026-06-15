@@ -1,188 +1,45 @@
 .container {
   min-height: 100vh;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  padding: 20px;
-
-  background: linear-gradient(
-    180deg,
-    #f8fafc 0%,
-    #eef4ff 100%
-  );
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem;
 }
-
-/* -------------------------------------------------------------------------- */
-/* CARD */
-/* -------------------------------------------------------------------------- */
 
 .card {
+  max-width: 480px;
   width: 100%;
-  max-width: 430px;
-
-  background: white;
-
-  border-radius: 28px;
-
-  padding: 40px 28px;
-
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 2rem;
+  padding: 2rem 1.5rem;
   text-align: center;
-
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-
-  animation: fadeIn 0.4s ease;
+  box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* -------------------------------------------------------------------------- */
-/* ICONS */
-/* -------------------------------------------------------------------------- */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 50px -12px rgba(0, 0, 0, 0.3);
+}
 
-.successIcon,
-.failedIcon {
-  width: 100px;
-  height: 100px;
-
-  margin: 0 auto 24px;
-
-  border-radius: 50%;
-
+/* Loading state */
+.loadingState {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-
-  font-size: 42px;
-
-  animation: popIn 0.5s ease;
+  gap: 1rem;
 }
-
-.successIcon {
-  background: #dcfce7;
-}
-
-.failedIcon {
-  background: #fee2e2;
-}
-
-/* -------------------------------------------------------------------------- */
-/* TITLE */
-/* -------------------------------------------------------------------------- */
-
-.title {
-  font-size: 30px;
-  font-weight: 800;
-
-  color: #0f172a;
-
-  margin-bottom: 14px;
-}
-
-/* -------------------------------------------------------------------------- */
-/* MESSAGE */
-/* -------------------------------------------------------------------------- */
-
-.message {
-  font-size: 15px;
-  line-height: 1.7;
-
-  color: #64748b;
-
-  margin-bottom: 28px;
-}
-
-/* -------------------------------------------------------------------------- */
-/* BALANCE CARD */
-/* -------------------------------------------------------------------------- */
-
-.balanceCard {
-  background: linear-gradient(
-    135deg,
-    #2563eb,
-    #1d4ed8
-  );
-
-  border-radius: 22px;
-
-  padding: 22px;
-
-  color: white;
-
-  margin-bottom: 28px;
-
-  font-size: 15px;
-  font-weight: 500;
-
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
-}
-
-.balanceCard h2 {
-  margin-top: 12px;
-
-  font-size: 36px;
-  font-weight: 800;
-}
-
-/* -------------------------------------------------------------------------- */
-/* BUTTON */
-/* -------------------------------------------------------------------------- */
-
-.btn {
-  width: 100%;
-
-  border: none;
-
-  padding: 18px;
-
-  border-radius: 18px;
-
-  background: linear-gradient(
-    135deg,
-    #2563eb,
-    #1d4ed8
-  );
-
-  color: white;
-
-  font-size: 16px;
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition: all 0.25s ease;
-
-  box-shadow: 0 12px 25px rgba(37, 99, 235, 0.2);
-}
-
-.btn:hover {
-  transform: translateY(-2px);
-}
-
-.btn:active {
-  transform: scale(0.98);
-}
-
-/* -------------------------------------------------------------------------- */
-/* SPINNER */
-/* -------------------------------------------------------------------------- */
 
 .spinner {
-  width: 70px;
-  height: 70px;
-
-  margin: 0 auto 28px;
-
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #4f46e5;
   border-radius: 50%;
-
-  border: 6px solid #dbeafe;
-  border-top: 6px solid #2563eb;
-
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
-
-/* -------------------------------------------------------------------------- */
-/* ANIMATIONS */
-/* -------------------------------------------------------------------------- */
 
 @keyframes spin {
   to {
@@ -190,52 +47,153 @@
   }
 }
 
-@keyframes popIn {
+.subtle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+/* Icon wrapper and animated icons */
+.iconWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.successIcon {
+  background: linear-gradient(145deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.successIcon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.failedIcon {
+  background: linear-gradient(145deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+}
+
+.failedIcon svg {
+  width: 48px;
+  height: 48px;
+}
+
+@keyframes bounceIn {
   0% {
-    transform: scale(0.7);
+    transform: scale(0.3);
     opacity: 0;
   }
-
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
   100% {
     transform: scale(1);
     opacity: 1;
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Typography */
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
 }
 
-/* -------------------------------------------------------------------------- */
-/* MOBILE */
-/* -------------------------------------------------------------------------- */
+.message {
+  font-size: 1rem;
+  color: #4b5563;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
 
-@media (max-width: 768px) {
-  .container {
-    padding: 16px;
-  }
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 200px;
+  margin-top: 0.5rem;
+}
 
+.btn:hover {
+  background: #4338ca;
+  transform: scale(1.02);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.btn:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.btnOutline {
+  background: transparent;
+  border: 2px solid #4f46e5;
+  color: #4f46e5;
+  box-shadow: none;
+}
+
+.btnOutline:hover {
+  background: #4f46e5;
+  color: white;
+  transform: scale(1.02);
+}
+
+.btnArrow {
+  transition: transform 0.2s ease;
+}
+
+.btn:hover .btnArrow {
+  transform: translateX(4px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
   .card {
-    padding: 32px 22px;
+    padding: 1.5rem 1rem;
   }
-
   .title {
-    font-size: 25px;
+    font-size: 1.5rem;
   }
-
-  .balanceCard h2 {
-    font-size: 30px;
+  .icon {
+    width: 64px;
+    height: 64px;
   }
-
+  .icon svg {
+    width: 36px;
+    height: 36px;
+  }
   .btn {
-    font-size: 15px;
+    max-width: 100%;
   }
 }
