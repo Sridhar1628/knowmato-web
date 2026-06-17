@@ -6,6 +6,8 @@ let currentToken: string | null = null;
 
 let reconnectTimeout: NodeJS.Timeout | null = null;
 
+let manualDisconnect = false;
+
 type MessageHandler = (
   event: string,
   data: any
@@ -18,7 +20,13 @@ export const connectSocket = async (
   onMessage?: MessageHandler
 ) => {
 
+  if (!token) {
+    console.log('❌ Missing WS token');
+    return;
+  }
+
   currentToken = token;
+  manualDisconnect = false;
 
   if (onMessage) {
     globalMessageHandler = onMessage;
@@ -33,11 +41,6 @@ export const connectSocket = async (
     )
   ) {
     console.log('⚠️ WS already connected');
-    return;
-  }
-
-  if (!token) {
-    console.log('❌ Missing WS token');
     return;
   }
 
@@ -76,36 +79,64 @@ export const connectSocket = async (
 
     } catch (err) {
 
-      console.log('❌ WS Parse Error:', err);
+      console.log(
+        '❌ WS Parse Error:',
+        err
+      );
 
     }
   };
 
   socket.onerror = (error) => {
-    console.log('❌ WS Error:', error);
+
+    console.log(
+      '❌ WS Error:',
+      error
+    );
+
   };
 
   socket.onclose = () => {
 
-    console.log('🔌 WS Disconnected');
+    console.log(
+      '🔌 WS Disconnected'
+    );
 
     socket = null;
 
-    // Auto reconnect
-    if (currentToken) {
+    // USER LOGGED OUT
+    if (manualDisconnect) {
 
-      reconnectTimeout = setTimeout(() => {
+      console.log(
+        '🚪 Manual disconnect - no reconnect'
+      );
 
-        console.log('🔄 Reconnecting WS...');
-
-        connectSocket(
-          currentToken!,
-          globalMessageHandler
-        );
-
-      }, 3000);
-
+      return;
     }
+
+    // NO TOKEN
+    if (!currentToken) {
+
+      console.log(
+        '🚫 No token - no reconnect'
+      );
+
+      return;
+    }
+
+    // AUTO RECONNECT
+    reconnectTimeout = setTimeout(() => {
+
+      console.log(
+        '🔄 Reconnecting WS...'
+      );
+
+      connectSocket(
+        currentToken!,
+        globalMessageHandler
+      );
+
+    }, 3000);
   };
 };
 
@@ -113,13 +144,23 @@ export const disconnectSocket = () => {
 
   console.log('🛑 Disconnecting WS');
 
+  manualDisconnect = true;
+
+  currentToken = null;
+
   if (reconnectTimeout) {
-    clearTimeout(reconnectTimeout);
+
+    clearTimeout(
+      reconnectTimeout
+    );
+
     reconnectTimeout = null;
   }
 
   if (socket) {
+
     socket.close();
+
     socket = null;
   }
 };

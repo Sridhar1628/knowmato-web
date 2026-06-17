@@ -6,8 +6,20 @@ import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
 import { getStudentDashboard, getOnlineTutors, getCurrentAffairs, CurrentAffair , getMyDoubts} from '@/services/v1Service';
 import toast from 'react-hot-toast';
+import { dashboardCache } from '@/store/dashboardCache';
+import {
+  subscribeDashboard,
+} from '@/store/dashboardRealtime';
 
 import PostDoubtModal from '@/components/dashboard/PostDoubtModal';
+
+import {
+  connectSocket,
+} from '@/services/versionSocketService';
+
+import {
+  updateDashboardCache,
+} from '@/store/dashboardEvents';
 
 
 interface OnlineTutor {
@@ -63,7 +75,8 @@ interface RecentDoubt {
 export default function DashboardPage() {
   const router = useRouter();
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+  useState(!dashboardCache.loaded);
 
   const [onlineTutors, setOnlineTutors] = useState<OnlineTutor[]>([]);
 
@@ -120,7 +133,24 @@ export default function DashboardPage() {
     RecentDoubt[]
   >([]);
 
+  useEffect(() => {
 
+    const unsubscribe =
+      subscribeDashboard(() => {
+
+        setOnlineTutors([
+          ...dashboardCache.onlineTutors
+        ]);
+
+        setRecentDoubts([
+          ...dashboardCache.recentDoubts
+        ]);
+
+      });
+
+    return unsubscribe;
+
+  }, []);
 
   const fetchDashboardData =
     useCallback(async () => {
@@ -134,6 +164,9 @@ export default function DashboardPage() {
 
         const data =
           res.data || res;
+
+        dashboardCache.currentPrice =
+        data.current_price;
 
         setCurrentPrice(
           data.current_price ?? null
@@ -150,6 +183,9 @@ export default function DashboardPage() {
         const affairsData =
 
           currentAffairsRes?.data || [];
+
+        dashboardCache.currentAffairs =
+        affairsData;
 
         setCurrentAffairs(
           affairsData
@@ -172,6 +208,9 @@ export default function DashboardPage() {
 
           [];
 
+        dashboardCache.recentDoubts =
+        doubtsData.slice(0, 6);
+
         setRecentDoubts(
           doubtsData.slice(0, 6)
         );
@@ -185,6 +224,14 @@ export default function DashboardPage() {
 
         const tutorsData =
           tutorsRes?.data || [];
+
+        console.log(
+          'ONLINE TUTORS API',
+          tutorsData
+        );
+
+        dashboardCache.onlineTutors =
+        tutorsData;
 
         setOnlineTutors(
           tutorsData
@@ -208,11 +255,38 @@ export default function DashboardPage() {
         setLoading(false);
       }
 
+      dashboardCache.loaded = true;
+
+      dashboardCache.lastFetched =
+        Date.now();
     }, []);
 
   useEffect(() => {
+
+    if (dashboardCache.loaded) {
+
+      setCurrentPrice(
+        dashboardCache.currentPrice
+      );
+
+      setOnlineTutors(
+        dashboardCache.onlineTutors
+      );
+
+      setCurrentAffairs(
+        dashboardCache.currentAffairs
+      );
+
+      setRecentDoubts(
+        dashboardCache.recentDoubts
+      );
+
+      return;
+    }
+
     fetchDashboardData();
-  }, [fetchDashboardData]);
+
+  }, []);
 
   if (loading) {
     return (

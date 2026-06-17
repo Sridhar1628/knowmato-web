@@ -12,6 +12,11 @@ import {
 } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
 import { getTokens } from '@/services/storageService';
+import { dashboardCache } from '@/store/dashboardCache';
+import {
+  subscribeDashboard
+} from '@/store/dashboardRealtime';
+
 
 // Types
 interface Tutor {
@@ -119,6 +124,36 @@ function PostDoubtContent() {
 
   useEffect(() => {
 
+    const unsubscribe =
+      subscribeDashboard(() => {
+
+        setRecentDoubts([
+          ...dashboardCache.recentDoubts
+        ]);
+
+        setTutors([
+          ...dashboardCache.onlineTutors
+        ]);
+
+      });
+
+    return unsubscribe;
+
+  }, []);
+
+  useEffect(() => {
+
+    if (
+      dashboardCache.loaded
+    ) {
+
+      setRecentDoubts(
+        dashboardCache.recentDoubts
+      );
+
+      return;
+    }
+
     fetchRecentDoubts();
 
   }, []);
@@ -193,8 +228,17 @@ function PostDoubtContent() {
 
           [];
 
+        const latest =
+          doubtsData.slice(0, 5);
+
+        dashboardCache.recentDoubts =
+          latest;
+
+        dashboardCache.loaded =
+          true;
+
         setRecentDoubts(
-          doubtsData.slice(0, 5)
+          latest
         );
 
       } catch (error) {
@@ -227,6 +271,9 @@ function PostDoubtContent() {
       }));
 
       withPresence.sort((a, b) => Number(b.is_online) - Number(a.is_online));
+      dashboardCache.onlineTutors =
+        withPresence;
+
       setTutors(withPresence);
     } catch (error) {
       console.error('Failed to fetch tutors:', error);

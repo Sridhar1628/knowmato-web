@@ -3,6 +3,27 @@
 import { Provider } from 'react-redux';
 import { store } from '@/redux/store';
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  return <Provider store={store}>{children}</Provider>;
+import {
+  CallProvider,
+} from '@/contexts/CallContext';
+
+import FloatingCallWidget
+  from '@/components/FloatingCallWidget';
+
+export function Providers({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Provider store={store}>
+      <CallProvider>
+
+        <FloatingCallWidget />
+
+        {children}
+
+      </CallProvider>
+    </Provider>
+  );
 }

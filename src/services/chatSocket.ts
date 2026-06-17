@@ -1,3 +1,5 @@
+import { WS_BASE_URL } from "@/config/env";
+
 let chatSocket: WebSocket | null = null;
 
 export const connectChatSocket = (
@@ -9,7 +11,7 @@ export const connectChatSocket = (
     chatSocket.close();
   }
 
-  const url = `wss://api.knowmato.in/ws/chat/${sessionId}/?token=${token}`;
+  const url = `${WS_BASE_URL}/ws/chat/${sessionId}/?token=${token}`;
 
   chatSocket = new WebSocket(url);
 

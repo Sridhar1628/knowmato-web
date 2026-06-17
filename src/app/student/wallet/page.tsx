@@ -10,6 +10,16 @@ import { getTokens } from "@/services/storageService";
 import { apiGet } from "@/services/versionApiService";
 import styles from "./Wallet.module.css";
 
+import {
+  walletCache
+} from '@/store/walletCache';
+
+import {
+  subscribeWallet,
+  updateWalletBalance,
+  addTransaction
+} from '@/store/walletRealtime';
+
 /* ---------- Types ---------- */
 interface Wallet {
   real: number;
@@ -40,17 +50,28 @@ const StudentWalletScreen = () => {
   const user = useSelector((state: RootState) => state.auth.user);
 
   // State
-  const [wallet, setWallet] = useState<Wallet>({ real: 0, bonus: 0, total: 0 });
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [offer, setOffer] = useState<Offer | null>(null);
+  const [, forceUpdate] = useState({});
   const [loading, setLoading] = useState(true);
   const [highlightTxId, setHighlightTxId] = useState<number | null>(null);
   const [nextPage, setNextPage] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
   // Animation for balance change (simple CSS transition)
-  const prevTotalRef = useRef(wallet.total);
+  const prevTotalRef = useRef(walletCache.wallet.total);
   const balanceRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeWallet(() => {
+
+        forceUpdate({});
+
+      });
+
+    return unsubscribe;
+
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Fetch data (wallet, transactions, offers)
@@ -59,12 +80,6 @@ const StudentWalletScreen = () => {
     try {
       const res = await getTransactionHistory();
       const data = res.results;
-
-      setWallet({
-        real: data.wallet.real_balance,
-        bonus: data.wallet.bonus_balance,
-        total: data.wallet.total_balance,
-      });
 
       const mapped = data.transactions.map((tx: any) => ({
         id: tx.id,
@@ -78,14 +93,25 @@ const StudentWalletScreen = () => {
         time: tx.time,
       }));
 
-      setTransactions(mapped);
       setNextPage(res.next || null);
 
-      // Offers
-      const offerRes = await getAvailableWalletOffers();
-      if (offerRes.data?.length > 0) {
-        setOffer(offerRes.data[0]);
-      }
+      walletCache.wallet = {
+        real: data.wallet.real_balance,
+        bonus: data.wallet.bonus_balance,
+        total: data.wallet.total_balance,
+      };
+
+      walletCache.transactions =
+        mapped;
+
+      walletCache.offer =
+        offerRes.data?.[0] || null;
+
+      walletCache.nextPage =
+        res.next || null;
+
+      walletCache.initialized =
+        true;
     } catch (err) {
       console.log("Wallet Error:", err);
     } finally {
@@ -111,7 +137,7 @@ const StudentWalletScreen = () => {
         date: tx.date,
         time: tx.time,
       }));
-      setTransactions((prev) => [...prev, ...mapped]);
+      walletCache.transactions = [...walletCache.transactions, ...mapped];
       setNextPage(res.next || null);
     } catch (err) {
       console.log("Load More Error:", err);
@@ -136,11 +162,11 @@ const StudentWalletScreen = () => {
         switch (event) {
           case "WALLET_UPDATE":
             const newTotal = (data.real_balance || 0) + (data.bonus_balance || 0);
-            setWallet({
+            walletCache.wallet = {
               real: data.real_balance || 0,
               bonus: data.bonus_balance || 0,
               total: newTotal,
-            });
+            };
             break;
 
           case "TRANSACTION_CREATED":
@@ -152,7 +178,7 @@ const StudentWalletScreen = () => {
               date: data.date,
               time: data.time,
             };
-            setTransactions((prev) => [newTx, ...prev]);
+            walletCache.transactions = [newTx, ...walletCache.transactions];
             setHighlightTxId(data.id);
             setTimeout(() => setHighlightTxId(null), 2000);
             break;
@@ -171,14 +197,25 @@ const StudentWalletScreen = () => {
   // Initial fetch
   // ---------------------------------------------------------------------------
   useEffect(() => {
+
+    if (
+      walletCache.initialized
+    ) {
+
+      setLoading(false);
+
+      return;
+    }
+
     fetchData();
+
   }, [fetchData]);
 
   // ---------------------------------------------------------------------------
   // Animate balance change on total update
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    if (balanceRef.current && prevTotalRef.current !== wallet.total) {
+    if (balanceRef.current && prevTotalRef.current !== walletCache.wallet.total) {
       balanceRef.current.style.transition = "none";
       balanceRef.current.style.transform = "scale(1.1)";
       setTimeout(() => {
@@ -188,8 +225,8 @@ const StudentWalletScreen = () => {
         }
       }, 50);
     }
-    prevTotalRef.current = wallet.total;
-  }, [wallet.total]);
+    prevTotalRef.current = walletCache.wallet.total;
+  }, [walletCache.wallet.total]);
 
   // ---------------------------------------------------------------------------
   // Refresh handler
@@ -283,7 +320,7 @@ const StudentWalletScreen = () => {
         <div className={styles.balanceCard}>
           <p className={styles.balanceLabel}>Total Balance</p>
           <h2 ref={balanceRef} className={styles.balanceAmount}>
-            ₹{wallet.total.toFixed(2)}
+            ₹{walletCache.wallet.total.toFixed(2)}
           </h2>
           <button
             className={styles.addMoneyBtn}
@@ -299,13 +336,13 @@ const StudentWalletScreen = () => {
           <div className={styles.balanceBox}>
             <span className={styles.boxTitle}>Main Balance</span>
             <span className={styles.boxAmount}>
-              ₹{wallet.real.toFixed(2)}
+              ₹{walletCache.wallet.real.toFixed(2)}
             </span>
           </div>
           <div className={styles.balanceBox}>
             <span className={styles.boxHint}>Rewards & cashback</span>
             <span className={styles.boxAmount}>
-              ₹{wallet.bonus.toFixed(2)}
+              ₹{walletCache.wallet.bonus.toFixed(2)}
             </span>
           </div>
         </div>
@@ -337,11 +374,11 @@ const StudentWalletScreen = () => {
         </div>
 
         {/* Offer Banner */}
-        {offer && (
+        {walletCache.offer && (
           <div className={styles.promo}>
-            <p className={styles.promoTitle}>{offer.name}</p>
+            <p className={styles.promoTitle}>{walletCache.offer.name}</p>
             <p className={styles.promoSub}>
-              Get {offer.bonus_percentage}% bonus (max ₹{offer.max_bonus})
+              Get {walletCache.offer.bonus_percentage}% bonus (max ₹{walletCache.offer.max_bonus})
             </p>
           </div>
         )}
@@ -356,7 +393,7 @@ const StudentWalletScreen = () => {
 
         {/* Transactions List */}
         <div className={styles.txList}>
-          {transactions.map(renderTransaction)}
+          {walletCache.transactions.map(renderTransaction)}
         </div>
 
         {/* Load More Button */}

@@ -8,6 +8,13 @@ import { getStudentDashboard } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
 import { getTokens } from '@/services/storageService';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import {
+
+  updateOnlineTutor,
+
+  updateRecentDoubt,
+
+} from '@/store/dashboardRealtime';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -107,6 +114,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         if (!tokens?.access) return;
         connectSocket(tokens.access, (event: string, data: any) => {
           switch (event) {
+
             case 'WALLET_UPDATE':
 
               setWallet({
@@ -122,6 +130,24 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               });
 
               break;
+
+            case 'PRESENCE_UPDATE':
+
+              updateOnlineTutor(
+                data.user_id,
+                data.is_online
+              );
+
+              break;
+
+            case 'DOUBT_CREATED':
+
+            case 'DOUBT_UPDATED':
+
+              updateRecentDoubt(data);
+
+              break;
+
             default:
               break;
           }

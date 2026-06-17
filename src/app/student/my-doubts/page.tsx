@@ -5,6 +5,15 @@ import { useRouter } from 'next/navigation';
 import { getMyDoubts } from '@/services/v1Service';
 import { apiGet } from '@/services/apiService';
 
+import {
+  myDoubtsCache
+} from '@/store/myDoubtsCache';
+
+import {
+  subscribeMyDoubts
+} from '@/store/myDoubtsRealtime';
+import { Zap } from 'lucide-react';
+
 /* ---------- TYPES ---------- */
 interface Doubt {
   doubt_id: number;
@@ -53,9 +62,6 @@ const MyDoubtsScreen = () => {
   const [activeQuickFilter, setActiveQuickFilter] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-
-  const hasFetched =
-  useRef(false);
 
   // Filters
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -106,17 +112,32 @@ const MyDoubtsScreen = () => {
       const data = res?.data || res;
       const newDoubts = data.results?.data || [];
 
-      setAllDoubts(newDoubts);
-      setNextPageUrl(
+      myDoubtsCache.doubts =
+        newDoubts;
 
-        data.next
-          ?.replace(
-            'http://',
-            'https://'
-          ) || null
+      myDoubtsCache.nextPageUrl =
+        data.next?.replace(
+          'http://',
+          'https://'
+        ) || null;
 
+      myDoubtsCache.totalCount =
+        data.count || 0;
+
+      myDoubtsCache.initialized =
+        true;
+
+      setAllDoubts(
+        newDoubts as Doubt[]
       );
-      setTotalCount(data.count || 0);
+
+      setNextPageUrl(
+        myDoubtsCache.nextPageUrl
+      );
+
+      setTotalCount(
+        myDoubtsCache.totalCount
+      );
     } catch (error) {
       console.error('Fetch doubts error:', error);
       window.alert('Failed to load doubts. Please try again.');
@@ -175,6 +196,21 @@ const MyDoubtsScreen = () => {
     setFilterModalVisible(false);
 
   };
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeMyDoubts(() => {
+
+        setAllDoubts([
+          ...myDoubtsCache.doubts
+        ]);
+
+      });
+
+    return unsubscribe;
+
+  }, []);
 
   // Debounced search
   useEffect(() => {
@@ -394,10 +430,26 @@ const MyDoubtsScreen = () => {
   useEffect(() => {
 
     if (
-      hasFetched.current
-    ) return;
+      myDoubtsCache.initialized
+    ) {
 
-    hasFetched.current = true;
+      // cached doubts may have slightly different typings (e.g. preferred_explanation as string)
+      // cast here to satisfy state type Doubt[] safely at runtime
+      setAllDoubts(myDoubtsCache.doubts as unknown as Doubt[]);
+      setDoubts(myDoubtsCache.doubts as unknown as Doubt[]);
+
+      setNextPageUrl(
+        myDoubtsCache.nextPageUrl
+      );
+
+      setTotalCount(
+        myDoubtsCache.totalCount
+      );
+
+      setLoading(false);
+
+      return;
+    }
 
     fetchDoubts(false);
 

@@ -11,6 +11,8 @@ import {
 import axios from "@/api/axiosInstance";
 import styles from "./VideoCall.module.css";
 
+import { useCall } from '@/contexts/CallContext';
+
 // ----- Agora SDK (client-only import to avoid SSR issues) -----
 
 const APP_ID = "19789ef2ac6e48e89404f52c1c3231a5";
@@ -42,6 +44,11 @@ const VideoCallScreen: React.FC = () => {
     "🔥 SESSION ID:",
     sessionId
   );
+
+  const {
+    startCall,
+    minimizeCall,
+  } = useCall();
 
   // ----- User -----
   const [userRole, setUserRole] = useState<"student" | "tutor">("student");
@@ -283,6 +290,7 @@ const VideoCallScreen: React.FC = () => {
 
         console.log("Published tracks"); // only audio published
         setJoined(true);
+        startCall(sessionId);
         setConnectionState("connected");
 
         // 7. Start timer
@@ -654,6 +662,12 @@ const VideoCallScreen: React.FC = () => {
           onClick={toggleMute}
         >
           {isMuted ? "🔇" : "🎤"}
+        </button>
+
+        <button
+          onClick={minimizeCall}
+        >
+          Test Minimize
         </button>
 
         {/* Screen Share (camera removed) */}
