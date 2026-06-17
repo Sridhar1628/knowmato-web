@@ -7,11 +7,11 @@ const listeners = new Set<Listener>();
 export const subscribeDashboard = (
   listener: Listener
 ) => {
-
   listeners.add(listener);
 
-  return () =>
+  return () => {
     listeners.delete(listener);
+  };
 };
 
 export const notifyDashboard = () => {

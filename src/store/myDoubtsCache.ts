@@ -4,10 +4,10 @@ export interface CachedDoubt {
   doubt_id: number;
   title: string;
   category: string;
-  preferred_explanation: string;
-  status: string;
+  preferred_explanation: "text" | "live_video";
+  status: "completed" | "open" | "assigned";
   price: number | null;
-  mode: string;
+  mode: "pool" | "specific";
   created_at: string;
   tutor_id: number;
   tutor: string | null;

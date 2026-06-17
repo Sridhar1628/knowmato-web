@@ -12,8 +12,9 @@ export const subscribeWallet = (
 
   listeners.add(listener);
 
-  return () =>
+  return (): void => {
     listeners.delete(listener);
+  };
 };
 
 export const notifyWallet = () => {

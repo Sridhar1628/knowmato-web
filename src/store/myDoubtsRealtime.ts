@@ -9,11 +9,11 @@ const listeners = new Set<Listener>();
 export const subscribeMyDoubts = (
   listener: Listener
 ) => {
-
   listeners.add(listener);
 
-  return () => listeners.delete(listener);
-
+  return (): void => {
+    listeners.delete(listener);
+  };
 };
 
 const notify = () => {

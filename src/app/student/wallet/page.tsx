@@ -81,6 +81,9 @@ const StudentWalletScreen = () => {
       const res = await getTransactionHistory();
       const data = res.results;
 
+      const offerRes =
+        await getAvailableWalletOffers();
+
       const mapped = data.transactions.map((tx: any) => ({
         id: tx.id,
         description: tx.description,
@@ -101,8 +104,7 @@ const StudentWalletScreen = () => {
         total: data.wallet.total_balance,
       };
 
-      walletCache.transactions =
-        mapped;
+      walletCache.transactions = mapped;
 
       walletCache.offer =
         offerRes.data?.[0] || null;
@@ -110,8 +112,8 @@ const StudentWalletScreen = () => {
       walletCache.nextPage =
         res.next || null;
 
-      walletCache.initialized =
-        true;
+      walletCache.initialized = true;
+
     } catch (err) {
       console.log("Wallet Error:", err);
     } finally {
