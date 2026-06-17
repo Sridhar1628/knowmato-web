@@ -37,6 +37,14 @@ interface CallContextType {
 
   screenTrackRef: React.MutableRefObject<ILocalVideoTrack | null>;
 
+  joinAgoraCall: (
+    client: any,
+    micTrack: any,
+    cameraTrack: any
+    ) => void;
+
+    leaveAgoraCall: () => Promise<void>;
+
   connectionState:
     | 'disconnected'
     | 'connecting'
@@ -203,6 +211,73 @@ export function CallProvider({
 
     }, []);
 
+    const joinAgoraCall = (
+        client: any,
+        micTrack: any,
+        cameraTrack: any
+        ) => {
+
+        clientRef.current =
+            client;
+
+        micTrackRef.current =
+            micTrack;
+
+        cameraTrackRef.current =
+            cameraTrack;
+
+        setJoined(true);
+
+        setConnectionState(
+            'connected'
+        );
+    };
+
+    const leaveAgoraCall =
+        async () => {
+
+            try {
+
+            if (micTrackRef.current) {
+                micTrackRef.current.stop();
+                micTrackRef.current.close();
+                }
+
+                if (cameraTrackRef.current) {
+                cameraTrackRef.current.stop();
+                cameraTrackRef.current.close();
+                }
+
+                if (screenTrackRef.current) {
+                screenTrackRef.current.stop();
+                screenTrackRef.current.close();
+                }
+
+                if (clientRef.current) {
+                clientRef.current.removeAllListeners();
+                await clientRef.current.leave();
+                }
+
+            } catch (err) {
+
+            console.error(
+                'Agora cleanup error:',
+                err
+            );
+
+            }
+
+            clientRef.current = null;
+
+            micTrackRef.current = null;
+
+            cameraTrackRef.current = null;
+
+            screenTrackRef.current = null;
+
+            endCall();
+        };
+
   return (
     <CallContext.Provider
       value={{
@@ -238,6 +313,10 @@ export function CallProvider({
         cameraTrackRef,
 
         screenTrackRef,
+
+        joinAgoraCall,
+
+        leaveAgoraCall,
         }}
     >
       {children}

@@ -48,6 +48,7 @@ const VideoCallScreen: React.FC = () => {
   const {
     startCall,
     minimizeCall,
+    leaveAgoraCall,
   } = useCall();
 
   // ----- User -----
@@ -57,6 +58,10 @@ const VideoCallScreen: React.FC = () => {
 
   // ----- Agora Engine & Tracks -----
   const clientRef = useRef<any>(null);
+  const callInitializedRef =
+  useRef(false);
+  const localVideoRef =
+  useRef<HTMLDivElement>(null);
   const [micTrack, setMicTrack] = useState<any>(null);
   const [screenTrack, setScreenTrack] = useState<any>(null); // screen share track
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
@@ -93,6 +98,7 @@ const VideoCallScreen: React.FC = () => {
   const [showChatModal, setShowChatModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+
   // ----- Alert/Confirm modal -----
   const [alertData, setAlertData] = useState<{
     title: string;
@@ -116,6 +122,31 @@ const VideoCallScreen: React.FC = () => {
     }
 
     const initCall = async () => {
+
+      if (
+        callInitializedRef.current
+      ) {
+
+        console.log(
+          "⚠️ Call already initialized"
+        );
+
+        return;
+      }
+
+      if (
+        clientRef.current
+      ) {
+
+        console.log(
+          "⚠️ Agora client already exists"
+        );
+
+        return;
+      }
+
+      callInitializedRef.current =
+        true;
       const AgoraModule = await import(
         "agora-rtc-sdk-ng"
       );
@@ -143,8 +174,25 @@ const VideoCallScreen: React.FC = () => {
         const { channel_name, token, uid } = res.data;
 
         // 4. Initialise Agora
-        const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-        clientRef.current = client;
+        if (
+          clientRef.current
+        ) {
+
+          console.log(
+            "⚠️ Reusing existing Agora client"
+          );
+
+          return;
+        }
+
+        const client =
+          AgoraRTC.createClient({
+            mode: "rtc",
+            codec: "vp8",
+          });
+
+        clientRef.current =
+          client;
 
         // ---- Remote user unpublished ----
         client.on(
@@ -245,6 +293,9 @@ const VideoCallScreen: React.FC = () => {
 
         } catch (err) {
 
+          callInitializedRef.current =
+            false;
+
           console.error(
             "❌ TRACK CREATION FAILED:",
             err
@@ -272,7 +323,13 @@ const VideoCallScreen: React.FC = () => {
 
         console.log("✅ JOINED CHANNEL");
 
-        cameraTrack.play("local-video-container");
+        setTimeout(() => {
+
+          cameraTrack.play(
+            "local-video-container"
+          );
+
+        }, 500);
 
         console.log("📷 LOCAL CAMERA STARTED");
 
@@ -308,12 +365,13 @@ const VideoCallScreen: React.FC = () => {
     initCall();
 
     return () => {
-      // Cleanup
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (clientRef.current) {
-        clientRef.current.leave();
-        clientRef.current.removeAllListeners();
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
+
+      console.log(
+        "VideoCallScreen unmounted - keeping Agora alive"
+      );
     };
   }, [sessionId]);
 
@@ -367,33 +425,70 @@ const VideoCallScreen: React.FC = () => {
   };
 
   // ----- Leave Call -----
-  const handleLeaveCall = async (forceEnd = false) => {
+  const handleLeaveCall = async (
+    forceEnd = false
+  ) => {
+
     if (ending) return;
+
     setEnding(true);
 
     try {
-      if (timerRef.current) clearInterval(timerRef.current);
-      const client = clientRef.current;
-      if (client) {
-        client.removeAllListeners();
-        await client.leave();
-      }
-      micTrack?.close();
-      screenTrack?.close();
 
-      if (forceEnd && sessionId) {
-        const res = await axios.post(`sessions/${sessionId}/end-video/`);
-        const completed = res.data?.session_completed;
-        exitCallScreen(completed);
-      } else {
-        exitCallScreen(false);
+      if (timerRef.current) {
+        clearInterval(
+          timerRef.current
+        );
       }
-    } catch (err: any) {
-      console.error("End error:", err);
-      window.alert("Failed to end call.");
-      exitCallScreen(false);
+
+      callInitializedRef.current =
+        false;
+
+      disconnectChatSocket();
+
+      if (
+        forceEnd &&
+        sessionId
+      ) {
+
+        try {
+
+          await axios.post(
+            `sessions/${sessionId}/end-video/`
+          );
+
+        } catch (err) {
+
+          console.error(
+            "Failed to end session:",
+            err
+          );
+
+        }
+
+      }
+
+      await leaveAgoraCall();
+
+      exitCallScreen(
+        forceEnd
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Leave call error:",
+        err
+      );
+
+      exitCallScreen(
+        false
+      );
+
     } finally {
+
       setEnding(false);
+
     }
   };
 
@@ -511,7 +606,7 @@ const VideoCallScreen: React.FC = () => {
       mounted = false;
       disconnectChatSocket();
     };
-  }, [sessionId, showChatModal]);
+  }, [sessionId]);
 
   // ----- Send chat message -----
   const handleSendMessage = () => {
@@ -612,6 +707,7 @@ const VideoCallScreen: React.FC = () => {
       {/* Local Video Preview */}
       <div className={styles.localPreviewWrapper}>
         <div
+          ref={localVideoRef}
           id="local-video-container"
           className={styles.localPreviewVideo}
         />
@@ -665,9 +761,19 @@ const VideoCallScreen: React.FC = () => {
         </button>
 
         <button
-          onClick={minimizeCall}
+          onClick={() => {
+
+            minimizeCall();
+
+            router.push(
+              userRole === "tutor"
+                ? "/tutor/dashboard"
+                : "/student/dashboard"
+            );
+
+          }}
         >
-          Test Minimize
+          _
         </button>
 
         {/* Screen Share (camera removed) */}
@@ -691,7 +797,17 @@ const VideoCallScreen: React.FC = () => {
         </button>
 
         {/* End Call */}
-        <button className={styles.endCallButton} onClick={handleEndRequest}>
+        <button className={styles.endCallButton} onClick={() => {
+                                                    setAlertData({
+                                                      title: "End Session",
+                                                      message: "Are you sure you want to end this session?",
+                                                      onAccept: async () => {
+                                                        await handleLeaveCall(true);
+                                                        setAlertData(null);
+                                                      },
+                                                      onReject: () => setAlertData(null),
+                                                    });
+                                                  }}>
           📞
         </button>
       </div>
