@@ -9,12 +9,26 @@ import {
 
 import FloatingCallWidget
   from '@/components/FloatingCallWidget';
+import { useEffect } from 'react';
 
 export function Providers({
   children,
 }: {
   children: React.ReactNode;
 }) {
+
+    useEffect(() => {
+
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window
+    ) {
+
+      Notification.requestPermission();
+
+    }
+
+  }, []);
   return (
     <Provider store={store}>
       <CallProvider>

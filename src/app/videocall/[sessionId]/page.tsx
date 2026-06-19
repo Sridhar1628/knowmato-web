@@ -49,6 +49,16 @@ const VideoCallScreen: React.FC = () => {
     startCall,
     minimizeCall,
     leaveAgoraCall,
+
+    clientRef,
+    micTrackRef,
+    cameraTrackRef,
+    screenTrackRef,
+
+    joinAgoraCall,
+
+    remoteUid,
+    setRemoteUid,
   } = useCall();
 
   // ----- User -----
@@ -57,7 +67,6 @@ const VideoCallScreen: React.FC = () => {
   const [userName, setUserName] = useState("");
 
   // ----- Agora Engine & Tracks -----
-  const clientRef = useRef<any>(null);
   const callInitializedRef =
   useRef(false);
   const localVideoRef =
@@ -69,8 +78,10 @@ const VideoCallScreen: React.FC = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
-  const [joined, setJoined] = useState(false);
-  const [remoteUid, setRemoteUid] = useState<number | null>(null);
+  const {
+    joined,
+    setJoined,
+  } = useCall();
   const [showJoinToast, setShowJoinToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const localScreenShareContainerRef = useRef<HTMLDivElement>(null);
@@ -122,6 +133,20 @@ const VideoCallScreen: React.FC = () => {
     }
 
     const initCall = async () => {
+
+      if (
+        clientRef.current &&
+        joined
+      ) {
+
+        console.log(
+          'Reusing active call'
+        );
+
+        setIsLoading(false);
+
+        return;
+      }
 
       if (
         callInitializedRef.current
@@ -304,7 +329,15 @@ const VideoCallScreen: React.FC = () => {
           return;
         }
 
-        setMicTrack(microphoneTrack);
+        setMicTrack(
+          microphoneTrack
+        );
+
+        joinAgoraCall(
+          client,
+          microphoneTrack,
+          cameraTrack
+        );
 
         console.log("🚀 JOINING CHANNEL:", channel_name);
         console.log("🚀 TOKEN:", token);
@@ -385,6 +418,10 @@ const VideoCallScreen: React.FC = () => {
         // Start screen share
         const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "disable"); // disable camera mirroring
         setScreenTrack(screenTrack);
+        screenTrackRef.current =
+          Array.isArray(screenTrack)
+            ? screenTrack[0]
+            : screenTrack;
         await client.unpublish(micTrack);
         if (Array.isArray(screenTrack)) {
           await client.publish([micTrack, ...screenTrack]);
@@ -522,6 +559,46 @@ const VideoCallScreen: React.FC = () => {
       onReject: () => setAlertData(null),
     });
   };
+
+  const showCallNotification =
+    (sessionId: number) => {
+
+      if (
+        typeof window === 'undefined' ||
+        !('Notification' in window) ||
+        Notification.permission !== 'granted'
+      ) {
+        return;
+      } {
+        return;
+      }
+
+      const notification =
+        new Notification(
+          'Knowmato Call',
+          {
+            body:
+              'Click to return to your active session',
+            icon:
+              '/logo.png',
+            tag:
+              `call-${sessionId}`,
+          }
+        );
+
+      notification.onclick =
+        () => {
+
+          window.focus();
+
+          window.focus();
+
+          window.open(
+            `/videocall/${sessionId}`,
+            "_self"
+          );
+        };
+    };
 
   // ----- Chat Socket -----
   useEffect(() => {
@@ -765,10 +842,14 @@ const VideoCallScreen: React.FC = () => {
 
             minimizeCall();
 
-            router.push(
-              userRole === "tutor"
-                ? "/tutor/dashboard"
-                : "/student/dashboard"
+            showCallNotification(
+              sessionId!
+            );
+
+            router.replace(
+              userRole === 'tutor'
+                ? '/tutor/dashboard'
+                : '/student/dashboard'
             );
 
           }}
