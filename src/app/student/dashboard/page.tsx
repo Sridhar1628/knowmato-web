@@ -133,25 +133,6 @@ export default function DashboardPage() {
     RecentDoubt[]
   >([]);
 
-  useEffect(() => {
-
-    const unsubscribe =
-      subscribeDashboard(() => {
-
-        setOnlineTutors([
-          ...dashboardCache.onlineTutors
-        ]);
-
-        setRecentDoubts([
-          ...dashboardCache.recentDoubts
-        ]);
-
-      });
-
-    return unsubscribe;
-
-  }, []);
-
   const fetchDashboardData =
     useCallback(async () => {
 
@@ -181,8 +162,23 @@ export default function DashboardPage() {
           await getCurrentAffairs();
 
         const affairsData =
+          (currentAffairsRes?.data || [])
+          .filter((item: CurrentAffair) => {
 
-          currentAffairsRes?.data || [];
+            const createdAt =
+              new Date(item.created_at);
+
+            const now =
+              new Date();
+
+            const diffHours =
+              (now.getTime() -
+                createdAt.getTime()) /
+              (1000 * 60 * 60);
+
+            return diffHours <= 24;
+
+          });
 
         dashboardCache.currentAffairs =
         affairsData;
@@ -261,6 +257,92 @@ export default function DashboardPage() {
         Date.now();
     }, []);
 
+    useEffect(() => {
+
+      const unsubscribe =
+        subscribeDashboard(() => {
+
+          console.log(
+            '🔄 Dashboard Realtime Update'
+          );
+
+          setOnlineTutors([
+            ...dashboardCache.onlineTutors
+          ]);
+
+          setRecentDoubts([
+            ...dashboardCache.recentDoubts
+          ]);
+
+          setCurrentAffairs([
+            ...dashboardCache.currentAffairs
+          ]);
+
+          setCurrentPrice(
+            dashboardCache.currentPrice
+          );
+
+        });
+
+      return unsubscribe;
+
+    }, []);
+
+    useEffect(() => {
+
+      const refreshTutors = async () => {
+
+        try {
+
+          const tutorsRes =
+            await getOnlineTutors();
+
+          const tutorsData =
+            tutorsRes?.data || [];
+
+          console.log(
+            'REFRESHED TUTORS',
+            tutorsData
+          );
+
+          dashboardCache.onlineTutors =
+            tutorsData;
+
+          setOnlineTutors(
+            tutorsData
+          );
+
+        } catch (err) {
+
+          console.error(
+            'Tutor refresh failed',
+            err
+          );
+
+        }
+
+      };
+
+      const handleRefresh = () => {
+        refreshTutors();
+      };
+
+      window.addEventListener(
+        'refresh-online-tutors',
+        handleRefresh
+      );
+
+      return () => {
+
+        window.removeEventListener(
+          'refresh-online-tutors',
+          handleRefresh
+        );
+
+      };
+
+    }, []);
+
   useEffect(() => {
 
     if (dashboardCache.loaded) {
@@ -299,6 +381,43 @@ export default function DashboardPage() {
     );
   }
 
+  const getTimeAgo = (
+    dateString: string
+  ) => {
+
+    const created =
+      new Date(dateString);
+
+    const now =
+      new Date();
+
+    const diffMs =
+      now.getTime() -
+      created.getTime();
+
+    const minutes =
+      Math.floor(
+        diffMs /
+        (1000 * 60)
+      );
+
+    const hours =
+      Math.floor(
+        diffMs /
+        (1000 * 60 * 60)
+      );
+
+    if (minutes < 60) {
+      return `${minutes} min ago`;
+    }
+
+    if (hours < 24) {
+      return `${hours} hr ago`;
+    }
+
+    return created.toLocaleDateString();
+  };
+
   return (
     <div className="flex flex-col gap-6 xl:flex-row">
       {/* MAIN CONTENT COLUMN */}
@@ -334,7 +453,7 @@ export default function DashboardPage() {
         <div className="mb-8 rounded-xl bg-white p-4 shadow-sm md:p-6">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-gray-800">Ask a Doubt</h3>
+              <h3 className="text-lg font-bold text-gray-800">Explain Your Doubt Here</h3>
               <p className="text-xs text-gray-500">Get instant help from expert tutors</p>
             </div>
             <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700">
@@ -947,7 +1066,6 @@ export default function DashboardPage() {
               justify-between
             "
           >
-
             <div>
 
               <h2
@@ -957,9 +1075,7 @@ export default function DashboardPage() {
                   text-gray-800
                 "
               >
-
                 📰 Current Affairs
-
               </h2>
 
               <p
@@ -968,12 +1084,40 @@ export default function DashboardPage() {
                   text-gray-500
                 "
               >
-
                 Stay updated with latest tech & AI news
-
               </p>
 
             </div>
+
+            <button
+              onClick={() =>
+                router.push(
+                  '/student/current-affairs'
+                )
+              }
+              className="
+                flex
+                items-center
+                gap-1
+                text-sm
+                font-semibold
+                text-indigo-600
+              "
+            >
+              View All
+
+              <span
+                className="
+                  rounded-full
+                  bg-indigo-100
+                  px-2
+                  py-0.5
+                  text-[10px]
+                "
+              >
+                {currentAffairs.length}
+              </span>
+            </button>
 
           </div>
 
@@ -1008,130 +1152,76 @@ export default function DashboardPage() {
 
           {/* LIST */}
 
-          <div
-            className="
-              space-y-4
-            "
-          >
-
-            {currentAffairs.map(
-              (item) => (
-
-                <div
-
-                  key={item.id}
-
-                  className="
-                    overflow-hidden
-                    rounded-2xl
-                    border
-                    border-gray-100
-                    bg-gray-50
-                    transition
-                    hover:shadow-md
-                  "
-                >
-
-                  {/* IMAGE */}
-
-                  {item.image_url && (
-
-                    <img
-
-                      src={item.image_url}
-
-                      alt={item.title}
-
-                      className="
-                        h-44
-                        w-full
-                        object-cover
-                      "
-                    />
-                  )}
-
-                  {/* CONTENT */}
-
+          {/* Replace the current affairs list in your dashboard’s <aside> */}
+          <div className="space-y-4">
+            {currentAffairs
+              .slice(0, 5)
+              .map((item) => (
+              <div
+                key={item.id}
+                onClick={() => router.push(`/student/current-affairs/`)}
+                className="cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 transition hover:shadow-md"
+              >
+                {/* IMAGE */}
+                {item.image_url && (
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="h-44 w-full object-cover"
+                  />
+                )}
+                {/* CONTENT */}
+                <div className="p-4">
+                  <span className="inline-block rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-indigo-700">
+                    {item.category}
+                  </span>
+                  <h3 className="mt-3 text-base font-bold text-gray-800">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600">
+                    {item.description}
+                  </p>
                   <div
                     className="
-                      p-4
+                      mt-4
+                      flex
+                      items-center
+                      justify-between
                     "
                   >
-
-                    {/* CATEGORY */}
-
                     <span
                       className="
-                        inline-block
                         rounded-full
-                        bg-indigo-100
-                        px-3
+                        bg-gray-100
+                        px-2
                         py-1
                         text-[10px]
-                        font-bold
-                        uppercase
-                        tracking-wide
-                        text-indigo-700
-                      "
-                    >
-
-                      {item.category}
-
-                    </span>
-
-                    {/* TITLE */}
-
-                    <h3
-                      className="
-                        mt-3
-                        text-base
-                        font-bold
-                        text-gray-800
-                      "
-                    >
-
-                      {item.title}
-
-                    </h3>
-
-                    {/* DESCRIPTION */}
-
-                    <p
-                      className="
-                        mt-2
-                        line-clamp-3
-                        text-sm
-                        leading-6
+                        font-semibold
                         text-gray-600
                       "
                     >
+                      🕒 {getTimeAgo(item.created_at)}
+                    </span>
 
-                      {item.description}
-
-                    </p>
-
-                    {/* DATE */}
-
-                    <p
+                    <span
                       className="
-                        mt-3
-                        text-xs
+                        text-[11px]
                         text-gray-400
                       "
                     >
-
                       {new Date(
                         item.created_at
-                      ).toLocaleDateString()}
-
-                    </p>
-
+                      ).toLocaleString([], {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
                   </div>
-
                 </div>
-              )
-            )}
-
+              </div>
+            ))}
           </div>
 
         </div>

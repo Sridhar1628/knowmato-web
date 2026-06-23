@@ -19,6 +19,13 @@ import {
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] =
+  useState('');
+
+  const [showSuggestions, setShowSuggestions] =
+  useState(false);
 
   const [
 
@@ -27,6 +34,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     setSearch
 
   ] = useState('');
+
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [wallet, setWallet] = useState<{
@@ -41,6 +50,50 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     setCachedName,
 
   ] = useState('');
+
+  useEffect(() => {
+
+    if (
+      debouncedSearch.length >= 1
+    ) {
+
+      saveRecentSearch(
+        debouncedSearch
+      );
+
+    }
+
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+
+    if (
+      debouncedSearch.length >= 1
+    ) {
+
+      router.replace(
+        `/student/search?q=${encodeURIComponent(
+          debouncedSearch
+        )}`
+      );
+
+    }
+
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+
+    const timer = setTimeout(() => {
+
+      setDebouncedSearch(
+        search.trim()
+      );
+
+    }, 300);
+
+    return () => clearTimeout(timer);
+
+  }, [search]);
 
   useEffect(() => {
 
@@ -106,6 +159,30 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  const saveRecentSearch = (query: string) => {
+
+    const existing =
+      JSON.parse(
+        localStorage.getItem('recent_searches') || '[]'
+      );
+
+    const updated = [
+      query,
+      ...existing.filter(
+        (item: string) =>
+          item.toLowerCase() !==
+          query.toLowerCase()
+      ),
+    ].slice(0, 5);
+
+    localStorage.setItem(
+      'recent_searches',
+      JSON.stringify(updated)
+    );
+
+    setRecentSearches(updated);
+  };
+
   // Socket setup (shared across student pages)
   useEffect(() => {
     const initSocket = async () => {
@@ -136,6 +213,12 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
               updateOnlineTutor(
                 data.user_id,
                 data.is_online
+              );
+
+              window.dispatchEvent(
+                new Event(
+                  'refresh-online-tutors'
+                )
               );
 
               break;
@@ -298,28 +381,20 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
               value={search}
 
+              onFocus={() =>
+                setShowSuggestions(true)
+              }
+              onBlur={() => {
+                setTimeout(() => {
+                  setShowSuggestions(false);
+                }, 200);
+              }}
+
               onChange={(e) =>
                 setSearch(
                   e.target.value
                 )
               }
-
-              onKeyDown={(e) => {
-
-                if (
-                  e.key === 'Enter' &&
-                  search.trim()
-                ) {
-
-                  router.push(
-                    `/student/search?q=${encodeURIComponent(
-                      search.trim()
-                    )}`
-                  );
-
-                }
-
-              }}
 
               placeholder="
                 Search for topics,
@@ -344,7 +419,64 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 focus:ring-indigo-500
               "
             />
-            <span className="absolute right-3 top-2 text-xs text-gray-400 hidden sm:inline">⌘ K</span>
+            {showSuggestions && recentSearches.length > 0 && (
+
+              <div
+                className="
+                  absolute
+                  top-full
+                  mt-2
+                  w-full
+                  rounded-xl
+                  border
+                  border-gray-200
+                  bg-white
+                  shadow-lg
+                  z-50
+                "
+              >
+
+                {recentSearches.map(
+                  (item) => (
+
+                    <button
+                      key={item}
+                      onClick={() => {
+
+                        setSearch(item);
+
+                        router.push(
+                          `/student/search?q=${encodeURIComponent(
+                            item
+                          )}`
+                        );
+
+                      }}
+                      className="
+                        flex
+                        items-center
+                        gap-3
+                        w-full
+                        px-4
+                        py-3
+                        text-left
+                        text-sm
+                        font-medium
+                        text-gray-800
+                        transition
+                        hover:bg-indigo-50
+                        hover:text-indigo-700
+                      "
+                    >
+                      🕒 {item}
+                    </button>
+
+                  )
+                )}
+
+              </div>
+
+            )}
           </div>
         </div>
 

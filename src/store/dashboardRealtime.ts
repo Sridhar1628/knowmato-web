@@ -27,7 +27,12 @@ export const updateOnlineTutor = (
 ) => {
 
   console.log(
-    'BEFORE:',
+    'SOCKET USER ID:',
+    userId
+  );
+
+  console.log(
+    'ONLINE TUTORS:',
     dashboardCache.onlineTutors
   );
 
@@ -36,15 +41,19 @@ export const updateOnlineTutor = (
       (tutor) => {
 
         console.log(
-          'COMPARE',
-          tutor.id,
-          userId
+          'COMPARE:',
+          {
+            tutorId: tutor.id,
+            socketUserId: userId,
+            tutorName:
+              tutor.display_name,
+          }
         );
 
         if (tutor.id === userId) {
 
           console.log(
-            'MATCH FOUND',
+            'MATCH FOUND:',
             tutor.display_name
           );
 
@@ -58,13 +67,9 @@ export const updateOnlineTutor = (
       }
     );
 
-  console.log(
-    'AFTER:',
-    dashboardCache.onlineTutors
-  );
-
   notifyDashboard();
 };
+
 
 export const updateRecentDoubt = (
   doubt: any

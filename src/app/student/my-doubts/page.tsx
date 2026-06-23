@@ -527,12 +527,6 @@ const MyDoubtsScreen = () => {
 
       {/* Ask New Doubt + Search */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <button
-          onClick={() => router.push('/student/post-doubt')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-2.5 font-semibold text-white shadow-md hover:bg-indigo-500 transition"
-        >
-          ✨ Ask New Doubt
-        </button>
         <div className="relative flex-1 sm:max-w-xs">
           <input
             type="text"
@@ -585,7 +579,14 @@ const MyDoubtsScreen = () => {
       </div>
 
       {/* Doubts List */}
-      <div className="space-y-4">
+      <div
+        className="
+          grid
+          gap-6
+          grid-cols-1
+          lg:grid-cols-3
+        "
+      >
         {doubts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="text-5xl mb-4">📭</span>
@@ -609,7 +610,21 @@ const MyDoubtsScreen = () => {
                 <div
                   key={item.doubt_id}
                   onClick={() => handleDoubtPress(item)}
-                  className="cursor-pointer rounded-2xl bg-white p-5 shadow-sm border border-gray-100 hover:shadow-md transition"
+                  className="
+                    group
+                    cursor-pointer
+                    rounded-2xl
+                    border
+                    border-gray-100
+                    bg-white
+                    p-5
+                    shadow-sm
+                    transition-all
+                    duration-300
+                    hover:-translate-y-1
+                    hover:border-indigo-300
+                    hover:shadow-xl
+                  "
                 >
                   {/* Top Row */}
                   <div className="flex items-start gap-3">
@@ -628,7 +643,6 @@ const MyDoubtsScreen = () => {
                       </div>
                       <h3 className="mt-1 font-semibold text-gray-900 truncate">{item.title}</h3>
                     </div>
-                    <span className="text-lg font-bold text-indigo-600">₹{item.price || 0}</span>
                   </div>
 
                   {/* Category & Type */}
@@ -648,7 +662,7 @@ const MyDoubtsScreen = () => {
                   {/* Tutor & Date */}
                   <div className="mt-3 flex items-center justify-between text-sm">
                     <span className="text-gray-500">
-                      👨‍🏫 Tutor: <span className="font-medium text-gray-700">{item.tutor || 'Not Assigned'}</span>
+                        Tutor: <span className="font-medium text-gray-700">{item.tutor || 'Not Assigned'}</span>
                     </span>
                     <span className="text-xs text-gray-400">📅 {formatDate(item.created_at)}</span>
                   </div>
@@ -795,6 +809,42 @@ const MyDoubtsScreen = () => {
           </>
         )}
       </div>
+
+      <button
+        onClick={() =>
+          router.push('/student/post-doubt')
+        }
+        className="
+          fixed
+          bottom-6
+          right-6
+          z-40
+
+          flex
+          items-center
+          gap-2
+
+          rounded-full
+          bg-indigo-600
+          px-5
+          py-3
+
+          text-sm
+          font-bold
+          text-white
+
+          shadow-xl
+
+          transition-all
+          duration-300
+
+          hover:scale-105
+          hover:bg-indigo-700
+        "
+      >
+        <Zap size={18} />
+        Ask Doubt
+      </button>
 
       {/* Filter Modal */}
       {filterModalVisible && (

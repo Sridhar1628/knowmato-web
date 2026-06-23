@@ -423,16 +423,96 @@ function PostDoubtContent() {
             transition={{ duration: 0.4 }}
             className="rounded-2xl bg-white p-6 shadow-sm md:p-8"
           >
-            <div className="mb-6 flex flex-col items-start justify-between sm:flex-row sm:items-center">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Post a Doubt</h1>
-                <p className="text-sm text-gray-500">Get instant help from verified experts</p>
+            <div
+              className="
+                mb-8
+                overflow-hidden
+                rounded-2xl
+                bg-gradient-to-r
+                from-indigo-600
+                via-purple-600
+                to-indigo-700
+                p-6
+                text-white
+              "
+            >
+              <div
+                className="
+                  flex
+                  flex-col
+                  gap-4
+                  lg:flex-row
+                  lg:items-center
+                  lg:justify-between
+                "
+              >
+                <div>
+                  <h1
+                    className="
+                      text-3xl
+                      font-bold
+                    "
+                  >
+                    🚀 Post a Doubt
+                  </h1>
+
+                  <p
+                    className="
+                      mt-2
+                      text-indigo-100
+                    "
+                  >
+                    Connect instantly with verified experts and
+                    get your doubts solved in minutes.
+                  </p>
+                </div>
+
+                <div
+                  className="
+                    rounded-xl
+                    bg-white/10
+                    px-5
+                    py-3
+                    backdrop-blur-sm
+                  "
+                >
+                  <div className="text-xs text-indigo-100">
+                    Average Response Time
+                  </div>
+
+                  <div className="text-xl font-bold">
+                    ⚡ Under 60 Seconds
+                  </div>
+                </div>
               </div>
-              <div className="mt-3 sm:mt-0 flex items-center gap-1 rounded-lg bg-purple-50 px-4 py-2 text-sm font-semibold text-purple-700">
-                <span className="text-lg">⚡</span>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-[10px] font-normal text-purple-600">Average Response Time</span>
-                  <span>Under 60 sec</span>
+
+              <div
+                className="
+                  mt-6
+                  grid
+                  gap-4
+                  md:grid-cols-3
+                "
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📝</span>
+                  <span className="text-sm">
+                    Post Your Doubt
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">👨‍🏫</span>
+                  <span className="text-sm">
+                    Expert Accepts
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎯</span>
+                  <span className="text-sm">
+                    Get It Solved
+                  </span>
                 </div>
               </div>
             </div>
@@ -649,7 +729,7 @@ function PostDoubtContent() {
               >
 
                 <span>
-                  More details = faster help
+                  More details = faster Solution
                 </span>
 
                 <span>
@@ -907,62 +987,16 @@ function PostDoubtContent() {
 
         {/* --- RIGHT SIDEBAR (unchanged) --- */}
         <div className="hidden w-80 shrink-0 flex-col gap-6 lg:flex">
-          {/* How it Works */}
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-lg font-bold text-gray-800">How It Works</h3>
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                    📝
-                  </div>
-                  <div className="h-full w-px bg-gray-200"></div>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-800">Post Your Doubt</p>
-                  <p className="text-[10px] text-gray-500">Describe your doubt and add any files or images.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                    👤
-                  </div>
-                  <div className="h-full w-px bg-gray-200"></div>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-800">Experts Get Notified</p>
-                  <p className="text-[10px] text-gray-500">Relevant online tutors will see your doubt.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                    ✅
-                  </div>
-                  <div className="h-full w-px bg-gray-200"></div>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-800">Get Connected</p>
-                  <p className="text-[10px] text-gray-500">The first tutor to accept will connect with you.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                    🎯
-                  </div>
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-800">Doubt Solved</p>
-                  <p className="text-[10px] text-gray-500">Get your doubt solved instantly!</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Recent Doubts Posted */}
-          <div className="rounded-2xl bg-white p-6 shadow-sm">
+          <div className="
+                  rounded-2xl
+                  border
+                  border-gray-100
+                  bg-white
+                  p-6
+                  shadow-sm
+                ">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800">Recent Doubts Posted</h3>
               <button
@@ -985,7 +1019,12 @@ function PostDoubtContent() {
             </div>
             <div className="space-y-4">
               {recentDoubts.map((doubt) => (
-                <div key={doubt.doubt_id} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+                <div key={doubt.doubt_id} className="
+                                            rounded-xl
+                                            p-3
+                                            transition
+                                            hover:bg-indigo-50
+                                          ">
                   <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-500">
                     <span className="text-indigo-600">⬇️</span> {doubt.mode === 'specific'
                                                                                   ? 'Specific Tutor'

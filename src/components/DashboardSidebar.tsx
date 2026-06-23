@@ -43,7 +43,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
     { icon: '📋', label: 'My Doubts', href: '/student/my-doubts' },
     { icon: '📰', label: 'Current Affairs', href: '/student/current-affairs' },
     { icon: '💰', label: 'My Wallet', href: '/student/wallet' },
-    { icon: '🏆', label: 'Leaderboard', href: '#' },
+    { icon: '🏆', label: 'Leaderboard', href: '/student/leaderboard' },
     { icon: '⚙️', label: 'Settings', href: '#' },
   ];
 

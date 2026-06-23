@@ -376,6 +376,12 @@ export default function AdminDashboard() {
             title="👥 Manage Users"
             onPress={() => router.push("/admin/users")}
           />
+
+          <ActionCard
+            title=" Manage Current Affairs"
+            onPress={() => router.push("/admin/current-affairs")}
+          />
+
         </div>
 
         {/* Tip Card */}

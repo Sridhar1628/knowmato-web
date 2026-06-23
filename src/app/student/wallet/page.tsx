@@ -320,29 +320,45 @@ const StudentWalletScreen = () => {
       <div className={styles.scrollContainer}>
         {/* Balance Card */}
         <div className={styles.balanceCard}>
-          <p className={styles.balanceLabel}>Total Balance</p>
-          <h2 ref={balanceRef} className={styles.balanceAmount}>
+          <p className={styles.balanceLabel}>
+            Total Balance
+          </p>
+
+          <h2
+            ref={balanceRef}
+            className={styles.balanceAmount}
+          >
             ₹{walletCache.wallet.total.toFixed(2)}
           </h2>
+
           <button
             className={styles.addMoneyBtn}
-            onClick={() => router.push("/add-money")}
+            onClick={() =>
+              router.push("/add-money")
+            }
           >
             + Add Money
           </button>
-          <p className={styles.balanceHint}>Instant. Secure. Seamless.</p>
+
+          {walletCache.offer && (
+            <div className={styles.offerPill}>
+              🎁 {walletCache.offer.bonus_percentage}% Bonus
+              · Max ₹{walletCache.offer.max_bonus}
+            </div>
+          )}
+
         </div>
 
         {/* Split Balances */}
         <div className={styles.balanceRow}>
           <div className={styles.balanceBox}>
-            <span className={styles.boxTitle}>Main Balance</span>
+            <span className={styles.boxTitle}>💵 Available Balance</span>
             <span className={styles.boxAmount}>
               ₹{walletCache.wallet.real.toFixed(2)}
             </span>
           </div>
           <div className={styles.balanceBox}>
-            <span className={styles.boxHint}>Rewards & cashback</span>
+            <span className={styles.boxHint}>🎁 Bonus Balance</span>
             <span className={styles.boxAmount}>
               ₹{walletCache.wallet.bonus.toFixed(2)}
             </span>
@@ -366,24 +382,8 @@ const StudentWalletScreen = () => {
             <span>📜</span>
             <span className={styles.quickText}>History</span>
           </button>
-          <button
-            className={styles.quickItem}
-            onClick={() => router.push("/wallet-offers")}
-          >
-            <span>🎁</span>
-            <span className={styles.quickText}>Offers</span>
-          </button>
         </div>
 
-        {/* Offer Banner */}
-        {walletCache.offer && (
-          <div className={styles.promo}>
-            <p className={styles.promoTitle}>{walletCache.offer.name}</p>
-            <p className={styles.promoSub}>
-              Get {walletCache.offer.bonus_percentage}% bonus (max ₹{walletCache.offer.max_bonus})
-            </p>
-          </div>
-        )}
 
         {/* Transactions Header */}
         <div className={styles.txHeader}>

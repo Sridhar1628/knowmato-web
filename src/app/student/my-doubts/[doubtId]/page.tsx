@@ -34,6 +34,10 @@ interface DoubtDetail {
     tutor_name: string;
     price: number;
   } | null;
+  review?: {
+    rating: number;
+    comment: string;
+  } | null;
 }
 
 export default function MyDoubtsDetailsPage() {
@@ -44,6 +48,9 @@ export default function MyDoubtsDetailsPage() {
   const [doubt, setDoubt] = useState<DoubtDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+
+  const hasReview = doubt?.review != null;
+
 
   // ================== FETCH DETAILS ==================
   const fetchDetails = useCallback(async () => {
@@ -219,9 +226,8 @@ export default function MyDoubtsDetailsPage() {
               <span className="font-medium">{doubt.preferred_explanation}</span>
             </div>
             <div>
-              <span className="text-gray-500">💰 Price:</span>{" "}
               <span className="font-semibold text-emerald-600">
-                ₹{doubt.price ?? "--"}
+                {doubt.price ? `₹${doubt.price}` : "Free"}
               </span>
             </div>
             <div className="sm:col-span-2">
@@ -243,21 +249,118 @@ export default function MyDoubtsDetailsPage() {
           </div>
         </div>
 
-        {/* Join Session Button */}
-        {hasSession && (
-          <div className="mb-6">
-            <button
-              onClick={joinSession}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-md transition flex flex-col items-center"
+        {/* STATUS ACTION CARD */}
+
+        {doubt.status === 'open' &&
+          doubt.mode === 'pool' && (
+
+            <div
+              className="
+                mb-6
+                rounded-2xl
+                border
+                border-amber-200
+                bg-amber-50
+                p-6
+                text-center
+              "
             >
-              <span className="text-lg">🎥 Join Session</span>
-              <span className="text-sm opacity-90 mt-1">
-                {doubt.session?.session_type} • Status:{" "}
-                {doubt.session?.status}
-              </span>
-            </button>
-          </div>
-        )}
+              <div className="text-5xl">
+                ⏳
+              </div>
+
+              <h3
+                className="
+                  mt-3
+                  text-xl
+                  font-bold
+                  text-amber-900
+                "
+              >
+                Waiting For Tutor
+              </h3>
+
+              <p
+                className="
+                  mt-2
+                  text-sm
+                  text-amber-700
+                "
+              >
+                Your doubt is visible
+                to online tutors.
+              </p>
+
+              <button
+                onClick={fetchDetails}
+                className="
+                  mt-4
+                  rounded-xl
+                  bg-amber-600
+                  px-5
+                  py-3
+                  font-semibold
+                  text-white
+                "
+              >
+                🔄 Refresh Status
+              </button>
+            </div>
+
+          )}
+
+        {hasSession &&
+          doubt.status === 'assigned' && (
+
+            <div
+              className="
+                mb-6
+                rounded-2xl
+                border
+                border-green-200
+                bg-green-50
+                p-6
+              "
+            >
+              <h3
+                className="
+                  text-xl
+                  font-bold
+                  text-green-800
+                "
+              >
+                🎉 Tutor Accepted
+              </h3>
+
+              <p
+                className="
+                  mt-2
+                  text-green-700
+                "
+              >
+                Your session is ready.
+              </p>
+
+              <button
+                onClick={joinSession}
+                className="
+                  mt-5
+                  w-full
+                  rounded-xl
+                  bg-green-600
+                  py-4
+                  text-lg
+                  font-bold
+                  text-white
+                  shadow-lg
+                  hover:bg-green-700
+                "
+              >
+                🚀 Join Session
+              </button>
+            </div>
+
+          )}
 
         {/* Specific Mode: Tutor Proposal */}
         {hasDirectRequest && (
@@ -282,6 +385,101 @@ export default function MyDoubtsDetailsPage() {
             </div>
           </div>
         )}
+
+        {doubt.status === 'completed' &&
+        !hasReview && (
+
+          <div
+            className="
+              mb-6
+              rounded-2xl
+              border
+              border-indigo-200
+              bg-indigo-50
+              p-6
+            "
+          >
+            <h3
+              className="
+                text-xl
+                font-bold
+                text-indigo-800
+              "
+            >
+              ⭐ Session Completed
+            </h3>
+
+            <p
+              className="
+                mt-2
+                text-indigo-700
+              "
+            >
+              Share your feedback.
+            </p>
+
+            <button
+              onClick={() =>
+                router.push(
+                  `/student/submit-review/${doubt.session?.id}`
+                )
+              }
+              className="
+                mt-4
+                w-full
+                rounded-xl
+                bg-indigo-600
+                py-3
+                font-bold
+                text-white
+              "
+            >
+              ⭐ Submit Review
+            </button>
+          </div>
+
+        )}
+
+        {doubt.status === 'completed' &&
+          hasReview && (
+
+            <div
+              className="
+                mb-6
+                rounded-2xl
+                border
+                border-gray-200
+                bg-white
+                p-6
+              "
+            >
+              <h3
+                className="
+                  text-xl
+                  font-bold
+                  text-gray-800
+                "
+              >
+                ✅ Session Completed
+              </h3>
+
+              <p
+                className="
+                  mt-2
+                  text-gray-600
+                "
+              >
+                Review already submitted.
+              </p>
+
+              <div className="mt-4">
+                {'⭐'.repeat(
+                  doubt.review?.rating || 0
+                )}
+              </div>
+            </div>
+
+          )}
 
         {/* Pool Mode: Waiting */}
         {doubt.mode === "pool" && doubt.status === "open" && !hasSession && (

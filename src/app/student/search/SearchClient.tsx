@@ -37,11 +37,31 @@ export default function SearchPage() {
 
   const [loading, setLoading] = useState(true);
 
+  const [
+    recentSearches,
+    setRecentSearches,
+  ] = useState<string[]>([]);
+
   const [doubts, setDoubts] =
     useState<SearchDoubt[]>([]);
 
   const [tutors, setTutors] =
     useState<SearchTutor[]>([]);
+
+  
+
+  useEffect(() => {
+
+    const stored =
+      JSON.parse(
+        localStorage.getItem(
+          'recent_searches'
+        ) || '[]'
+      );
+
+    setRecentSearches(stored);
+
+  }, []);
 
   const fetchResults =
     useCallback(async () => {
@@ -89,6 +109,21 @@ export default function SearchPage() {
         const tutorsData =
           tutorsRes?.data || [];
 
+        const filteredDoubts =
+          doubtsData.filter(
+            (d: SearchDoubt) =>
+              d.title
+                ?.toLowerCase()
+                .includes(
+                  query.toLowerCase()
+                ) ||
+              d.category
+                ?.toLowerCase()
+                .includes(
+                  query.toLowerCase()
+                )
+          );
+
         const filteredTutors =
           tutorsData.filter(
             (t: SearchTutor) => {
@@ -109,7 +144,7 @@ export default function SearchPage() {
             }
           );
 
-        setDoubts(doubtsData);
+        setDoubts(filteredDoubts);
 
         setTutors(filteredTutors);
 
@@ -260,7 +295,9 @@ export default function SearchPage() {
               <div
                 className="
                   grid
-                  gap-4
+                  gap-6
+                  md:grid-cols-2
+                  xl:grid-cols-3
                 "
               >
 
@@ -275,30 +312,51 @@ export default function SearchPage() {
                         )
                       }
                       className="
-                        rounded-xl
+                        group
+                        rounded-2xl
                         border
                         border-gray-200
                         bg-white
-                        p-4
+                        p-5
                         text-left
                         shadow-sm
-                        transition
-                        hover:border-indigo-300
-                        hover:shadow-md
+                        transition-all
+                        duration-300
+                        hover:-translate-y-1
+                        hover:border-indigo-400
+                        hover:shadow-xl
                       "
                     >
-                      <h3
-                        className="
-                          font-semibold
-                          text-gray-800
-                        "
-                      >
-                        {doubt.title}
-                      </h3>
+                      <div className="flex items-start justify-between">
+                        <h3
+                          className="
+                            line-clamp-2
+                            font-semibold
+                            text-gray-800
+                            group-hover:text-indigo-600
+                          "
+                        >
+                          {doubt.title}
+                        </h3>
+
+                        <span
+                          className="
+                            rounded-full
+                            bg-indigo-50
+                            px-2
+                            py-1
+                            text-xs
+                            font-medium
+                            text-indigo-600
+                          "
+                        >
+                          {doubt.status}
+                        </span>
+                      </div>
 
                       <p
                         className="
-                          mt-2
+                          mt-3
                           text-sm
                           text-gray-500
                         "
@@ -361,7 +419,9 @@ export default function SearchPage() {
               <div
                 className="
                   grid
-                  gap-4
+                  gap-6
+                  md:grid-cols-2
+                  xl:grid-cols-3
                 "
               >
 
@@ -371,12 +431,18 @@ export default function SearchPage() {
                     <div
                       key={tutor.id}
                       className="
-                        rounded-xl
+                        group
+                        rounded-2xl
                         border
                         border-gray-200
                         bg-white
-                        p-4
+                        p-5
                         shadow-sm
+                        transition-all
+                        duration-300
+                        hover:-translate-y-1
+                        hover:border-indigo-400
+                        hover:shadow-xl
                       "
                     >
 
@@ -387,6 +453,52 @@ export default function SearchPage() {
                           gap-2
                         "
                       >
+
+                        <div className="mb-4 flex items-center gap-3">
+                          <div
+                            className="
+                              flex
+                              h-12
+                              w-12
+                              items-center
+                              justify-center
+                              rounded-full
+                              bg-indigo-600
+                              text-lg
+                              font-bold
+                              text-white
+                            "
+                          >
+                            {tutor.name?.charAt(0)?.toUpperCase()}
+                          </div>
+
+                          <div>
+                            <h3
+                              className="
+                                font-semibold
+                                text-gray-800
+                                group-hover:text-indigo-600
+                              "
+                            >
+                              {tutor.name}
+                            </h3>
+
+                            <p
+                              className={`
+                                text-xs
+                                ${
+                                  tutor.is_online
+                                    ? 'text-green-600'
+                                    : 'text-red-500'
+                                }
+                              `}
+                            >
+                              {tutor.is_online
+                                ? '🟢 Online'
+                                : '🔴 Offline'}
+                            </p>
+                          </div>
+                        </div>
 
                         <h3
                           className="
@@ -426,6 +538,37 @@ export default function SearchPage() {
                         {' • '}
                         {tutor.total_reviews} reviews
                       </p>
+
+                      <button
+                        disabled={!tutor.is_online}
+                        onClick={() =>
+                          router.push(
+                            `/student/post-doubt?tutorId=${tutor.id}&tutorName=${encodeURIComponent(
+                              tutor.name
+                            )}`
+                          )
+                        }
+                        className={`
+                          mt-4
+                          w-full
+                          rounded-lg
+                          px-4
+                          py-2
+                          text-sm
+                          font-semibold
+                          text-white
+                          transition
+                          ${
+                            tutor.is_online
+                              ? 'bg-indigo-600 hover:bg-indigo-700'
+                              : 'cursor-not-allowed bg-gray-300'
+                          }
+                        `}
+                      >
+                        {tutor.is_online
+                          ? '🚀 Request This Tutor'
+                          : '🔴 Tutor Offline'}
+                      </button>
 
                     </div>
 

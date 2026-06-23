@@ -232,7 +232,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 0.8rem;
+  padding: 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -366,4 +366,94 @@
     overflow-y: auto;
     padding-right: 4px; /* for scrollbar */
   }
+}
+
+.offerBadge {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    #fff7ed,
+    #fef3c7
+  );
+  border: 1px solid #fbbf24;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #92400e;
+
+  text-align: center;
+}
+
+.offerBadge span {
+  display: block;
+  margin-top: 2px;
+
+  font-size: 11px;
+  color: #b45309;
+}
+
+.offerCard {
+  margin-top: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 16px;
+
+  border-radius: 18px;
+
+  background: linear-gradient(
+    135deg,
+    #fff7ed,
+    #fef3c7
+  );
+
+  border: 1px solid #fbbf24;
+}
+
+.offerIcon {
+  font-size: 28px;
+}
+
+.offerTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.offerDesc {
+  font-size: 13px;
+  color: #b45309;
+  margin-top: 4px;
+}
+
+.offerMax {
+  font-size: 12px;
+  color: #d97706;
+  margin-top: 2px;
+}
+
+.offerPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  margin-top: 14px;
+
+  padding: 8px 14px;
+
+  border-radius: 999px;
+
+  background: rgba(255,255,255,.15);
+
+  backdrop-filter: blur(10px);
+
+  color: white;
+
+  font-size: 13px;
+  font-weight: 600;
 }
