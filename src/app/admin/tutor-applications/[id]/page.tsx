@@ -9,6 +9,10 @@ import {
   rejectTutorApplication,
 } from "@/services/v1Service";
 
+import {
+  API_HOST
+} from '@/config/env';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -192,7 +196,7 @@ export default function TutorApplicationDetailPage() {
 
   // ------ helper for resume link ------
   const resumeUrl = application.resume
-    ? `http://127.0.0.1:8000${application.resume}`
+    ? `${API_HOST}${application.resume}`
     : null;
 
   return (
