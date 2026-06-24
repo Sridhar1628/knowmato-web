@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getOnlineTutors } from '@/services/v1Service';
 
+import {
+  subscribeDashboard,
+} from '@/store/dashboardRealtime';
+
+import {
+  dashboardCache,
+} from '@/store/dashboardCache';
+
 interface Tutor {
   id: number;
   display_name: string;
@@ -37,9 +45,13 @@ export default function TutorsPage() {
         const res =
           await getOnlineTutors();
 
-        setTutors(
-          res.data || []
-        );
+        const tutorData =
+          res.data || [];
+
+        dashboardCache.onlineTutors =
+          tutorData;
+
+        setTutors(tutorData);
 
       } catch (error) {
 
@@ -54,6 +66,25 @@ export default function TutorsPage() {
     };
 
     fetchTutors();
+
+  }, []);
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeDashboard(() => {
+
+        console.log(
+          '🔄 Tutors Realtime Update'
+        );
+
+        setTutors([
+          ...dashboardCache.onlineTutors,
+        ]);
+
+      });
+
+    return unsubscribe;
 
   }, []);
 
