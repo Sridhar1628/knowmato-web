@@ -382,6 +382,11 @@ export default function AdminDashboard() {
             onPress={() => router.push("/admin/current-affairs")}
           />
 
+          <ActionCard
+            title="👥 Manage Tutor Applications"
+            onPress={() => router.push("/admin/tutor-applications")}
+          />
+
         </div>
 
         {/* Tip Card */}

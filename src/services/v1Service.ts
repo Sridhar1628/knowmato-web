@@ -565,33 +565,61 @@ export const toggleTutorBadge =
 // 👨‍🏫 TUTOR PROFILE
 // ======================================================
 
+// ======================================================
+// 👨‍🏫 TUTOR PROFILE
+// ======================================================
+
 export interface TutorProfile {
 
   id: number;
 
+  // User Info
   display_name: string;
-
   email: string;
-
   role: string;
 
+  // Existing
   bio: string;
-
   skills: string;
-
   experience: number;
 
   is_verified: boolean;
 
   average_rating: number;
-
   total_reviews: number;
 
   is_top_tutor: boolean;
 
   is_online: boolean;
-
   last_seen: string | null;
+
+  // Contact Information
+  phone_number: string;
+  city_state: string;
+  linkedin_profile: string;
+
+  // Education
+  highest_qualification: string;
+  degree: string;
+  college_name: string;
+  year_of_completion: number | null;
+
+  // Professional
+  expertise_level: string;
+  current_status: string;
+  organization: string;
+  professional_summary: string;
+
+  // Multi Select
+  mentor_subjects: string[];
+  mentor_languages: string[];
+
+  // Resume
+  resume: string | null;
+
+  // Application
+  application_submitted: boolean;
+  application_submitted_at: string | null;
 }
 
 // ======================================================
@@ -599,7 +627,10 @@ export interface TutorProfile {
 // ======================================================
 
 export const getTutorProfile =
-  async (): Promise<TutorProfile> => {
+  async (): Promise<{
+    success: boolean;
+    data: TutorProfile;
+  }> => {
 
     return await apiGet(
       '/accounts/tutor/profile/'
@@ -618,20 +649,55 @@ export interface UpdateTutorProfileRequest {
   skills?: string;
 
   experience?: number;
+
+  phone_number?: string;
+
+  city_state?: string;
+
+  linkedin_profile?: string;
+
+  highest_qualification?: string;
+
+  degree?: string;
+
+  college_name?: string;
+
+  year_of_completion?: number;
+
+  expertise_level?: string;
+
+  current_status?: string;
+
+  organization?: string;
+
+  professional_summary?: string;
+
+  mentor_subjects?: string[];
+
+  mentor_languages?: string[];
 }
+
+// ======================================================
+// ✏️ UPDATE PROFILE
+// ======================================================
 
 export const updateTutorProfile =
   async (
-    data: UpdateTutorProfileRequest
+    data: FormData
   ) => {
 
     return await apiPut(
       '/accounts/tutor/profile/',
-      data
+      data,
+      {
+        headers: {
+          'Content-Type':
+            'multipart/form-data',
+        },
+      }
     );
 
 };
-
 // ======================================================
 // 👨‍💼 ADMIN - GET ALL TUTORS
 // ======================================================
@@ -1025,3 +1091,157 @@ export const resetPassword =
     );
 
   };
+
+
+// ======================================================
+// 👨‍🏫 TUTOR APPLICATION
+// ======================================================
+
+export interface TutorApplication {
+
+  id: number;
+
+  full_name: string;
+
+  email: string;
+
+  phone: string;
+
+  city_state: string;
+
+  linkedin_profile: string;
+
+  highest_qualification: string;
+
+  degree: string;
+
+  college_name: string;
+
+  year_of_completion: number | null;
+
+  skills: string;
+
+  experience: number;
+
+  expertise_level: string;
+
+  current_status: string;
+
+  organization: string;
+
+  professional_summary: string;
+
+  mentor_subjects: string[];
+
+  mentor_languages: string[];
+
+  resume: string | null;
+
+  status:
+    | 'pending'
+    | 'approved'
+    | 'rejected';
+
+  admin_notes: string | null;
+
+  submitted_at: string;
+
+  reviewed_at: string | null;
+}
+
+// ======================================================
+// 📝 SUBMIT TUTOR APPLICATION
+// ======================================================
+
+export const submitTutorApplication =
+  async (
+    formData: FormData
+  ) => {
+
+    return await apiPost(
+      '/accounts/tutor/apply/',
+      formData,
+      {
+        headers: {
+          'Content-Type':
+            'multipart/form-data',
+        },
+      }
+    );
+
+};
+
+// ======================================================
+// 👀 GET APPLICATION DETAIL
+// ======================================================
+
+export const getTutorApplication =
+  async (
+    applicationId: number
+  ) => {
+
+    return await apiGet(
+      `/accounts/tutor/apply/${applicationId}/`
+    );
+
+};
+
+// ======================================================
+// 👨‍💼 ADMIN - ALL APPLICATIONS
+// ======================================================
+
+export const getTutorApplications =
+  async () => {
+
+    return await apiGet(
+      '/accounts/v1/admin/tutor-applications/'
+    );
+
+};
+
+// ======================================================
+// 👨‍💼 ADMIN - APPLICATION DETAIL
+// ======================================================
+
+export const getTutorApplicationDetail =
+  async (
+    applicationId: number
+  ) => {
+
+    return await apiGet(
+      `/accounts/v1/admin/tutor-applications/${applicationId}/`
+    );
+
+};
+
+// ======================================================
+// ✅ APPROVE APPLICATION
+// ======================================================
+
+export const approveTutorApplication =
+  async (
+    applicationId: number
+  ) => {
+
+    return await apiPost(
+      `/accounts/v1/admin/tutor-applications/${applicationId}/approve/`,
+      {}
+    );
+
+};
+
+// ======================================================
+// ❌ REJECT APPLICATION
+// ======================================================
+
+export const rejectTutorApplication =
+  async (
+    applicationId: number
+  ) => {
+
+    return await apiPost(
+      `/accounts/v1/admin/tutor-applications/${applicationId}/reject/`,
+      {}
+    );
+
+};

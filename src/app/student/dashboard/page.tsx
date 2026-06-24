@@ -845,7 +845,15 @@ export default function DashboardPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-bold text-gray-800">Live Tutors Online</h3>
-            <button className="text-xs text-indigo-600 hover:underline">View All</button>
+            <button
+              onClick={() =>
+                router.push(
+                  '/student/tutors'
+                )
+              }
+            >
+              View All →
+            </button>
           </div>
 
           <div
