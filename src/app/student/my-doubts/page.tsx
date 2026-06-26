@@ -504,25 +504,50 @@ const MyDoubtsScreen = () => {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       {/* Page heading */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">📋 My Doubts</h1>
-          <p className="text-sm text-gray-500">Total: {totalCount} doubts</p>
+      <div className="relative mb-6 flex items-center justify-center">
+
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">
+            📋 My Doubts
+          </h1>
         </div>
+
         <button
           onClick={onRefresh}
           disabled={refreshing}
-          className="rounded-lg bg-white p-2 text-gray-600 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          className="
+            absolute
+            right-0
+            rounded-xl
+            bg-white
+            p-2
+            text-gray-600
+            shadow-sm
+            transition
+            hover:bg-gray-50
+            disabled:opacity-50
+          "
           title="Refresh"
         >
           {refreshing ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
           ) : (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
             </svg>
           )}
         </button>
+
       </div>
 
       {/* Ask New Doubt + Search */}
@@ -533,7 +558,27 @@ const MyDoubtsScreen = () => {
             placeholder="Search doubts..."
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="
+              w-full
+              rounded-xl
+              border
+              border-gray-200
+              bg-white
+              py-3
+              pl-4
+              pr-12
+              text-sm
+              font-medium
+              text-gray-900
+              placeholder:text-gray-400
+              caret-indigo-600
+              outline-none
+              transition-all
+              duration-300
+              focus:border-indigo-500
+              focus:ring-4
+              focus:ring-indigo-100
+            "
           />
           <span className="absolute right-3 top-2.5 text-gray-400">🔍</span>
         </div>
@@ -896,7 +941,24 @@ const MyDoubtsScreen = () => {
             <select
               value={tempFilters.status}
               onChange={e => setTempFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="mb-4 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="
+                mb-4
+                w-full
+                rounded-xl
+                border
+                border-gray-200
+                bg-white
+                px-4
+                py-3
+                text-sm
+                text-gray-900
+                font-medium
+                outline-none
+                transition-all
+                focus:border-indigo-500
+                focus:ring-4
+                focus:ring-indigo-100
+              "
             >
               <option value="">All</option>
               <option value="open">Open</option>
@@ -911,7 +973,23 @@ const MyDoubtsScreen = () => {
                   type="date"
                   value={tempFilters.from_date}
                   onChange={e => setTempFilters(prev => ({ ...prev, from_date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-white
+                    px-4
+                    py-3
+                    text-sm
+                    text-gray-900
+                    font-medium
+                    outline-none
+                    transition-all
+                    focus:border-indigo-500
+                    focus:ring-4
+                    focus:ring-indigo-100
+                  "
                 />
               </div>
               <div>
@@ -920,7 +998,23 @@ const MyDoubtsScreen = () => {
                   type="date"
                   value={tempFilters.to_date}
                   onChange={e => setTempFilters(prev => ({ ...prev, to_date: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-gray-200
+                    bg-white
+                    px-4
+                    py-3
+                    text-sm
+                    text-gray-900
+                    font-medium
+                    outline-none
+                    transition-all
+                    focus:border-indigo-500
+                    focus:ring-4
+                    focus:ring-indigo-100
+                  "
                 />
               </div>
             </div>

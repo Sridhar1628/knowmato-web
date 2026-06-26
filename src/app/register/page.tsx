@@ -369,7 +369,7 @@ export default function RegisterPage() {
                 "
               >
 
-                Join Jeblio
+                Join Knowmato
 
               </h1>
 

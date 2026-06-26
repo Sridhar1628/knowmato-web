@@ -131,7 +131,7 @@ export default function SplashScreen() {
           className="mb-4"
         >
           <h1 className="text-6xl font-extrabold tracking-wide text-white drop-shadow-2xl sm:text-7xl md:text-8xl">
-            Jeblio <span className="inline-block animate-bounce-slow">🚀</span>
+            Knowmato <span className="inline-block animate-bounce-slow">🚀</span>
           </h1>
         </motion.div>
 

@@ -345,25 +345,44 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         className="
           sticky
           top-0
-          z-30
+          z-50
           flex
-          h-16
+          h-20
           items-center
           justify-between
           border-b
-          border-gray-200
-          bg-white
-          px-4
-          shadow-sm
-
+          border-white/20
+          bg-white/80
+          backdrop-blur-2xl
+          px-6
+          shadow-[0_8px_30px_rgba(15,23,42,0.08)]
           lg:ml-72
         "
       >
         {/* Left: hamburger (mobile) + logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-5">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-gray-600 hover:text-gray-900 md:hidden"
+            className="
+              md:hidden
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              text-slate-600
+              shadow-sm
+              transition-all
+              duration-300
+              hover:scale-105
+              hover:border-cyan-300
+              hover:text-cyan-600
+              hover:shadow-lg
+              "
             aria-label="Open sidebar"
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -373,131 +392,162 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         </div>
 
         {/* Center: Search */}
-        <div className="hidden flex-1 max-w-md mx-4 sm:block">
-          <div className="relative">
+        <div className="hidden flex-1 max-w-2xl mx-4 sm:block">
+          <div className="relative group">
+
+            {/* Search Icon */}
+
+            <svg
+              className="
+                absolute
+                left-4
+                top-1/2
+                h-5
+                w-5
+                -translate-y-1/2
+                text-slate-400
+                transition
+                group-focus-within:text-cyan-500
+              "
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 21l-4.3-4.3m1.3-5.2a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+
+            <div
+              className="
+                absolute
+                -inset-0.5
+                rounded-2xl
+                bg-gradient-to-r
+                from-cyan-400
+                via-blue-500
+                to-violet-500
+                opacity-0
+                blur
+                transition-all
+                duration-300
+                group-focus-within:opacity-25
+              "
+            />
+
             <input
-
               type="text"
-
               value={search}
-
-              onFocus={() =>
-                setShowSuggestions(true)
-              }
+              onFocus={() => setShowSuggestions(true)}
               onBlur={() => {
                 setTimeout(() => {
                   setShowSuggestions(false);
                 }, 200);
               }}
-
-              onChange={(e) =>
-                setSearch(
-                  e.target.value
-                )
-              }
-
-              placeholder="
-                Search for topics,
-                tutors or doubts...
-              "
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search tutors, doubts or topics..."
 
               className="
+                relative
                 w-full
-                rounded-lg
+                rounded-2xl
                 border
-                border-gray-300
-                bg-white
-                py-2
-                pl-4
-                pr-10
+                border-slate-200/80
+                bg-white/90
+                backdrop-blur-xl
+                py-3.5
+                pl-12
+                pr-20
                 text-sm
                 font-medium
-                text-black
-                placeholder:text-gray-400
-                focus:outline-none
-                focus:ring-2
-                focus:ring-indigo-500
+                text-slate-800
+                placeholder:text-slate-400
+                shadow-sm
+                transition-all
+                duration-300
+                outline-none
+                hover:border-cyan-300
+                hover:shadow-md
+                focus:border-cyan-500
+                focus:ring-4
+                focus:ring-cyan-100
+                focus:shadow-[0_0_40px_rgba(34,211,238,0.18)]
               "
             />
-            {showSuggestions && recentSearches.length > 0 && (
-
-              <div
-                className="
-                  absolute
-                  top-full
-                  mt-2
-                  w-full
-                  rounded-xl
-                  border
-                  border-gray-200
-                  bg-white
-                  shadow-lg
-                  z-50
-                "
-              >
-
-                {recentSearches.map(
-                  (item) => (
-
-                    <button
-                      key={item}
-                      onClick={() => {
-
-                        setSearch(item);
-
-                        router.push(
-                          `/student/search?q=${encodeURIComponent(
-                            item
-                          )}`
-                        );
-
-                      }}
-                      className="
-                        flex
-                        items-center
-                        gap-3
-                        w-full
-                        px-4
-                        py-3
-                        text-left
-                        text-sm
-                        font-medium
-                        text-gray-800
-                        transition
-                        hover:bg-indigo-50
-                        hover:text-indigo-700
-                      "
-                    >
-                      🕒 {item}
-                    </button>
-
-                  )
-                )}
-
-              </div>
-
-            )}
           </div>
         </div>
 
         {/* Right: notifications, wallet, user */}
-        <div className="flex items-center gap-2 sm:gap-4">          <button
+        <div className="flex items-center gap-4">          <button
             onClick={() => router.push('/student/wallet')}
-            className="hidden sm:flex items-center gap-1 rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600 transition hover:bg-indigo-100"
+            className="
+              hidden
+              sm:flex
+              items-center
+              gap-2
+              rounded-2xl
+              border
+              border-emerald-200
+              bg-gradient-to-r
+              from-emerald-50
+              to-cyan-50
+              px-4
+              py-2.5
+              text-sm
+              font-semibold
+              text-emerald-700
+              shadow-sm
+              transition-all
+              duration-300
+              hover:-translate-y-0.5
+              hover:shadow-lg
+              "
           >
             💰 ₹{wallet
-              ? wallet.real + wallet.bonus
+              ? wallet.real
               : '...'}
           </button>
 
           <button
             onClick={() => router.push('/profile')}
-            className="flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1.5"
+            className="
+              flex
+              items-center
+              gap-3
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              px-3
+              py-2
+              shadow-sm
+              transition-all
+              duration-300
+              hover:border-cyan-300
+              hover:shadow-lg
+              "
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs text-white">
+            <span className="
+                    flex
+                    h-10
+                    w-10
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-gradient-to-br
+                    from-cyan-500
+                    to-blue-600
+                    text-sm
+                    font-bold
+                    text-white
+                    shadow-md
+                    ">
               {cachedName.charAt(0).toUpperCase()}
             </span>
-            <span className="hidden sm:inline text-xs font-semibold text-indigo-900">{cachedName ||'Student'}</span>
+            <span className="hidden sm:inline text-sm font-semibold text-indigo-900">{cachedName ||'Student'}</span>
           </button>
         </div>
       </header>

@@ -10,6 +10,16 @@ import { getTokens } from "@/services/storageService";
 import toast from "react-hot-toast";
 import { apiGet } from "@/services/apiService";
 
+import {
+  transactionCache,
+} from "@/store/transactionCache";
+
+import {
+  subscribeTransactions,
+  setTransactionCache,
+  clearTransactionCache,
+} from "@/store/transactionRealtime";
+
 // ---------- Types ----------
 interface Transaction {
   id: number;
@@ -39,19 +49,27 @@ const filters = ["All", "Added", "Spent", "Bonus"];
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [sections, setSections] = useState<Section[]>([]);
+  const [, forceUpdate] = useState({});
+  
+  
   const [selectedFilter, setSelectedFilter] = useState("All");
-  const [nextPage, setNextPage] = useState<string | null>(null);
+  
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [summary, setSummary] = useState<Summary>({
-    added: 0,
-    spent: 0,
-    bonus: 0,
-    net: 0,
-  });
-  const socketRef = useRef<boolean>(false);
+  
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeTransactions(() => {
+
+        forceUpdate({});
+
+      });
+
+    return unsubscribe;
+
+  }, []);
 
   // ---------- Helpers ----------
   const groupByMonth = (transactions: Transaction[]): Section[] => {
@@ -71,29 +89,6 @@ export default function TransactionHistoryPage() {
     }));
   };
 
-  const calculateSummary = (transactions: Transaction[]) => {
-    let added = 0,
-      spent = 0,
-      bonus = 0;
-    transactions.forEach((tx) => {
-      const real = Number(tx.real_amount || 0);
-      const bonusAmount = Number(tx.bonus_amount || 0);
-      const amount = Number(tx.amount || 0);
-      if (tx.type === "credit") {
-        added += real;
-        bonus += bonusAmount;
-      }
-      if (tx.type === "debit") {
-        spent += Math.abs(amount);
-      }
-    });
-    setSummary({
-      added: Number(added.toFixed(2)),
-      spent: Number(spent.toFixed(2)),
-      bonus: Number(bonus.toFixed(2)),
-      net: Number((added + bonus - spent).toFixed(2)),
-    });
-  };
 
   const filterTransactions = (transactions: Transaction[], filter: string) => {
     if (filter === "Added") return transactions.filter((tx) => tx.type === "credit");
@@ -110,12 +105,67 @@ export default function TransactionHistoryPage() {
     try {
       setRefreshing(true);
       const res = await getTransactionHistory();
-      const data = res.results.transactions;
-      setAllTransactions(data);
-      setNextPage(res.next || null);
-      const filtered = filterTransactions(data, selectedFilter);
-      setSections(groupByMonth(filtered));
-      calculateSummary(data);
+      const data: Transaction[] = res.results.transactions;
+      const filtered =
+        filterTransactions(
+          data,
+          selectedFilter
+        );
+
+      const grouped =
+        groupByMonth(filtered);
+
+      let added = 0;
+      let spent = 0;
+      let bonus = 0;
+
+      data.forEach((tx) => {
+
+        const real =
+          Number(tx.real_amount || 0);
+
+        const bonusAmount =
+          Number(tx.bonus_amount || 0);
+
+        const amount =
+          Number(tx.amount || 0);
+
+        if (tx.type === 'credit') {
+
+          added += real;
+          bonus += bonusAmount;
+
+        }
+
+        if (tx.type === 'debit') {
+
+          spent += Math.abs(amount);
+
+        }
+
+      });
+
+      setTransactionCache(
+
+        data,
+
+        grouped,
+
+        {
+
+          added,
+
+          spent,
+
+          bonus,
+
+          net: added + bonus - spent,
+
+        },
+
+        res.next || null
+
+      );
     } catch (error) {
       console.error("Error fetching transactions:", error);
       toast.error("Failed to load transactions.");
@@ -125,22 +175,87 @@ export default function TransactionHistoryPage() {
   }, [selectedFilter]);
 
   useEffect(() => {
+
+    if (
+      transactionCache.initialized
+    ) {
+
+      forceUpdate({});
+
+      return;
+    }
+
+    clearTransactionCache();
+
     fetchData();
-  }, [selectedFilter, fetchData]);
+
+  }, []);
 
   // ---------- Load more ----------
   const loadMore = async () => {
-    if (!nextPage || loadingMore) return;
+    if (!transactionCache.nextPage || loadingMore) return;
     try {
       setLoadingMore(true);
-      const res = await apiGet(nextPage);
+      const res = await apiGet(transactionCache.nextPage);
       const more: Transaction[] = res.results.transactions;
-      const updated = [...allTransactions, ...more];
-      setAllTransactions(updated);
-      const filtered = filterTransactions(updated, selectedFilter);
-      setSections(groupByMonth(filtered));
-      calculateSummary(updated);
-      setNextPage(res.next || null);
+      const updated = [
+      ...transactionCache.transactions,
+      ...more,
+      ];
+
+      const filtered =
+        filterTransactions(
+          updated,
+          selectedFilter
+        );
+
+      const grouped =
+        groupByMonth(filtered);
+
+      let added = 0;
+      let spent = 0;
+      let bonus = 0;
+
+      updated.forEach((tx) => {
+
+        const real = Number(tx.real_amount || 0);
+
+        const bonusAmount = Number(tx.bonus_amount || 0);
+
+        const amount = Number(tx.amount || 0);
+
+        if (tx.type === "credit") {
+          added += real;
+          bonus += bonusAmount;
+        }
+
+        if (tx.type === "debit") {
+          spent += Math.abs(amount);
+        }
+
+      });
+
+      setTransactionCache(
+
+        updated,
+
+        grouped,
+
+        {
+
+          added,
+
+          spent,
+
+          bonus,
+
+          net: added + bonus - spent,
+
+        },
+
+        res.next || null
+
+      );
     } catch (err) {
       console.error("Load more error:", err);
       toast.error("Failed to load more transactions.");
@@ -157,6 +272,8 @@ export default function TransactionHistoryPage() {
       if (!tokens?.access) return;
       connectSocket(tokens.access, (event) => {
         if (event === "TRANSACTION_CREATED" && mounted) {
+          clearTransactionCache();
+
           fetchData();
         }
       });
@@ -197,15 +314,15 @@ export default function TransactionHistoryPage() {
       <div className="flex gap-2 px-4 -mt-4 mb-6">
         <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm text-center">
           <p className="text-xs text-gray-500">Added</p>
-          <p className="text-xl font-bold text-green-600 mt-1">₹{summary.added}</p>
+          <p className="text-xl font-bold text-green-600 mt-1">₹{transactionCache.summary.added}</p>
         </div>
         <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm text-center">
           <p className="text-xs text-gray-500">Spent</p>
-          <p className="text-xl font-bold text-red-600 mt-1">₹{summary.spent}</p>
+          <p className="text-xl font-bold text-red-600 mt-1">₹{transactionCache.summary.spent}</p>
         </div>
         <div className="flex-1 bg-white rounded-2xl p-4 shadow-sm text-center">
           <p className="text-xs text-gray-500">Bonus</p>
-          <p className="text-xl font-bold text-purple-600 mt-1">₹{summary.bonus}</p>
+          <p className="text-xl font-bold text-purple-600 mt-1">₹{transactionCache.summary.bonus}</p>
         </div>
       </div>
 
@@ -243,7 +360,7 @@ export default function TransactionHistoryPage() {
           </div>
         )}
 
-        {sections.length === 0 && !refreshing && (
+        {transactionCache.sections.length === 0 && !refreshing && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <span className="text-5xl mb-4">📭</span>
             <h3 className="text-lg font-bold">No Transactions Found</h3>
@@ -251,7 +368,7 @@ export default function TransactionHistoryPage() {
           </div>
         )}
 
-        {sections.map((section) => (
+        {transactionCache.sections.map((section) => (
           <div key={section.title} className="mb-6">
             <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">
               {section.title}
@@ -332,7 +449,7 @@ export default function TransactionHistoryPage() {
         ))}
 
         {/* Summary card */}
-        {sections.length > 0 && (
+        {transactionCache.sections.length > 0 && (
           <div className="bg-white rounded-2xl p-5 shadow-sm mt-6">
             <h3 className="text-lg font-bold text-gray-800 mb-4">
               💰 Wallet Summary
@@ -341,32 +458,32 @@ export default function TransactionHistoryPage() {
               <div className="flex justify-between text-sm">
                 <span>Amount Added</span>
                 <span className="text-green-600 font-semibold">
-                  ₹{summary.added}
+                  ₹{transactionCache.summary.added}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Amount Spent</span>
                 <span className="text-red-600 font-semibold">
-                  ₹{summary.spent}
+                  ₹{transactionCache.summary.spent}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Bonus Earned</span>
                 <span className="text-indigo-600 font-semibold">
-                  ₹{summary.bonus}
+                  ₹{transactionCache.summary.bonus}
                 </span>
               </div>
               <hr className="my-2" />
               <div className="flex justify-between font-bold">
                 <span>Net Balance</span>
-                <span>₹{summary.net}</span>
+                <span>₹{transactionCache.summary.net}</span>
               </div>
             </div>
           </div>
         )}
 
         {/* Load more */}
-        {nextPage && (
+        {transactionCache.nextPage && (
           <button
             onClick={loadMore}
             disabled={loadingMore}

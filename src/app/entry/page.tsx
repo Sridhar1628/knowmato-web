@@ -195,7 +195,7 @@ export default function EntryPage() {
           animate={titleControls}
           className="mb-4 text-4xl font-extrabold tracking-tight text-white drop-shadow-lg sm:text-5xl md:text-6xl"
         >
-          Welcome to Jeblio 🎓
+          Welcome to Knowmato 🎓
         </motion.h1>
 
         {/* Animated Subtitle */}

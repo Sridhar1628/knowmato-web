@@ -306,16 +306,6 @@ const StudentWalletScreen = () => {
   return (
     <div className={styles.container}>
       {/* Header */}
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={() => router.back()}>
-          ←
-        </button>
-        <div className={styles.headerCenter}>
-          <h1 className={styles.title}>💰 Wallet</h1>
-          <p className={styles.headerSub}>Manage your balance & rewards</p>
-        </div>
-        <button className={styles.helpBtn}>❔</button>
-      </div>
 
       <div className={styles.scrollContainer}>
         {/* Balance Card */}

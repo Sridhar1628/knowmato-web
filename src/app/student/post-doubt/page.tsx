@@ -481,7 +481,7 @@ function PostDoubtContent() {
                   </div>
 
                   <div className="text-xl font-bold">
-                    ⚡ Under 60 Seconds
+                     Under 60 Seconds
                   </div>
                 </div>
               </div>

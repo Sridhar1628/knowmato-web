@@ -36,6 +36,15 @@ import {
 import TutorSidebar
   from '@/components/TutorSidebar';
 
+import {
+  tutorDashboardCache,
+} from "@/store/tutorDashboardCache";
+
+import {
+  subscribeTutorDashboard,
+  updateTutorWallet,
+} from "@/store/tutorDashboardRealtime";
+
 interface WalletState {
   real: number;
   bonus: number;
@@ -64,11 +73,6 @@ export default function TutorLayout({
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
 
-  const [wallet, setWallet] =
-    useState<WalletState>({
-      real: 0,
-      bonus: 0,
-    });
 
   const [notificationCount,
     setNotificationCount] =
@@ -104,17 +108,18 @@ export default function TutorLayout({
         // ✅ WALLET
         if (data.wallet) {
 
-          setWallet({
+          updateTutorWallet(
 
-            real: parseFloat(
-              data.wallet.real_balance || '0'
-            ),
+            parseFloat(
+              data.wallet.real_balance || "0"
+            ) +
 
-            bonus: parseFloat(
-              data.wallet.bonus_balance || '0'
-            ),
+            parseFloat(
+              data.wallet.bonus_balance || "0"
+            )
 
-          });
+          );
+
         }
 
       } catch (err) {
@@ -208,22 +213,17 @@ export default function TutorLayout({
         // WALLET UPDATE
         // =================================
 
-        case 'WALLET_UPDATE':
+        case "WALLET_UPDATE":
 
-          setWallet({
+          updateTutorWallet(
 
-            real: parseFloat(
-              data.real_balance || '0'
-            ),
+              Number(data.real_balance) +
 
-            bonus: parseFloat(
-              data.bonus_balance || '0'
-            ),
+              Number(data.bonus_balance)
 
-          });
+          );
 
           break;
-
         // =================================
         // SESSION EVENTS
         // =================================
@@ -281,6 +281,21 @@ export default function TutorLayout({
   // =========================================
   // INITIAL SOCKET CONNECTION
   // =========================================
+
+  const [, forceUpdate] = useState({});
+
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeTutorDashboard(() => {
+
+        forceUpdate({});
+
+      });
+
+    return unsubscribe;
+
+  }, []);
 
   useEffect(() => {
 
@@ -497,23 +512,6 @@ export default function TutorLayout({
           {/* RIGHT */}
           <div className="flex items-center gap-3">
 
-            {/* NOTIFICATIONS */}
-            <button className="relative rounded-full p-2 transition hover:bg-gray-100">
-
-              🔔
-
-              {notificationCount > 0 && (
-
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-
-                  {notificationCount}
-
-                </span>
-
-              )}
-
-            </button>
-
             {/* WALLET */}
             <button
               onClick={() =>
@@ -523,9 +521,7 @@ export default function TutorLayout({
               }
               className="rounded-xl bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-600 transition hover:bg-indigo-100"
             >
-              💰 ₹
-              {wallet.real +
-                wallet.bonus}
+              💰 ₹{tutorDashboardCache.stats.walletBalance}
             </button>
 
           </div>

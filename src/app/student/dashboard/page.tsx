@@ -846,13 +846,38 @@ export default function DashboardPage() {
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-bold text-gray-800">Live Tutors Online</h3>
             <button
-              onClick={() =>
-                router.push(
-                  '/student/tutors'
-                )
-              }
+              onClick={() => router.push('/student/tutors')}
+              className="
+                flex
+                items-center
+                gap-1
+                rounded-lg
+                px-3
+                py-1.5
+                text-sm
+                font-semibold
+                text-cyan-600
+                transition-all
+                duration-300
+                hover:bg-cyan-50
+                hover:text-cyan-700
+                hover:translate-x-1
+              "
             >
-              View All →
+              View All
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
             </button>
           </div>
 
@@ -1107,9 +1132,17 @@ export default function DashboardPage() {
                 flex
                 items-center
                 gap-1
+                rounded-lg
+                px-3
+                py-1.5
                 text-sm
                 font-semibold
-                text-indigo-600
+                text-cyan-600
+                transition-all
+                duration-300
+                hover:bg-cyan-50
+                hover:text-cyan-700
+                hover:translate-x-1
               "
             >
               View All
@@ -1497,14 +1530,10 @@ export default function DashboardPage() {
 
       )}
       <PostDoubtModal
-
         open={showPostModal}
-
         description={quickDoubt}
-
-        onClose={() =>
-          setShowPostModal(false)
-        }
+        onDescriptionChange={setQuickDoubt}
+        onClose={() => setShowPostModal(false)}
       />
 
 

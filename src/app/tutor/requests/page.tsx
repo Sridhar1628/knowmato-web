@@ -7,6 +7,26 @@ import { subscribeSocket } from "@/services/socketEventBus";
 import { SocketEvents } from "@/services/versionSocketEvents";
 import toast from "react-hot-toast";
 
+import {
+  tutorRequestsCache,
+} from "@/store/tutorRequestsCache";
+
+import {
+
+    subscribeTutorRequests,
+
+    setTutorRequests,
+
+    clearTutorRequests,
+
+    addTutorRequest,
+
+    removeTutorRequest,
+
+    updateTutorRequest,
+
+} from "@/store/tutorRequestsRealtime";
+
 // ---------- Types ----------
 interface TutorRequest {
   request_id: number;
@@ -39,10 +59,9 @@ const statusColors: Record<string, string> = {
 
 export default function TutorRequestsPage() {
   const router = useRouter();
+  const [, forceUpdate] = useState({});
 
   // Data
-  const [allRequests, setAllRequests] = useState<TutorRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<TutorRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -60,6 +79,19 @@ export default function TutorRequestsPage() {
   // Socket
   const socketUnsubRef = useRef<(() => void) | null>(null);
 
+  useEffect(() => {
+
+    const unsubscribe =
+      subscribeTutorRequests(() => {
+
+        forceUpdate({});
+
+      });
+
+    return unsubscribe;
+
+  }, []);
+
   // ---------- Helpers ----------
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
@@ -74,93 +106,139 @@ export default function TutorRequestsPage() {
     setStatusOptions(statuses);
   };
 
-  const applyFilters = useCallback(
-    (
-      requests: TutorRequest[],
-      studentName: string,
-      start: string,
-      end: string,
-      status: string,
-      sort: string
-    ) => {
-      let filtered = [...requests];
-
-      if (studentName.trim()) {
-        filtered = filtered.filter((r) =>
-          r.student?.name?.toLowerCase().includes(studentName.toLowerCase())
-        );
-      }
-
-      if (start) {
-        const startDateObj = new Date(start);
-        filtered = filtered.filter(
-          (r) => new Date(r.created_at) >= startDateObj
-        );
-      }
-      if (end) {
-        const endDateObj = new Date(end);
-        endDateObj.setHours(23, 59, 59, 999);
-        filtered = filtered.filter(
-          (r) => new Date(r.created_at) <= endDateObj
-        );
-      }
-
-      if (status !== "All") {
-        filtered = filtered.filter((r) => r.status === status);
-      }
-
-      // Sorting
-      if (sort === "newest") {
-        filtered.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      } else if (sort === "oldest") {
-        filtered.sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        );
-      } else if (sort === "student_asc") {
-        filtered.sort((a, b) =>
-          (a.student?.name || "").localeCompare(b.student?.name || "")
-        );
-      }
-
-      setFilteredRequests(filtered);
-    },
-    []
-  );
 
   // ---------- Fetch Requests ----------
   const fetchRequests = useCallback(async () => {
+
     try {
-      setLoading(true);
-      const res = await getTutorRequests();
-      const data = res?.data?.data || res?.data || [];
-      setAllRequests(data);
-      extractStatuses(data);
-      applyFilters(data, searchStudent, startDate, endDate, selectedStatus, sortBy);
+
+        setLoading(true);
+
+        const res = await getTutorRequests();
+
+        const data =
+            res?.data?.data ||
+            res?.data ||
+            [];
+
+        setTutorRequests(data);
+
+        extractStatuses(data);
+
     } catch (error) {
-      console.error("Error fetching tutor requests:", error);
-      toast.error("Failed to load requests.");
+
+        console.error(error);
+
+        toast.error(
+            "Failed to load requests."
+        );
+
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+
+        setLoading(false);
+
+        setRefreshing(false);
+
     }
-  }, [searchStudent, startDate, endDate, selectedStatus, sortBy, applyFilters]);
+
+}, []);
+
+  const filteredRequests =
+    tutorRequestsCache.requests.filter((request) => {
+
+      if (
+        searchStudent &&
+        !request.student.name
+          .toLowerCase()
+          .includes(
+            searchStudent.toLowerCase()
+          )
+      ) {
+        return false;
+      }
+
+      if (
+        selectedStatus !== "All" &&
+        request.status !== selectedStatus
+      ) {
+        return false;
+      }
+
+      if (
+        startDate &&
+        new Date(request.created_at) <
+          new Date(startDate)
+      ) {
+        return false;
+      }
+
+      if (endDate) {
+
+        const end = new Date(endDate);
+
+        end.setHours(23,59,59,999);
+
+        if (
+          new Date(request.created_at) >
+          end
+        ) {
+          return false;
+        }
+
+      }
+
+      return true;
+
+    }).sort((a,b)=>{
+
+        if(sortBy==="oldest"){
+
+            return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();
+
+        }
+
+        if(sortBy==="student_asc"){
+
+            return a.student.name.localeCompare(
+                b.student.name
+            );
+
+        }
+
+        return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();
+
+    });
 
   // Re-fetch when filters change (except initial load)
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    const load = async () => {
+      if (tutorRequestsCache.loaded) {
+        extractStatuses(tutorRequestsCache.requests);
+        forceUpdate({});
+        setLoading(false);
+        return;
+      }
+
+      clearTutorRequests();
+
+      await fetchRequests();
+    };
+
+    load();
+  }, []);
 
   // ---------- Accept / Reject ----------
   const handleAccept = async (requestId: number) => {
     if (!window.confirm("Accept this request?")) return;
     try {
-      await handleDirectRequest({ request_id: requestId, action: "accept" });
+      await handleDirectRequest({
+          request_id: requestId,
+          action: "accept"
+      });
+
+      removeTutorRequest(requestId);
+
       toast.success("Request accepted!");
-      fetchRequests();
     } catch (error) {
       console.error("Accept error:", error);
       toast.error("Failed to accept request.");
@@ -172,7 +250,7 @@ export default function TutorRequestsPage() {
     try {
       await handleDirectRequest({ request_id: requestId, action: "reject" });
       toast.success("Request rejected.");
-      fetchRequests();
+      removeTutorRequest(requestId);
     } catch (error) {
       console.error("Reject error:", error);
       toast.error("Failed to reject request.");
@@ -184,8 +262,13 @@ export default function TutorRequestsPage() {
     const unsub = subscribeSocket((event, data) => {
       console.log("📡 REQUEST EVENT:", event, data);
 
-      if (event === SocketEvents.NEW_DOUBT_REQUEST) {
-        fetchRequests();
+      if (
+          event ===
+          SocketEvents.NEW_DOUBT_REQUEST
+      ) {
+
+          addTutorRequest(data);
+
       }
 
       if (event === SocketEvents.DIRECT_ACCEPTED) {
@@ -279,9 +362,14 @@ export default function TutorRequestsPage() {
       {/* Refresh */}
       <div className="px-4 py-3 flex justify-end">
         <button
-          onClick={() => {
-            setRefreshing(true);
-            fetchRequests().finally(() => setRefreshing(false));
+            onClick={async () => {
+
+              setRefreshing(true);
+
+              clearTutorRequests();
+
+              await fetchRequests();
+
           }}
           disabled={refreshing}
           className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"

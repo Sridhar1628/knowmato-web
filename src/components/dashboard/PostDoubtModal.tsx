@@ -64,15 +64,18 @@ interface Props {
 
   description: string;
 
+  onDescriptionChange: (value: string) => void;
+
   onClose: () => void;
 }
-
 
 export default function PostDoubtModal({
 
   open,
 
   description,
+
+  onDescriptionChange,
 
   onClose,
 
@@ -101,6 +104,8 @@ export default function PostDoubtModal({
 
   const [keywords, setKeywords] =
     useState('');
+
+  const [editingDescription, setEditingDescription] = useState(false);
 
   // ============================================
   // PREFERRED EXPLANATION
@@ -593,6 +598,70 @@ export default function PostDoubtModal({
 
               </div>
 
+              <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+
+                <div className="mb-3 flex items-center justify-between">
+
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                    Doubt Description
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingDescription(!editingDescription)
+                    }
+                    className="
+                      rounded-lg
+                      bg-white
+                      px-3
+                      py-1
+                      text-xs
+                      font-semibold
+                      text-indigo-600
+                      shadow-sm
+                      transition
+                      hover:bg-indigo-100
+                    "
+                  >
+                    {editingDescription ? "✔ Save" : "✏ Edit"}
+                  </button>
+
+                </div>
+
+                {editingDescription ? (
+
+                  <textarea
+                    value={description}
+                    onChange={(e) =>
+                      onDescriptionChange(e.target.value)
+                    }
+                    className="
+                      min-h-[140px]
+                      w-full
+                      rounded-xl
+                      border
+                      border-indigo-200
+                      bg-white
+                      p-4
+                      text-sm
+                      text-gray-700
+                      outline-none
+                      focus:border-indigo-500
+                      focus:ring-4
+                      focus:ring-indigo-100
+                    "
+                  />
+
+                ) : (
+
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                    {description}
+                  </p>
+
+                )}
+
+              </div>
               {/* CATEGORY */}
 
               <div>
