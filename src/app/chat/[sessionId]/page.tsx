@@ -14,6 +14,7 @@ import { getTokens } from "@/services/storageService";
 import { endSession } from "@/services/sessionService";
 import axiosInstance from "@/api/axiosInstance";
 import styles from "./ChatScreen.module.css";
+import { createReport } from "@/services/v1Service";
 
 /* ----- Constants ----- */
 const PRIMARY = "#5B4CF0";
@@ -68,9 +69,25 @@ const ChatScreen = () => {
     onReject?: () => void;
   } | null>(null);
 
+  const [showMenu, setShowMenu] = useState(false);
+  const isStudent =
+    currentUserId !== null &&
+    sessionDetails !== null &&
+    currentUserId === Number(sessionDetails.student_id);
+
   const socketInitialized = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  const [reportReason, setReportReason] =
+    useState("");
+
+  const [reportDescription, setReportDescription] =
+    useState("");
+
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Format time
   const formatTime = (timestamp?: string) => {
@@ -103,7 +120,7 @@ const ChatScreen = () => {
       if (currentUserId === Number(res.data.student_id)) {
         router.replace(`/student/submit-review/${sessionId}`);
       } else {
-        router.replace("/tutor/sessions"); // adjust to your tutor sessions route
+        router.replace("/tutor/dashboard"); // adjust to your tutor sessions route
       }
     } catch {
       router.back();
@@ -370,10 +387,77 @@ const ChatScreen = () => {
     );
   }
 
+  const handleSubmitReport = async () => {
+
+    if (!reportReason) {
+      window.alert("Please select a reason.");
+      return;
+    }
+
+    if (!reportDescription.trim()) {
+      window.alert("Please enter a description.");
+      return;
+    }
+
+    if (reportDescription.trim().length < 10) {
+      window.alert(
+        "Please provide a little more detail."
+      );
+      return;
+    }
+
+    try {
+
+      setReportLoading(true);
+
+      await createReport({
+
+        session_id: Number(sessionId),
+
+        reason: reportReason as any,
+
+        description: reportDescription.trim(),
+
+      });
+
+      window.alert(
+        "✅ Your report has been submitted successfully."
+      );
+
+      setShowReportModal(false);
+
+      setReportReason("");
+
+      setReportDescription("");
+
+    } catch (error: any) {
+
+        console.log("REPORT ERROR");
+
+        console.log(error.response);
+
+        console.log(error.response?.data);
+
+        window.alert(
+          JSON.stringify(error.response?.data, null, 2)
+        );
+
+      } finally {
+
+      setReportLoading(false);
+
+    }
+
+  };
+
+  const WARNING_MESSAGE =
+  "⚠️ Please communicate respectfully. Abuse, harassment, offensive language, sharing personal contact information, or inappropriate behaviour may result in account suspension.";
+
   return (
     <div className={styles.container}>
       {/* ---- Header ---- */}
       <div className={styles.header}>
+
         <button
           className={styles.backButton}
           onClick={() => router.back()}
@@ -389,7 +473,10 @@ const ChatScreen = () => {
         </div>
 
         <div className={styles.headerInfo}>
-          <span className={styles.headerName}>{otherUserName || "Chat"}</span>
+          <span className={styles.headerName}>
+            {otherUserName || "Chat"}
+          </span>
+
           <span className={styles.headerStatus}>
             {typingUser
               ? "✍️ typing..."
@@ -401,6 +488,42 @@ const ChatScreen = () => {
           </span>
         </div>
 
+        {/* Student Menu */}
+        {isStudent && (
+          <div className={styles.menuWrapper}>
+
+            <button
+              className={styles.menuButton}
+              onClick={() => setShowMenu((v) => !v)}
+            >
+              ⋮
+            </button>
+
+            {showMenu && (
+
+              <div className={styles.menuDropdown}>
+
+                <button
+                  className={styles.menuItem}
+                  onClick={() => {
+
+                    setShowMenu(false);
+
+                    // Step 2
+                    setShowReportModal(true);
+
+                  }}
+                >
+                  🚨 Report Tutor
+                </button>
+
+              </div>
+
+            )}
+
+          </div>
+        )}
+
         <button
           className={styles.endButton}
           onClick={handleEndSession}
@@ -408,6 +531,27 @@ const ChatScreen = () => {
         >
           End
         </button>
+
+      </div>
+
+      <div className={styles.warningBar}>
+
+        <div className={styles.warningTrack}>
+
+          <span>
+
+            {WARNING_MESSAGE}
+
+          </span>
+
+          <span>
+
+            {WARNING_MESSAGE}
+
+          </span>
+
+        </div>
+
       </div>
 
       {/* ---- Messages ---- */}
@@ -479,6 +623,131 @@ const ChatScreen = () => {
           ➤
         </button>
       </div>
+
+      {showReportModal && (
+
+        <div className={styles.modalOverlay}>
+
+          <div className={styles.reportModal}>
+
+            <h3 className={styles.reportTitle}>
+              🚨 Report Tutor
+            </h3>
+
+            <p className={styles.reportSubtitle}>
+              Your report will be reviewed by our moderation team.
+            </p>
+
+            <label className={styles.reportLabel}>
+              Reason
+            </label>
+
+            <select
+              className={styles.reportSelect}
+              value={reportReason}
+              onChange={(e) =>
+                setReportReason(e.target.value)
+              }
+            >
+
+              <option value="">
+                Select a reason
+              </option>
+
+              <option value="rude">
+                Rude Behaviour
+              </option>
+
+              <option value="late">
+                Tutor Was Late
+              </option>
+
+              <option value="poor_explanation">
+                Poor Explanation
+              </option>
+
+              <option value="wrong_information">
+                Wrong Information
+              </option>
+
+              <option value="harassment">
+                Harassment
+              </option>
+
+              <option value="spam">
+                Spam
+              </option>
+
+              <option value="other">
+                Other
+              </option>
+
+            </select>
+
+            <label className={styles.reportLabel}>
+              Description
+            </label>
+
+            <textarea
+
+              className={styles.reportTextarea}
+
+              rows={5}
+
+              value={reportDescription}
+
+              onChange={(e) =>
+                setReportDescription(e.target.value)
+              }
+
+              placeholder="Describe what happened..."
+
+            />
+
+            <div className={styles.reportActions}>
+
+              <button
+
+                className={styles.cancelButton}
+                disabled={reportLoading}
+
+                onClick={() => {
+
+                  setShowReportModal(false);
+
+                  setReportReason("");
+
+                  setReportDescription("");
+
+                }}
+
+              >
+                Cancel
+              </button>
+
+              <button
+
+                className={styles.submitButton}
+
+                disabled={reportLoading}
+
+                onClick={handleSubmitReport}
+
+              >
+
+                {reportLoading
+                  ? "Submitting..."
+                  : "Submit Report"}
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
       {/* ---- Custom Alert Modal for End Session Request ---- */}
       {alertData && (

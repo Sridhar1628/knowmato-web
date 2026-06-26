@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { getMyDoubts } from '@/services/v1Service';
 import { apiGet } from '@/services/apiService';
 
@@ -733,13 +734,61 @@ const MyDoubtsScreen = () => {
                         </div>
                       ) : (
                         <button
-                          onClick={e => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            router.push(`/student/submit-review/${item.session?.session_id}`);
+
+                            if (!item.session?.session_id) {
+                              toast.error("Session not found.");
+                              return;
+                            }
+
+                            router.push(
+                              `/student/submit-review/${item.session.session_id}`
+                            );
                           }}
-                          className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition"
+                          className="
+                            group
+                            flex
+                            w-full
+                            items-center
+                            justify-center
+                            gap-2
+                            rounded-xl
+                            bg-gradient-to-r
+                            from-amber-500
+                            via-yellow-500
+                            to-orange-500
+                            py-3
+                            text-sm
+                            font-bold
+                            text-white
+                            shadow-lg
+                            transition-all
+                            duration-300
+                            hover:-translate-y-0.5
+                            hover:shadow-xl
+                            active:scale-[0.98]
+                          "
                         >
-                          ⭐ Add Review
+                          <span className="transition-transform duration-300 group-hover:rotate-12">
+                            ⭐
+                          </span>
+
+                          <span>Write Review</span>
+
+                          <svg
+                            className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
                         </button>
                       )}
                     </div>

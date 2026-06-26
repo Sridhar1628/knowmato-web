@@ -393,12 +393,13 @@ export interface TransactionListResponse {
 }
 
 export interface TransactionFilters {
-  type?: 'credit' | 'debit';
-  source?: string;
-  start_date?: string; // YYYY-MM-DD
-  end_date?: string;   // YYYY-MM-DD
   page?: number;
   page_size?: number;
+  type?: "credit" | "debit";
+
+  search?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 export const getTransactionHistory = async (filters?: TransactionFilters) => {
@@ -1242,6 +1243,498 @@ export const rejectTutorApplication =
     return await apiPost(
       `/accounts/v1/admin/tutor-applications/${applicationId}/reject/`,
       {}
+    );
+
+};
+
+
+
+
+
+// ======================================================
+// 🚨 REPORTS
+// ======================================================
+
+export type ReportReason =
+  | "rude"
+  | "late"
+  | "poor_explanation"
+  | "wrong_information"
+  | "harassment"
+  | "spam"
+  | "other";
+
+export type ReportStatus =
+  | "pending"
+  | "under_review"
+  | "resolved"
+  | "rejected";
+
+// ======================================================
+// 👨‍🎓 CREATE REPORT
+// ======================================================
+
+export interface CreateReportRequest {
+  session_id: number;
+  reason: ReportReason;
+  description: string;
+}
+
+export const createReport = async (
+  data: CreateReportRequest
+) => {
+  return await apiPost(
+    "/v1/reports/create/",
+    data
+  );
+};
+
+// ======================================================
+// 👨‍🎓 MY REPORTS
+// ======================================================
+
+export interface StudentReportFilters {
+  page?: number;
+  page_size?: number;
+}
+
+export const getMyReports = async (
+  params?: StudentReportFilters
+) => {
+  return await apiGetWithParams(
+    "/v1/reports/my-reports/",
+    params
+  );
+};
+
+// ======================================================
+// 👨‍💼 ADMIN REPORTS
+// ======================================================
+
+export interface AdminReportFilters {
+
+  status?: ReportStatus;
+
+  reason?: ReportReason;
+
+  search?: string;
+
+  is_read?: boolean;
+
+  page?: number;
+
+  page_size?: number;
+
+}
+
+export const getAdminReports = async (
+  params?: AdminReportFilters
+) => {
+
+  return await apiGetWithParams(
+    "/v1/reports/admin/reports/",
+    params
+  );
+
+};
+
+// ======================================================
+// 👨‍💼 REPORT DETAIL
+// ======================================================
+
+export const getAdminReportDetail = async (
+  reportId: number
+) => {
+
+  return await apiGet(
+    `/v1/reports/admin/reports/${reportId}/`
+  );
+
+};
+
+// ======================================================
+// 👨‍💼 UPDATE REPORT
+// ======================================================
+
+export interface UpdateReportRequest {
+
+  status?: ReportStatus;
+
+  admin_notes?: string;
+
+}
+
+export const updateAdminReport = async (
+
+  reportId: number,
+
+  data: UpdateReportRequest
+
+) => {
+
+  return await apiPatch(
+
+    `/v1/reports/admin/reports/${reportId}/update/`,
+
+    data
+
+  );
+
+};
+
+// ======================================================
+// 📊 REPORT ANALYTICS
+// ======================================================
+
+export const getReportAnalytics =
+  async () => {
+
+    return await apiGet(
+      "/v1/reports/admin/reports/analytics/"
+    );
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ======================================================
+// 🏦 TUTOR BANK VERIFICATION
+// ======================================================
+
+export type VerificationStatus =
+  | "pending"
+  | "under_review"
+  | "approved"
+  | "rejected";
+
+// ============================================
+// Tutor Bank Verification
+// ============================================
+
+export interface TutorBankVerification {
+
+  account_holder_name: string;
+
+  account_number: string;
+
+  ifsc_code: string;
+
+  bank_name: string;
+
+  branch_name: string;
+
+  account_type: "savings" | "current";
+
+  pan_number: string;
+
+  aadhaar_number?: string;
+
+  mobile_number: string;
+
+  bank_proof?: string;
+
+  pan_card?: string;
+
+  status: VerificationStatus;
+
+  rejection_reason?: string;
+
+}
+
+export const getTutorBankVerification =
+  async () => {
+
+    return await apiGet(
+      "/wallet/verification/"
+    );
+
+};
+
+// ============================================
+// Submit Verification
+// ============================================
+
+export const submitTutorBankVerification =
+  async (
+    formData: FormData
+  ) => {
+
+    return await apiPost(
+      "/wallet/verification/",
+      formData,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
+    );
+
+};
+
+// ============================================
+// Update Verification
+// ============================================
+
+export const updateTutorBankVerification =
+  async (
+    formData: FormData
+  ) => {
+
+    return await apiPut(
+      "/wallet/verification/",
+      formData,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
+    );
+
+};
+
+
+
+// ======================================================
+// 💸 TUTOR WITHDRAWALS
+// ======================================================
+
+export interface Withdrawal {
+
+  withdrawal_id: number;
+
+  amount: number;
+
+  status:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "rejected";
+
+  admin_notes: string | null;
+
+  created_at: string;
+
+  processed_at: string | null;
+
+}
+
+export interface CreateWithdrawalRequest {
+
+  amount: number;
+
+}
+
+// ============================================
+// My Withdrawals
+// ============================================
+
+export const getMyWithdrawals =
+  async () => {
+
+    return await apiGet(
+      "/wallet/withdrawals/"
+    );
+
+};
+
+// ============================================
+// Create Withdrawal
+// ============================================
+
+export const createWithdrawal =
+  async (
+    data: CreateWithdrawalRequest
+  ) => {
+
+    return await apiPost(
+      "/wallet/withdrawals/",
+      data
+    );
+
+};
+
+
+
+// ======================================================
+// 👨‍💼 ADMIN BANK VERIFICATIONS
+// ======================================================
+
+export interface AdminVerificationFilters {
+
+  search?: string;
+
+  status?: VerificationStatus;
+
+  page?: number;
+
+  page_size?: number;
+
+}
+
+// ============================================
+// List
+// ============================================
+
+export const getAdminVerifications =
+  async (
+    params?: AdminVerificationFilters
+  ) => {
+
+    return await apiGetWithParams(
+      "/wallet/admin/verifications/",
+      params
+    );
+
+};
+
+// ============================================
+// Detail
+// ============================================
+
+export const getAdminVerificationDetail =
+  async (
+    verificationId: number
+  ) => {
+
+    return await apiGet(
+      `/wallet/admin/verifications/${verificationId}/`
+    );
+
+};
+
+// ============================================
+// Update
+// ============================================
+
+export interface UpdateVerificationRequest {
+
+  status:
+    | "approved"
+    | "rejected";
+
+  rejection_reason?: string;
+
+}
+
+export const updateAdminVerification =
+  async (
+    verificationId: number,
+    data: UpdateVerificationRequest
+  ) => {
+
+    return await apiPatch(
+      `/wallet/admin/verifications/${verificationId}/update/`,
+      data
+    );
+
+};
+
+
+
+// ======================================================
+// 👨‍💼 ADMIN WITHDRAWALS
+// ======================================================
+
+export interface AdminWithdrawalFilters {
+
+  search?: string;
+
+  status?:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "rejected";
+
+  page?: number;
+
+  page_size?: number;
+
+}
+
+// ============================================
+// List
+// ============================================
+
+export const getAdminWithdrawals =
+  async (
+    params?: AdminWithdrawalFilters
+  ) => {
+
+    return await apiGetWithParams(
+      "/wallet/admin/withdrawals/",
+      params
+    );
+
+};
+
+// ============================================
+// Detail
+// ============================================
+
+export const getAdminWithdrawalDetail =
+  async (
+    withdrawalId: number
+  ) => {
+
+    return await apiGet(
+      `/wallet/admin/withdrawals/${withdrawalId}/`
+    );
+
+};
+
+// ============================================
+// Update
+// ============================================
+
+export interface UpdateWithdrawalRequest {
+
+  status:
+    | "processing"
+    | "completed"
+    | "rejected";
+
+  admin_notes?: string;
+
+}
+
+export const updateAdminWithdrawal =
+  async (
+    withdrawalId: number,
+    data: UpdateWithdrawalRequest
+  ) => {
+
+    return await apiPatch(
+      `/wallet/admin/withdrawals/${withdrawalId}/update/`,
+      data
     );
 
 };

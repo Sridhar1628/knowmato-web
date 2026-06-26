@@ -12,19 +12,12 @@ import {
 } from "@/store/tutorRequestsCache";
 
 import {
-
-    subscribeTutorRequests,
-
-    setTutorRequests,
-
-    clearTutorRequests,
-
-    addTutorRequest,
-
-    removeTutorRequest,
-
-    updateTutorRequest,
-
+  subscribeTutorRequests,
+  setTutorRequests,
+  clearTutorRequests,
+  addTutorRequest,
+  removeTutorRequest,
+  updateTutorRequest,
 } from "@/store/tutorRequestsRealtime";
 
 // ---------- Types ----------
@@ -71,6 +64,7 @@ export default function TutorRequestsPage() {
   const [endDate, setEndDate] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
+  const [requestFilter, setRequestFilter] = useState<"new" | "completed">("new");
   const [statusOptions, setStatusOptions] = useState<string[]>(["All"]);
 
   // Filter modal
@@ -80,16 +74,10 @@ export default function TutorRequestsPage() {
   const socketUnsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-
-    const unsubscribe =
-      subscribeTutorRequests(() => {
-
-        forceUpdate({});
-
-      });
-
+    const unsubscribe = subscribeTutorRequests(() => {
+      forceUpdate({});
+    });
     return unsubscribe;
-
   }, []);
 
   // ---------- Helpers ----------
@@ -106,107 +94,66 @@ export default function TutorRequestsPage() {
     setStatusOptions(statuses);
   };
 
-
   // ---------- Fetch Requests ----------
   const fetchRequests = useCallback(async () => {
-
     try {
-
-        setLoading(true);
-
-        const res = await getTutorRequests();
-
-        const data =
-            res?.data?.data ||
-            res?.data ||
-            [];
-
-        setTutorRequests(data);
-
-        extractStatuses(data);
-
+      setLoading(true);
+      const res = await getTutorRequests();
+      const data = res?.data?.data || res?.data || [];
+      setTutorRequests(data);
+      extractStatuses(data);
     } catch (error) {
-
-        console.error(error);
-
-        toast.error(
-            "Failed to load requests."
-        );
-
+      console.error(error);
+      toast.error("Failed to load requests.");
     } finally {
-
-        setLoading(false);
-
-        setRefreshing(false);
-
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, []);
 
-}, []);
-
-  const filteredRequests =
-    tutorRequestsCache.requests.filter((request) => {
-
+  const filteredRequests = tutorRequestsCache.requests
+    .filter((request) => {
       if (
         searchStudent &&
         !request.student.name
           .toLowerCase()
-          .includes(
-            searchStudent.toLowerCase()
-          )
+          .includes(searchStudent.toLowerCase())
       ) {
         return false;
       }
-
-      if (
-        selectedStatus !== "All" &&
-        request.status !== selectedStatus
-      ) {
+      if (selectedStatus !== "All" && request.status !== selectedStatus) {
         return false;
       }
-
-      if (
-        startDate &&
-        new Date(request.created_at) <
-          new Date(startDate)
-      ) {
+      if (startDate && new Date(request.created_at) < new Date(startDate)) {
         return false;
       }
-
       if (endDate) {
-
         const end = new Date(endDate);
-
-        end.setHours(23,59,59,999);
-
-        if (
-          new Date(request.created_at) >
-          end
-        ) {
+        end.setHours(23, 59, 59, 999);
+        if (new Date(request.created_at) > end) {
           return false;
         }
-
       }
-
+      if (requestFilter === "new" && request.status !== "pending") {
+        return false;
+      }
+      if (
+        requestFilter === "completed" &&
+        request.status !== "accepted" &&
+        request.status !== "completed"
+      ) {
+        return false;
+      }
       return true;
-
-    }).sort((a,b)=>{
-
-        if(sortBy==="oldest"){
-
-            return new Date(a.created_at).getTime()-new Date(b.created_at).getTime();
-
-        }
-
-        if(sortBy==="student_asc"){
-
-            return a.student.name.localeCompare(
-                b.student.name
-            );
-
-        }
-
-        return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();
-
+    })
+    .sort((a, b) => {
+      if (sortBy === "oldest") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (sortBy === "student_asc") {
+        return a.student.name.localeCompare(b.student.name);
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
   // Re-fetch when filters change (except initial load)
@@ -218,12 +165,9 @@ export default function TutorRequestsPage() {
         setLoading(false);
         return;
       }
-
       clearTutorRequests();
-
       await fetchRequests();
     };
-
     load();
   }, []);
 
@@ -232,12 +176,10 @@ export default function TutorRequestsPage() {
     if (!window.confirm("Accept this request?")) return;
     try {
       await handleDirectRequest({
-          request_id: requestId,
-          action: "accept"
+        request_id: requestId,
+        action: "accept",
       });
-
       removeTutorRequest(requestId);
-
       toast.success("Request accepted!");
     } catch (error) {
       console.error("Accept error:", error);
@@ -261,23 +203,23 @@ export default function TutorRequestsPage() {
   useEffect(() => {
     const unsub = subscribeSocket((event, data) => {
       console.log("📡 REQUEST EVENT:", event, data);
-
-      if (
-          event ===
-          SocketEvents.NEW_DOUBT_REQUEST
-      ) {
-
-          addTutorRequest(data);
-
+      if (event === SocketEvents.NEW_DOUBT_REQUEST) {
+        addTutorRequest(data);
       }
-
+      if (event === SocketEvents.DIRECT_REJECTED) {
+        removeTutorRequest(data.request_id);
+      }
+      if (event === "DIRECT_UPDATED") {
+        updateTutorRequest(data);
+      }
+      if (event === "DIRECT_CANCELLED") {
+        removeTutorRequest(data.request_id);
+      }
       if (event === SocketEvents.DIRECT_ACCEPTED) {
-        const sessionId = data?.session_id;
-        const sessionType = data?.session_type;
+        removeTutorRequest(data.request_id);
+        const sessionId = data.session_id;
         if (!sessionId) return;
-
-        // Navigate to chat/video call
-        if (sessionType === "text" || sessionType === "chat") {
+        if (data.session_type === "chat") {
           router.push(`/chat/${sessionId}`);
         } else {
           router.push(`/videocall/${sessionId}`);
@@ -288,7 +230,7 @@ export default function TutorRequestsPage() {
     return () => {
       if (socketUnsubRef.current) socketUnsubRef.current();
     };
-  }, [fetchRequests, router]);
+  }, [router]);
 
   // ---------- Filter Handlers ----------
   const resetFilters = () => {
@@ -328,14 +270,24 @@ export default function TutorRequestsPage() {
       {/* Sort Chips */}
       <div className="bg-white border-b border-gray-200 px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide">
         <button
-          onClick={() => setSortBy("newest")}
-          className={`px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap ${
-            sortBy === "newest"
+          onClick={() => setRequestFilter("new")}
+          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+            requestFilter === "new"
               ? "bg-indigo-600 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-gray-100 text-gray-700"
           }`}
         >
-          🕒 Newest
+          🆕 New Requests
+        </button>
+        <button
+          onClick={() => setRequestFilter("completed")}
+          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+            requestFilter === "completed"
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-100 text-gray-700"
+          }`}
+        >
+          ✅ Completed
         </button>
         <button
           onClick={() => setSortBy("oldest")}
@@ -362,14 +314,11 @@ export default function TutorRequestsPage() {
       {/* Refresh */}
       <div className="px-4 py-3 flex justify-end">
         <button
-            onClick={async () => {
-
-              setRefreshing(true);
-
-              clearTutorRequests();
-
+          onClick={async () => {
+            setRefreshing(true);
+            if (!tutorRequestsCache.loaded) {
               await fetchRequests();
-
+            }
           }}
           disabled={refreshing}
           className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
@@ -391,10 +340,10 @@ export default function TutorRequestsPage() {
         </button>
       </div>
 
-      {/* Request List */}
-      <div className="px-4 pb-20 space-y-4">
+      {/* Request Cards Grid: 1 col on mobile, 3 cols on desktop */}
+      <div className="px-4 pb-20 grid grid-cols-1 lg:grid-cols-3 gap-5">
         {filteredRequests.length === 0 && !loading && (
-          <div className="text-center py-16 text-gray-400">
+          <div className="col-span-full text-center py-16 text-gray-400">
             <span className="text-4xl mb-4 block">📭</span>
             <p className="text-lg font-semibold">No requests match filters</p>
           </div>
@@ -408,21 +357,30 @@ export default function TutorRequestsPage() {
           return (
             <div
               key={item.request_id}
-              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
+              className="group relative bg-white rounded-2xl p-5 border border-gray-200 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-300 ease-out hover:-translate-y-1 flex flex-col"
             >
-              <h2 className="text-lg font-bold text-gray-800">{item.title}</h2>
-              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+              {/* Title & Description */}
+              <h2 className="text-lg font-bold text-gray-800 group-hover:text-indigo-700 transition-colors line-clamp-2">
+                {item.title}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1 line-clamp-2 flex-1">
+                {item.description}
+              </p>
 
+              {/* Meta info */}
               <div className="flex flex-wrap items-center gap-2 mt-3">
                 <span className="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2 py-1 rounded-full">
                   📂 {item.category}
                 </span>
-                <span className="text-sm text-gray-600">👤 {item.student?.name || "Unknown"}</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 flex items-center gap-1">
+                  👤 {item.student?.name || "Unknown"}
+                </span>
+                <span className="text-sm text-gray-600 flex items-center gap-1">
                   💬 {item.preferred_explanation}
                 </span>
               </div>
 
+              {/* Date & Status */}
               <div className="flex items-center justify-between mt-3">
                 <span className="text-xs text-gray-400">
                   📅 {formatDate(item.created_at)}
@@ -434,26 +392,29 @@ export default function TutorRequestsPage() {
                 </span>
               </div>
 
-              {isPending ? (
-                <div className="flex gap-3 mt-4">
-                  <button
-                    onClick={() => handleAccept(item.request_id)}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-xl transition"
-                  >
-                    ✓ Accept
-                  </button>
-                  <button
-                    onClick={() => handleReject(item.request_id)}
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 rounded-xl transition"
-                  >
-                    ✗ Reject
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-4 text-center py-2 bg-gray-100 rounded-xl text-sm text-gray-700 font-medium">
-                  Request {item.status}
-                </div>
-              )}
+              {/* Action buttons or status */}
+              <div className="mt-4">
+                {isPending ? (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleAccept(item.request_id)}
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm hover:shadow-md"
+                    >
+                      ✓ Accept
+                    </button>
+                    <button
+                      onClick={() => handleReject(item.request_id)}
+                      className="flex-1 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold py-2.5 rounded-xl transition-colors shadow-sm hover:shadow-md"
+                    >
+                      ✗ Reject
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-3 bg-gray-100 rounded-xl text-sm text-gray-700 font-medium border border-gray-200">
+                    Request {item.status}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -512,7 +473,9 @@ export default function TutorRequestsPage() {
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  {status === "All" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === "All"
+                    ? "All"
+                    : status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
               ))}
             </div>

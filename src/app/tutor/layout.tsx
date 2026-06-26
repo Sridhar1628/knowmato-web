@@ -88,7 +88,7 @@ export default function TutorLayout({
     user?.display_name ||
     user?.first_name ||
     user?.email?.split('@')[0] ||
-    'Tutor';
+    'Mentor';
 
   // =========================================
   // DASHBOARD FETCH
