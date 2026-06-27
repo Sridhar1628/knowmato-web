@@ -10,6 +10,7 @@ import {
 } from "@/services/chatSocket";
 import axios from "@/api/axiosInstance";
 import styles from "./VideoCall.module.css";
+import { useSelector } from "react-redux";
 
 import { useCall } from '@/contexts/CallContext';
 
@@ -26,9 +27,12 @@ interface Message {
   timestamp?: string;
 }
 
+
+
 const VideoCallScreen: React.FC = () => {
   const router = useRouter();
   const params = useParams();
+
 
   const sessionIdParam =
     Array.isArray(params.sessionId)
@@ -59,12 +63,27 @@ const VideoCallScreen: React.FC = () => {
 
     remoteUid,
     setRemoteUid,
+
+    isMuted,
+
+    toggleMute,
+
+    isScreenSharing,
+
+    toggleScreenShare,
+
+    connectionState,
+    initializeAgora,
+
   } = useCall();
 
   // ----- User -----
   const [userRole, setUserRole] = useState<"student" | "tutor">("student");
   const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState("");
+  const user = useSelector(
+    (state: any) => state.auth.user
+  );
 
   // ----- Agora Engine & Tracks -----
 
@@ -73,12 +92,8 @@ const VideoCallScreen: React.FC = () => {
   const localVideoRef =
   useRef<HTMLDivElement>(null);
   const [micTrack, setMicTrack] = useState<any>(null);
-  const [screenTrack, setScreenTrack] = useState<any>(null); // screen share track
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [remoteVideoMuted, setRemoteVideoMuted] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const {
     joined,
     setJoined,
@@ -118,6 +133,10 @@ const VideoCallScreen: React.FC = () => {
     onAccept?: () => void;
     onReject?: () => void;
   } | null>(null);
+
+  useEffect(() => {
+  console.log("Redux User:", user);
+}, [user]);
 
   // ---------------------------------------------------------------------------
   // Initialisation: load user, start call
@@ -187,209 +206,23 @@ const VideoCallScreen: React.FC = () => {
         // 1. Get user info from token
         const tokens = await getTokens();
         if (!tokens?.access) throw new Error("No token");
-        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
-        setUserId(Number(payload.user_id));
-        setUserName(payload.display_name || "");
-        // role could be derived from token or stored separately, assume 'student' as fallback
-        const role = payload.role || "student";
-        setUserRole(role);
-
+        
         // 2. Request permissions (web mic) – done later via Agora
 
         // 3. Fetch video session details
         const res = await axios.post(`sessions/${sessionId}/start-video/`);
+
         const { channel_name, token, uid } = res.data;
 
-        // 4. Initialise Agora
-        if (
-          clientRef.current
-        ) {
-
-          console.log(
-            "⚠️ Reusing existing Agora client"
-          );
-
-          return;
-        }
-
-        // Safety: if a client somehow already exists,
-        // remove old listeners before replacing it.
-        (clientRef.current as any)?.removeAllListeners?.();
-
-        const client =
-          AgoraRTC.createClient({
-            mode: "rtc",
-            codec: "vp8",
-          });
-
-        clientRef.current =
-          client;
-
-        console.log("🎥 Agora client created");
-
-        // ---- Remote user unpublished ----
-        client.on(
-          "user-published",
-          async (
-            user: any,
-            mediaType: "video" | "audio"
-          ) => {
-
-            console.log(
-              "🔥 USER PUBLISHED:",
-              user.uid,
-              mediaType
-            );
-
-            await client.subscribe(user, mediaType);
-
-            console.log(
-              "✅ SUBSCRIBED TO:",
-              mediaType
-            );
-
-            setRemoteUid(Number(user.uid));
-
-            setShowJoinToast(true);
-
-            setToastMessage("User joined");
-
-            if (
-              mediaType === "video" &&
-              user.videoTrack
-            ) {
-
-              console.log(
-                "📺 PLAYING REMOTE VIDEO"
-              );
-
-              user.videoTrack.play(
-                "remote-video-container"
-              );
-            }
-
-            if (
-              mediaType === "audio" &&
-              user.audioTrack
-            ) {
-
-              console.log(
-                "🔊 PLAYING REMOTE AUDIO"
-              );
-
-              user.audioTrack.play();
-            }
-          }
-        );
-
-        // ---- User left ----
-        client.on(
-          "user-left",
-          (user: any) => {
-          setRemoteUid(null);
-          setShowJoinToast(true);
-          setToastMessage("User left");
-          setTimeout(() => setShowJoinToast(false), 2000);
-        });
-
-        // ---- Connection state ----
-        client.on("connection-state-change", (curState: string) => {
-          switch (curState) {
-            case "CONNECTED":
-              setConnectionState("connected");
-              break;
-            case "CONNECTING":
-              setConnectionState("connecting");
-              break;
-            default:
-              setConnectionState("disconnected");
-          }
-        });
-
-        // 5. Create microphone track only (camera OFF)
-        console.log("🎤 REQUESTING CAMERA/MIC");
-
-        let microphoneTrack;
-        let cameraTrack;
-
-        try {
-
-          const tracks =
-            await AgoraRTC.createMicrophoneAndCameraTracks();
-
-          microphoneTrack = tracks[0];
-          cameraTrack = tracks[1];
-
-          console.log("✅ CAMERA/MIC CREATED");
-          console.log("🚀 JOINING CHANNEL:", channel_name);
-          console.log("🚀 UID:", uid);
-
-        } catch (err) {
-
-          callInitializedRef.current =
-            false;
-
-          console.error(
-            "❌ TRACK CREATION FAILED:",
-            err
-          );
-
-          return;
-        }
-
-        setMicTrack(
-          microphoneTrack
-        );
-
-        joinAgoraCall(
-          client,
-          microphoneTrack,
-          cameraTrack
-        );
-
-        console.log("🚀 Joining Agora", {
-          sessionId,
+        await initializeAgora({
+          appId: APP_ID,
           channel: channel_name,
+          token,
           uid,
         });
 
-        await client.join(
-          APP_ID,
-          channel_name,
-          token,
-          uid
-        );
-
-        console.log("✅ Agora join completed");
-
-        setTimeout(() => {
-
-          cameraTrack.play(
-            "local-video-container"
-          );
-
-        }, 500);
-
-        console.log("📷 LOCAL CAMERA STARTED");
-
-        console.log("📡 PUBLISHING TRACKS");
-
-        await client.publish([
-          microphoneTrack,
-          cameraTrack,
-        ]);
-
-
-        console.log("📡 TRACKS PUBLISHED");
-
-        console.log("✅ Audio + Video published");
-
-        console.log("Published tracks"); // only audio published
-        setJoined(true);
         startCall(sessionId);
-        setConnectionState("connected");
 
-        // 7. Start timer
         timerRef.current = setInterval(() => {
           setSeconds((prev) => prev + 1);
         }, 1000);
@@ -417,58 +250,7 @@ const VideoCallScreen: React.FC = () => {
     };
   }, [sessionId]);
 
-  // ----- Screen Share Toggle -----
-  const toggleScreenShare = async () => {
-    const client = clientRef.current;
-    if (!client) return;
 
-    try {
-      if (!isScreenSharing) {
-        // Start screen share
-        const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "disable"); // disable camera mirroring
-        setScreenTrack(screenTrack);
-        screenTrackRef.current =
-          Array.isArray(screenTrack)
-            ? screenTrack[0]
-            : screenTrack;
-        await client.unpublish(micTrack);
-        if (Array.isArray(screenTrack)) {
-          await client.publish([micTrack, ...screenTrack]);
-        } else {
-          await client.publish([micTrack, screenTrack]);
-        }
-        screenTrack.play("local-screen-container");
-        setIsScreenSharing(true);
-      } else {
-        // Stop screen share
-        await client.unpublish(screenTrack);
-        if (Array.isArray(screenTrack)) {
-          screenTrack.forEach(
-          (track: any) => track.close()
-        );
-        } else {
-          screenTrack?.close();
-        }
-        setScreenTrack(null);
-        setIsScreenSharing(false);
-      }
-    } catch (err) {
-      console.error("Screen share error:", err);
-      window.alert("Failed to toggle screen share.");
-    }
-  };
-
-  // ----- Mic toggle -----
-  const toggleMute = () => {
-    if (!micTrack) return;
-    const newMuted = !isMuted;
-    if (newMuted) {
-      micTrack.setEnabled(false);
-    } else {
-      micTrack.setEnabled(true);
-    }
-    setIsMuted(newMuted);
-  };
 
   // ----- Leave Call -----
   const handleLeaveCall = async (
@@ -545,13 +327,16 @@ const VideoCallScreen: React.FC = () => {
   };
 
   const exitCallScreen = (completed: boolean) => {
+    console.log("EXIT CALL");
+    console.log("Role:", userRole);
+    console.log("Completed:", completed);
     if (userRole === "tutor") {
-      router.replace("/tutor/sessions");
+      router.replace("/tutor/dashboard");
     } else {
       if (completed) {
         router.replace(`/student/submit-review/${sessionId}`);
       } else {
-        router.replace("/student/sessions");
+        router.replace("/student/dashboard");
       }
     }
   };

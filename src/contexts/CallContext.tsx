@@ -39,7 +39,23 @@ interface CallContextType {
 
   isJoining: boolean;
 
+  toggleMute: () => Promise<void>;
+
+  toggleScreenShare: () => Promise<void>;
+
   isInitialized: boolean;
+
+  isMuted: boolean;
+
+  setIsMuted: (
+      value: boolean
+  ) => void;
+
+  isScreenSharing: boolean;
+
+  setIsScreenSharing: (
+      value: boolean
+  ) => void;
 
   setIsJoining: (
     value: boolean
@@ -70,6 +86,13 @@ interface CallContextType {
 
   restoreCall: () => void;
 
+  initializeAgora: (params: {
+      appId: string;
+      channel: string;
+      token: string;
+      uid: number;
+  }) => Promise<void>;
+
   setRemoteUid: (
     uid: number | null
   ) => void;
@@ -84,6 +107,7 @@ interface CallContextType {
       | 'connecting'
       | 'connected'
   ) => void;
+
 }
 
 const CallContext =
@@ -116,6 +140,12 @@ export function CallProvider({
 
   const [isInitialized, setIsInitialized] =
     useState(false);
+
+  const [isMuted, setIsMuted] =
+      useState(false);
+
+  const [isScreenSharing, setIsScreenSharing] =
+      useState(false);
 
     const [
     connectionState,
@@ -300,6 +330,147 @@ export function CallProvider({
             endCall();
         };
 
+  const toggleMute = async () => {
+
+        if (!micTrackRef.current) return;
+
+        const muted = !isMuted;
+
+        await micTrackRef.current.setEnabled(!muted);
+
+        setIsMuted(muted);
+
+    };
+
+    const toggleScreenShare = async () => {
+
+      const client = clientRef.current;
+
+      if (!client) return;
+
+      const AgoraRTC = (await import(
+          "agora-rtc-sdk-ng"
+      )).default;
+
+      try {
+
+          if (!isScreenSharing) {
+
+              const createdTrack =
+                  await AgoraRTC.createScreenVideoTrack(
+                      {},
+                      "disable"
+                  );
+
+              const track =
+                  Array.isArray(createdTrack)
+                      ? createdTrack[0]
+                      : createdTrack;
+
+              screenTrackRef.current =
+                  track;
+
+              if (cameraTrackRef.current) {
+
+                  await client.unpublish(
+                      cameraTrackRef.current
+                  );
+
+              }
+
+              await client.publish(track);
+
+              setIsScreenSharing(true);
+
+          } else {
+
+              if (screenTrackRef.current) {
+
+                  await client.unpublish(
+                      screenTrackRef.current
+                  );
+
+                  screenTrackRef.current.stop();
+
+                  screenTrackRef.current.close();
+
+                  screenTrackRef.current = null;
+
+              }
+
+              setIsScreenSharing(false);
+
+          }
+
+      } catch (err) {
+
+          console.error(
+              "Screen Share Error:",
+              err
+          );
+
+      }
+
+  };
+
+  const initializeAgora = async ({
+      appId,
+      channel,
+      token,
+      uid,
+  }: {
+      appId: string;
+      channel: string;
+      token: string;
+      uid: number;
+  }) => {
+
+      if (clientRef.current) {
+          return;
+      }
+
+      const AgoraRTC = (
+          await import("agora-rtc-sdk-ng")
+      ).default;
+
+      const client =
+          AgoraRTC.createClient({
+              mode: "rtc",
+              codec: "vp8",
+          });
+
+      clientRef.current = client;
+
+      const tracks =
+          await AgoraRTC.createMicrophoneAndCameraTracks();
+
+      const micTrack = tracks[0];
+      const cameraTrack = tracks[1];
+
+      await cameraTrack.setEnabled(false);
+
+      micTrackRef.current = micTrack;
+      cameraTrackRef.current = cameraTrack;
+
+      await client.join(
+          appId,
+          channel,
+          token,
+          uid
+      );
+
+      await client.publish([
+          micTrack,
+          cameraTrack,
+      ]);
+
+      setJoined(true);
+
+      setConnectionState(
+          "connected"
+      );
+  };
+
   return (
     <CallContext.Provider
       value={{
@@ -347,6 +518,18 @@ export function CallProvider({
         setIsJoining,
 
         setIsInitialized,
+
+        isMuted,
+        setIsMuted,
+
+        isScreenSharing,
+        setIsScreenSharing,
+
+        toggleMute,
+
+        toggleScreenShare,
+
+        initializeAgora,
         }}
     >
       {children}
