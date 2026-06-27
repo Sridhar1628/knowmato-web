@@ -16,12 +16,12 @@ function NavItem({ icon, label, href, active, onClick }: NavItemProps) {
     <button
       onClick={() => {
         router.push(href);
-        onClick?.(); // close mobile sidebar
+        onClick?.();
       }}
-      className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+      className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-300 ${
         active
-          ? 'bg-indigo-600 text-white'
-          : 'text-gray-300 hover:bg-white/5 hover:text-white'
+          ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
+          : 'text-white/70 hover:bg-white/10 hover:text-white hover:shadow-md'
       }`}
     >
       <span className="text-lg">{icon}</span>
@@ -52,7 +52,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
       {/* Backdrop for mobile – closes when clicked */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={onClose}
         />
       )}
@@ -62,7 +62,9 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         className={`
           fixed inset-y-0 left-0 z-50
           flex w-72 flex-col
-          bg-[#0f0f23] text-white
+          bg-[#0f0c29]/90 backdrop-blur-xl
+          border-r border-white/10
+          text-white
           transition-transform duration-300 ease-in-out
 
           ${open ? 'translate-x-0' : '-translate-x-full'}
@@ -78,11 +80,16 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         `}
       >
         {/* Brand & close button (mobile) */}
-        <div className="flex h-16 items-center justify-between border-b border-gray-700/50 px-4">
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight">Instant Skill</span>
+            <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
+              Instant Skill
+            </span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-white md:hidden">
+          <button
+            onClick={onClose}
+            className="text-white/50 hover:text-white md:hidden transition-colors"
+          >
             ✕
           </button>
         </div>
@@ -96,20 +103,21 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
               label={route.label}
               href={route.href}
               active={pathname === route.href}
-              onClick={onClose} // close on mobile after navigating
+              onClick={onClose}
             />
           ))}
         </nav>
 
-        {/* Upgrade to Pro 
-        <div className="border-t border-gray-700/50 p-4">
-          <div className="rounded-xl bg-gradient-to-br from-indigo-900 to-purple-900 p-4 text-center">
+        {/* Upgrade to Pro – you can uncomment and style later */}
+        {/*
+        <div className="border-t border-white/10 p-4">
+          <div className="rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 p-4 text-center border border-white/10 backdrop-blur-md">
             <div className="mb-2 text-2xl">👑</div>
-            <h4 className="font-semibold">Upgrade to Pro</h4>
-            <p className="mt-1 text-[10px] text-gray-300">
+            <h4 className="font-semibold text-white">Upgrade to Pro</h4>
+            <p className="mt-1 text-[10px] text-white/70">
               Get priority support, <br /> unlimited chats & more.
             </p>
-            <button className="mt-3 w-full rounded-lg bg-indigo-600 py-1.5 text-xs font-bold hover:bg-indigo-500">
+            <button className="mt-3 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 py-1.5 text-xs font-bold text-white hover:shadow-lg">
               Upgrade Now
             </button>
           </div>

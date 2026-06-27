@@ -19,25 +19,15 @@ import {
 
 // ---------- Types ----------
 interface WalletInfo {
-
   real_balance: number;
-
   bonus_balance: number;
-
   total_balance: number;
-
   earnings: {
-
     total_earnings: number;
-
     paid_earnings: number;
-
     pending_earnings: number;
-
     sessions_count: number;
-
   } | null;
-
 }
 
 interface VerificationStatus {
@@ -48,16 +38,16 @@ interface VerificationStatus {
 }
 
 // ---------- Helpers ----------
-const statusBadge = (status: string) => {
+const statusBadgeClass = (status: string) => {
   const map: Record<string, string> = {
-    pending: "bg-amber-100 text-amber-800 border-amber-300",
-    under_review: "bg-blue-100 text-blue-800 border-blue-300",
-    approved: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    rejected: "bg-red-100 text-red-800 border-red-300",
-    processing: "bg-purple-100 text-purple-800 border-purple-300",
-    completed: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    pending: "bg-amber-400/20 text-amber-300 border-amber-400/40",
+    under_review: "bg-sky-400/20 text-sky-300 border-sky-400/40",
+    approved: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
+    rejected: "bg-rose-400/20 text-rose-300 border-rose-400/40",
+    processing: "bg-purple-400/20 text-purple-300 border-purple-400/40",
+    completed: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
   };
-  return map[status] || "bg-gray-100 text-gray-800 border-gray-300";
+  return map[status] || "bg-gray-400/20 text-gray-300 border-gray-400/40";
 };
 
 const statusIcons: Record<string, string> = {
@@ -101,8 +91,7 @@ export default function TutorWalletPage() {
     .filter((w) => w.status === "pending" || w.status === "processing")
     .reduce((sum, w) => sum + w.amount, 0);
 
-  const lifetimeEarnings =
-    wallet?.earnings?.total_earnings || 0;
+  const lifetimeEarnings = wallet?.earnings?.total_earnings || 0;
 
   // ===== FETCH FUNCTIONS =====
   const fetchTransactions = useCallback(async () => {
@@ -117,25 +106,11 @@ export default function TutorWalletPage() {
         end_date: txDateTo || undefined,
       };
       const res = await getTransactionHistory(params);
-
-      console.log("Transaction RESPONSE:", res);
-
       const data = res?.results;
-
       if (data) {
-
-        setTransactions(
-          data.transactions || []
-        );
-
-        setTxNext(
-          res?.next || null
-        );
-
-        setTxPrev(
-          res?.previous || null
-        );
-
+        setTransactions(data.transactions || []);
+        setTxNext(res?.next || null);
+        setTxPrev(res?.previous || null);
       }
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || "Failed to load transactions";
@@ -177,70 +152,27 @@ export default function TutorWalletPage() {
   }, []);
 
   const fetchWallet = useCallback(async () => {
-
     try {
-
       const res = await getMyWallet();
-
-        console.log("WALLET RESPONSE:", res);
-
-        console.log("RES.DATA:", res?.data);
-
-        console.log("RES.DATA.DATA:", res?.data?.data);
-
-      const walletData =
-        res?.data;
-
+      const walletData = res?.data;
       if (walletData) {
-
         setWallet({
-
-          real_balance:
-            Number(walletData.real_balance),
-
-          bonus_balance:
-            Number(walletData.bonus_balance),
-
-          total_balance:
-            Number(walletData.total_balance),
-
-          earnings:
-            walletData.earnings || null,
-
+          real_balance: Number(walletData.real_balance),
+          bonus_balance: Number(walletData.bonus_balance),
+          total_balance: Number(walletData.total_balance),
+          earnings: walletData.earnings || null,
         });
-
       }
-
     } catch (err: any) {
-
-      const msg =
-        err?.response?.data?.error ||
-        err?.message ||
-        "Failed to load wallet";
-
+      const msg = err?.response?.data?.error || err?.message || "Failed to load wallet";
       toast.error(msg);
-
     }
-
   }, []);
 
-  useEffect(() => {
-
-    fetchWallet();
-
-  }, [fetchWallet]);
-
-  useEffect(() => {
-    fetchVerification();
-  }, [fetchVerification]);
-
-  useEffect(() => {
-    fetchWithdrawals();
-  }, [fetchWithdrawals]);
-
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+  useEffect(() => { fetchWallet(); }, [fetchWallet]);
+  useEffect(() => { fetchVerification(); }, [fetchVerification]);
+  useEffect(() => { fetchWithdrawals(); }, [fetchWithdrawals]);
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
 
   // ===== WITHDRAW LOGIC =====
   const validateWithdraw = (): boolean => {
@@ -269,7 +201,6 @@ export default function TutorWalletPage() {
       setWithdrawAmount("");
       setWithdrawError(null);
       await fetchWithdrawals();
-
       await fetchWallet();
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || "Withdrawal failed";
@@ -288,34 +219,39 @@ export default function TutorWalletPage() {
 
   // ===== RENDER =====
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-amber-50 to-orange-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* ===== HEADER ===== */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      {/* Animated blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+
+      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+        {/* HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 flex items-center gap-2">
               <span className="text-4xl">💰</span> My Wallet
             </h1>
-            <p className="text-gray-600 mt-1 font-medium">
+            <p className="text-white/70 mt-1 font-medium">
               Manage your earnings, withdrawals & verification
             </p>
           </div>
         </div>
 
-        {/* ===== VERIFICATION CARD ===== */}
+        {/* VERIFICATION CARD */}
         {!verifLoading && (
           <AnimatePresence>
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`rounded-2xl p-5 border shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
+              className={`backdrop-blur-xl rounded-2xl p-5 border shadow-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
                 verification?.verified
-                  ? "bg-emerald-50 border-emerald-300"
+                  ? "bg-emerald-500/10 border-emerald-400/30"
                   : verification?.status === "rejected"
-                  ? "bg-red-50 border-red-300"
+                  ? "bg-rose-500/10 border-rose-400/30"
                   : verification?.submitted
-                  ? "bg-blue-50 border-blue-300"
-                  : "bg-amber-50 border-amber-300"
+                  ? "bg-sky-500/10 border-sky-400/30"
+                  : "bg-amber-500/10 border-amber-400/30"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -329,7 +265,7 @@ export default function TutorWalletPage() {
                     : "⚪"}
                 </span>
                 <div>
-                  <p className="font-bold text-gray-900">
+                  <p className="font-bold text-white">
                     {verification?.verified
                       ? "Bank Verified"
                       : verification?.status === "rejected"
@@ -339,7 +275,7 @@ export default function TutorWalletPage() {
                       : "Bank Verification Required"}
                   </p>
                   {verification?.rejection_reason && (
-                    <p className="text-sm text-red-700 mt-1 font-medium">
+                    <p className="text-sm text-rose-300 mt-1 font-medium">
                       Reason: {verification.rejection_reason}
                     </p>
                   )}
@@ -349,7 +285,7 @@ export default function TutorWalletPage() {
                 {verification?.verified ? (
                   <button
                     onClick={() => setShowWithdrawModal(true)}
-                    className="px-6 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-bold rounded-xl shadow-md hover:from-teal-600 hover:to-emerald-600 transition"
+                    className="px-6 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-400 text-white font-bold rounded-xl shadow-lg hover:from-teal-500 hover:to-emerald-500 transition"
                   >
                     Withdraw ₹
                   </button>
@@ -362,12 +298,12 @@ export default function TutorWalletPage() {
                         router.push("/tutor/verification/view");
                       }
                     }}
-                    className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-md transition ${
+                    className={`px-6 py-2.5 text-white font-bold rounded-xl shadow-lg transition ${
                       verification?.status === "rejected"
-                        ? "bg-red-600 hover:bg-red-700"
+                        ? "bg-gradient-to-r from-rose-400 to-pink-400 hover:from-rose-500 hover:to-pink-500"
                         : verification?.submitted
-                        ? "bg-amber-600 hover:bg-amber-700"
-                        : "bg-teal-600 hover:bg-teal-700"
+                        ? "bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-500 hover:to-orange-500"
+                        : "bg-gradient-to-r from-violet-400 to-purple-400 hover:from-violet-500 hover:to-purple-500"
                     }`}
                   >
                     {verification?.status === "rejected"
@@ -382,151 +318,93 @@ export default function TutorWalletPage() {
           </AnimatePresence>
         )}
 
-        {/* ===== WALLET SUMMARY ===== */}
+        {/* WALLET SUMMARY */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <motion.div whileHover={{ y: -4 }} className="bg-white rounded-2xl p-4 shadow-md border border-amber-100">
-            <p className="text-sm text-gray-600 font-medium">Real Balance</p>
-            <p className="text-2xl font-bold text-teal-700 mt-1">
-              ₹{wallet?.real_balance?.toFixed(2) ?? "0.00"}
-            </p>
-          </motion.div>
-
-          <motion.div
-            whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl p-4 shadow-md border border-emerald-100"
-          >
-            <p className="text-sm text-gray-600 font-medium">
-              Total Balance
-            </p>
-
-            <p className="text-2xl font-bold text-emerald-700 mt-1">
-              ₹{wallet?.total_balance?.toFixed(2) ?? "0.00"}
-            </p>
-          </motion.div>
-          <motion.div whileHover={{ y: -4 }} className="bg-white rounded-2xl p-4 shadow-md border border-amber-100">
-            <p className="text-sm text-gray-600 font-medium">Pending Withdrawals</p>
-            <p className="text-2xl font-bold text-amber-600 mt-1">
-              ₹{pendingWithdrawalsTotal.toFixed(2)}
-            </p>
-          </motion.div>
-          <motion.div whileHover={{ y: -4 }} className="bg-white rounded-2xl p-4 shadow-md border border-emerald-100">
-            <p className="text-sm text-gray-600 font-medium">Lifetime Earnings</p>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">
-              ₹{lifetimeEarnings.toFixed(2)}
-            </p>
-          </motion.div>
-          <motion.div
-            whileHover={{ y: -4 }}
-            className="bg-white rounded-2xl p-4 shadow-md border border-purple-100"
-          >
-            <p className="text-sm text-gray-600 font-medium">
-              Pending Earnings
-            </p>
-
-            <p className="text-2xl font-bold text-purple-600 mt-1">
-              ₹{
-                wallet?.earnings?.pending_earnings?.toFixed(2)
-                ?? "0.00"
-              }
-            </p>
-          </motion.div>
+          {[
+            { label: "Real Balance", value: wallet?.real_balance?.toFixed(2) ?? "0.00", gradient: "from-teal-400 to-emerald-400", border: "border-teal-400/30" },
+            { label: "Total Balance", value: wallet?.total_balance?.toFixed(2) ?? "0.00", gradient: "from-emerald-400 to-green-400", border: "border-emerald-400/30" },
+            { label: "Pending Withdrawals", value: pendingWithdrawalsTotal.toFixed(2), gradient: "from-amber-400 to-yellow-400", border: "border-amber-400/30" },
+            { label: "Lifetime Earnings", value: lifetimeEarnings.toFixed(2), gradient: "from-violet-400 to-purple-400", border: "border-violet-400/30" },
+            { label: "Pending Earnings", value: wallet?.earnings?.pending_earnings?.toFixed(2) ?? "0.00", gradient: "from-sky-400 to-cyan-400", border: "border-sky-400/30" },
+          ].map((stat, i) => (
+            <motion.div
+              key={i}
+              whileHover={{ y: -4 }}
+              className={`bg-white/5 backdrop-blur-xl rounded-2xl p-4 shadow-xl border ${stat.border}`}
+            >
+              <p className="text-sm text-white/60 font-medium">{stat.label}</p>
+              <p className={`text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mt-1`}>
+                ₹{stat.value}
+              </p>
+            </motion.div>
+          ))}
         </div>
 
-        {/* ===== TRANSACTIONS & WITHDRAWALS (desktop 2-col) ===== */}
+        {/* TRANSACTIONS & WITHDRAWALS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* ----- TRANSACTIONS ----- */}
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-teal-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          {/* TRANSACTIONS */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               📊 Transaction History
             </h2>
 
-            {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"
                 placeholder="Search..."
                 value={txSearch}
                 onChange={(e) => setTxSearch(e.target.value)}
-                className="
-                  flex-1 rounded-xl border-2 border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900
-                  placeholder:text-gray-400 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100
-                "
+                className="flex-1 bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white placeholder-white/40 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
               />
               <input
                 type="date"
                 value={txDateFrom}
                 onChange={(e) => setTxDateFrom(e.target.value)}
-                className="
-                  rounded-xl border-2 border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900
-                  outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100
-                "
+                className="bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
               />
               <input
                 type="date"
                 value={txDateTo}
                 onChange={(e) => setTxDateTo(e.target.value)}
-                className="
-                  rounded-xl border-2 border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900
-                  outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100
-                "
+                className="bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
               />
               <select
                 value={txFilters.type || ""}
                 onChange={(e) =>
-                  setTxFilters((prev) => ({
-                    ...prev,
-                    type: e.target.value as TransactionFilters["type"],
-                  }))
+                  setTxFilters((prev) => ({ ...prev, type: e.target.value as TransactionFilters["type"] }))
                 }
-                className="
-                  rounded-xl border-2 border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-900
-                  outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100
-                "
+                className="bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
               >
-                <option value="">All</option>
-                <option value="credit">Credit</option>
-                <option value="debit">Debit</option>
+                <option value="" className="bg-gray-900">All</option>
+                <option value="credit" className="bg-gray-900">Credit</option>
+                <option value="debit" className="bg-gray-900">Debit</option>
               </select>
             </div>
 
-            {/* Transaction list */}
             {txLoading ? (
-              <div className="animate-pulse space-y-2">
+              <div className="animate-pulse space-y-3">
                 {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-6 bg-gray-100 rounded" />
+                  <div key={i} className="h-6 bg-white/10 rounded" />
                 ))}
               </div>
             ) : transactions.length === 0 ? (
-              <EmptyState
-                icon="📊"
-                title="No transactions yet"
-                description="Once you start earning or spending, your transactions will appear here."
-              />
+              <EmptyState icon="📊" title="No transactions yet" description="Once you start earning or spending, your transactions will appear here." />
             ) : (
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {transactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="flex justify-between items-center border-b border-gray-100 pb-2"
-                  >
+                  <div key={tx.id} className="flex justify-between items-center border-b border-white/10 pb-2">
                     <div className="flex items-center gap-2">
                       {tx.type === "credit" ? (
-                        <span className="text-emerald-500 text-xl">↑</span>
+                        <span className="text-emerald-400 text-xl">↑</span>
                       ) : (
-                        <span className="text-red-500 text-xl">↓</span>
+                        <span className="text-rose-400 text-xl">↓</span>
                       )}
                       <div>
-                        <p className="font-semibold text-gray-800">{tx.description}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(tx.created_at).toLocaleString()}
-                        </p>
+                        <p className="font-semibold text-white">{tx.description}</p>
+                        <p className="text-xs text-white/50">{new Date(tx.created_at).toLocaleString()}</p>
                       </div>
                     </div>
-                    <p
-                      className={`font-bold ${
-                        tx.type === "credit" ? "text-emerald-600" : "text-red-500"
-                      }`}
-                    >
+                    <p className={`font-bold ${tx.type === "credit" ? "text-emerald-400" : "text-rose-400"}`}>
                       {tx.type === "credit" ? "+" : "-"}₹{tx.amount}
                     </p>
                   </div>
@@ -534,72 +412,63 @@ export default function TutorWalletPage() {
               </div>
             )}
 
-            {/* Pagination */}
             <div className="flex justify-center gap-2 mt-4">
               <button
                 disabled={!txPrev}
                 onClick={() => setTxPage((p) => p - 1)}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50"
+                className="px-3 py-1 bg-white/10 text-white/80 rounded-lg font-medium hover:bg-white/20 disabled:opacity-40"
               >
                 Prev
               </button>
-              <span className="text-sm self-center font-medium text-gray-600">Page {txPage}</span>
+              <span className="text-sm self-center font-medium text-white/60">Page {txPage}</span>
               <button
                 disabled={!txNext}
                 onClick={() => setTxPage((p) => p + 1)}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50"
+                className="px-3 py-1 bg-white/10 text-white/80 rounded-lg font-medium hover:bg-white/20 disabled:opacity-40"
               >
                 Next
               </button>
             </div>
           </div>
 
-          {/* ----- WITHDRAWALS ----- */}
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-amber-100">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          {/* WITHDRAWALS */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               🏦 Withdrawal Requests
             </h2>
 
             {wdLoading ? (
-              <div className="animate-pulse space-y-2">
+              <div className="animate-pulse space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-16 bg-gray-100 rounded" />
+                  <div key={i} className="h-16 bg-white/10 rounded" />
                 ))}
               </div>
             ) : withdrawals.length === 0 ? (
-              <EmptyState
-                icon="🏦"
-                title="No withdrawal requests"
-                description="Once you request a withdrawal, it will show up here."
-              />
+              <EmptyState icon="🏦" title="No withdrawal requests" description="Once you request a withdrawal, it will show up here." />
             ) : (
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {withdrawals.map((wd) => (
                   <div
                     key={wd.withdrawal_id}
-                    className="border border-gray-200 rounded-xl p-3 flex flex-col sm:flex-row justify-between gap-2 bg-gray-50/50"
+                    className="border border-white/10 rounded-xl p-3 flex flex-col sm:flex-row justify-between gap-2 bg-white/5"
                   >
                     <div>
-                      <p className="font-bold text-gray-800">₹{wd.amount.toFixed(2)}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-bold text-white">₹{wd.amount.toFixed(2)}</p>
+                      <p className="text-xs text-white/50">
                         Requested: {new Date(wd.created_at).toLocaleString()}
                       </p>
                       {wd.processed_at && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-white/50">
                           Processed: {new Date(wd.processed_at).toLocaleString()}
                         </p>
                       )}
                       {wd.status === "rejected" && wd.admin_notes && (
-                        <p className="text-xs text-red-600 mt-1 font-medium">
+                        <p className="text-xs text-rose-400 mt-1 font-medium">
                           Reason: {wd.admin_notes}
                         </p>
                       )}
                     </div>
-                    <span
-                      className={`self-start px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusBadge(
-                        wd.status
-                      )}`}
-                    >
+                    <span className={`self-start px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusBadgeClass(wd.status)}`}>
                       {statusIcons[wd.status]} {wd.status}
                     </span>
                   </div>
@@ -610,7 +479,7 @@ export default function TutorWalletPage() {
         </div>
       </div>
 
-      {/* ===== WITHDRAW MODAL ===== */}
+      {/* WITHDRAW MODAL */}
       <AnimatePresence>
         {showWithdrawModal && (
           <motion.div
@@ -623,17 +492,17 @@ export default function TutorWalletPage() {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-teal-100"
+              className="bg-gradient-to-br from-[#1a1535] to-[#0f0c29] border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
             >
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">Withdraw Funds</h2>
-              <p className="text-sm text-gray-600 mb-4">
+              <h2 className="text-2xl font-bold text-white mb-1">Withdraw Funds</h2>
+              <p className="text-sm text-white/70 mb-4">
                 Available (Real Balance):{" "}
-                <span className="font-bold text-teal-700">
+                <span className="font-bold text-teal-400">
                   ₹{wallet?.real_balance?.toFixed(2) ?? "0.00"}
                 </span>
               </p>
 
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-semibold text-white/80 mb-1">
                 Amount to withdraw
               </label>
               <input
@@ -644,27 +513,26 @@ export default function TutorWalletPage() {
                   setWithdrawAmount(e.target.value);
                   setWithdrawError(null);
                 }}
-                className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 transition"
+                className="w-full bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-3 text-lg font-medium text-white placeholder-white/40 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/50 transition"
                 min={1}
                 max={wallet?.real_balance}
               />
 
-              {/* Error message */}
               {withdrawError && (
-                <p className="mt-2 text-sm text-red-600 font-medium">{withdrawError}</p>
+                <p className="mt-2 text-sm text-rose-400 font-medium">{withdrawError}</p>
               )}
 
               <div className="flex gap-3 mt-5">
                 <button
                   onClick={handleCloseModal}
-                  className="flex-1 py-3 bg-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-300 transition"
+                  className="flex-1 py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-bold hover:bg-white/20 transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleWithdraw}
                   disabled={withdrawing}
-                  className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-xl font-bold shadow-md hover:from-teal-600 hover:to-emerald-600 transition disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="flex-1 py-3 bg-gradient-to-r from-teal-400 to-emerald-400 text-white rounded-xl font-bold shadow-lg hover:from-teal-500 hover:to-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed transition"
                 >
                   {withdrawing ? "Submitting..." : "Withdraw"}
                 </button>
@@ -677,7 +545,7 @@ export default function TutorWalletPage() {
   );
 }
 
-// ---------- Reusable Empty State ----------
+// ---------- Empty State ----------
 const EmptyState = ({
   icon,
   title,
@@ -689,7 +557,7 @@ const EmptyState = ({
 }) => (
   <div className="flex flex-col items-center justify-center py-10 text-center">
     <span className="text-4xl mb-3">{icon}</span>
-    <h3 className="text-lg font-bold text-gray-800">{title}</h3>
-    <p className="text-sm text-gray-500 mt-1 max-w-xs">{description}</p>
+    <h3 className="text-lg font-bold text-white">{title}</h3>
+    <p className="text-sm text-white/50 mt-1 max-w-xs">{description}</p>
   </div>
 );

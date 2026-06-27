@@ -37,6 +37,18 @@ interface CallContextType {
 
   screenTrackRef: React.MutableRefObject<ILocalVideoTrack | null>;
 
+  isJoining: boolean;
+
+  isInitialized: boolean;
+
+  setIsJoining: (
+    value: boolean
+  ) => void;
+
+  setIsInitialized: (
+    value: boolean
+  ) => void;
+
   joinAgoraCall: (
     client: any,
     micTrack: any,
@@ -96,7 +108,13 @@ export function CallProvider({
   const [remoteUid, setRemoteUid] =
     useState<number | null>(null);
 
-    const [joined, setJoined] =
+  const [joined, setJoined] =
+    useState(false);
+
+  const [isJoining, setIsJoining] =
+    useState(false);
+
+  const [isInitialized, setIsInitialized] =
     useState(false);
 
     const [
@@ -162,6 +180,10 @@ export function CallProvider({
     setRemoteUid(null);
 
     setJoined(false);
+
+    setIsJoining(false);
+
+    setIsInitialized(false);
 
     setConnectionState(
         'disconnected'
@@ -317,6 +339,14 @@ export function CallProvider({
         joinAgoraCall,
 
         leaveAgoraCall,
+
+        isJoining,
+
+        isInitialized,
+
+        setIsJoining,
+
+        setIsInitialized,
         }}
     >
       {children}

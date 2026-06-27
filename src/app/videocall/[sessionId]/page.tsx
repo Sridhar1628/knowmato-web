@@ -67,6 +67,7 @@ const VideoCallScreen: React.FC = () => {
   const [userName, setUserName] = useState("");
 
   // ----- Agora Engine & Tracks -----
+
   const callInitializedRef =
   useRef(false);
   const localVideoRef =
@@ -133,6 +134,7 @@ const VideoCallScreen: React.FC = () => {
     }
 
     const initCall = async () => {
+
 
       if (
         clientRef.current &&
@@ -210,6 +212,10 @@ const VideoCallScreen: React.FC = () => {
           return;
         }
 
+        // Safety: if a client somehow already exists,
+        // remove old listeners before replacing it.
+        (clientRef.current as any)?.removeAllListeners?.();
+
         const client =
           AgoraRTC.createClient({
             mode: "rtc",
@@ -218,6 +224,8 @@ const VideoCallScreen: React.FC = () => {
 
         clientRef.current =
           client;
+
+        console.log("🎥 Agora client created");
 
         // ---- Remote user unpublished ----
         client.on(
@@ -339,11 +347,11 @@ const VideoCallScreen: React.FC = () => {
           cameraTrack
         );
 
-        console.log("🚀 JOINING CHANNEL:", channel_name);
-        console.log("🚀 TOKEN:", token);
-        console.log("🚀 UID:", uid);
-
-        console.log("📡 CALLING client.join()");
+        console.log("🚀 Joining Agora", {
+          sessionId,
+          channel: channel_name,
+          uid,
+        });
 
         await client.join(
           APP_ID,
@@ -352,9 +360,7 @@ const VideoCallScreen: React.FC = () => {
           uid
         );
 
-        console.log("✅ JOIN SUCCESS");
-
-        console.log("✅ JOINED CHANNEL");
+        console.log("✅ Agora join completed");
 
         setTimeout(() => {
 
@@ -389,6 +395,9 @@ const VideoCallScreen: React.FC = () => {
         }, 1000);
       } catch (err) {
         console.error("Init error:", err);
+        callInitializedRef.current = false;
+
+        clientRef.current = null; 
         window.alert("Failed to start video call.");
       } finally {
         setIsLoading(false);
@@ -466,7 +475,12 @@ const VideoCallScreen: React.FC = () => {
     forceEnd = false
   ) => {
 
-    if (ending) return;
+    if (ending) {
+      console.log(
+        "⚠️ Leave already in progress"
+      );
+      return;
+    }
 
     setEnding(true);
 
@@ -481,7 +495,6 @@ const VideoCallScreen: React.FC = () => {
       callInitializedRef.current =
         false;
 
-      disconnectChatSocket();
 
       if (
         forceEnd &&
@@ -506,6 +519,8 @@ const VideoCallScreen: React.FC = () => {
       }
 
       await leaveAgoraCall();
+
+      disconnectChatSocket();
 
       exitCallScreen(
         forceEnd

@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  getTutorBankVerification,
-} from "@/services/v1Service";
+import { motion } from "framer-motion";
+import { getTutorBankVerification } from "@/services/v1Service";
 import toast from "react-hot-toast";
 
 export default function VerificationViewPage() {
@@ -17,12 +16,10 @@ export default function VerificationViewPage() {
     const fetchVerification = async () => {
       try {
         const res = await getTutorBankVerification();
-
         if (!res.submitted) {
           router.replace("/tutor/verification");
           return;
         }
-
         setVerification(res.data);
       } catch {
         toast.error("Failed to load verification.");
@@ -30,108 +27,93 @@ export default function VerificationViewPage() {
         setLoading(false);
       }
     };
-
     fetchVerification();
   }, [router]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-white/70">Loading verification...</p>
+        </div>
       </div>
     );
   }
 
   if (!verification) return null;
 
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+  const infoItems = [
+    { title: "Account Holder", value: verification.account_holder_name },
+    { title: "Account Number", value: `XXXXXX${verification.account_number.slice(-4)}` },
+    { title: "IFSC", value: verification.ifsc_code },
+    { title: "Bank", value: verification.bank_name },
+    { title: "Branch", value: verification.branch_name },
+    { title: "Account Type", value: verification.account_type },
+    { title: "PAN", value: verification.pan_number },
+    { title: "Aadhaar", value: `XXXXXXXX${verification.aadhaar_number.slice(-4)}` },
+    { title: "Mobile", value: verification.mobile_number },
+    { title: "Status", value: verification.status.toUpperCase() },
+  ];
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden p-4 sm:p-6">
+      {/* Animated blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="relative z-10 max-w-3xl mx-auto bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6 sm:p-8"
+      >
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mb-8">
           Bank Verification
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-          <Info title="Account Holder" value={verification.account_holder_name} />
-
-          <Info
-            title="Account Number"
-            value={`XXXXXX${verification.account_number.slice(-4)}`}
-          />
-
-          <Info title="IFSC" value={verification.ifsc_code} />
-
-          <Info title="Bank" value={verification.bank_name} />
-
-          <Info title="Branch" value={verification.branch_name} />
-
-          <Info title="Account Type" value={verification.account_type} />
-
-          <Info title="PAN" value={verification.pan_number} />
-
-          <Info
-            title="Aadhaar"
-            value={`XXXXXXXX${verification.aadhaar_number.slice(-4)}`}
-          />
-
-          <Info title="Mobile" value={verification.mobile_number} />
-
-          <Info
-            title="Status"
-            value={verification.status.toUpperCase()}
-          />
-
+          {infoItems.map((item, idx) => (
+            <motion.div
+              key={idx}
+              whileHover={{ scale: 1.02 }}
+              className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-4"
+            >
+              <p className="text-sm text-white/50">{item.title}</p>
+              <p className="font-semibold text-white mt-1">{item.value}</p>
+            </motion.div>
+          ))}
         </div>
 
         {verification.rejection_reason && (
-          <div className="mt-6 rounded-xl bg-red-50 border border-red-200 p-4">
-            <p className="font-semibold text-red-700">
-              Rejection Reason
-            </p>
-            <p className="text-red-600">
-              {verification.rejection_reason}
-            </p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6 rounded-xl bg-rose-500/10 border border-rose-400/30 backdrop-blur-md p-4"
+          >
+            <p className="font-semibold text-rose-300">Rejection Reason</p>
+            <p className="text-rose-200/80 mt-1">{verification.rejection_reason}</p>
+          </motion.div>
         )}
 
         <div className="flex gap-3 mt-8">
-
           <button
             onClick={() => router.push("/tutor/wallet")}
-            className="flex-1 bg-gray-200 hover:bg-gray-300 rounded-xl py-3 font-semibold"
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white/80 font-semibold py-3 rounded-xl border border-white/10 transition"
           >
             Back
           </button>
-
           {verification.status === "rejected" && (
             <button
               onClick={() => router.push("/tutor/verification")}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 font-semibold"
+              className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-violet-500/25 transition"
             >
               Update Verification
             </button>
           )}
-
         </div>
-
-      </div>
-    </div>
-  );
-}
-
-function Info({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="border rounded-xl p-4 bg-gray-50">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="font-semibold text-gray-900 mt-1">{value}</p>
+      </motion.div>
     </div>
   );
 }

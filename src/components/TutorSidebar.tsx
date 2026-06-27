@@ -15,7 +15,7 @@ const menuItems = [
     icon: "📚",
   },
   {
-    label: "Requests",
+    label: "My Requests",
     href: "/tutor/requests",
     icon: "📩",
   },

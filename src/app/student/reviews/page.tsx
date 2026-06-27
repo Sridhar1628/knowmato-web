@@ -117,30 +117,38 @@ export default function StudentReviewsPage() {
   // Loading state
   if (loading && !refreshing) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          <p className="mt-4 text-gray-700 font-medium">Loading reviews...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+        <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+        <div className="relative z-10 text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
+          <p className="mt-4 text-white/80 font-medium">Loading reviews...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+
+      <div className="relative z-10 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 flex items-center gap-2">
               <span className="text-4xl">📝</span> My Reviews
             </h1>
-            <p className="text-gray-500 mt-1">Manage your tutor reviews & feedback</p>
+            <p className="text-white/60 mt-1">Manage your tutor reviews & feedback</p>
           </div>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white rounded-full shadow-sm border border-gray-200 text-indigo-600 font-semibold hover:bg-indigo-50 transition-all disabled:opacity-50 mt-4 sm:mt-0"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-violet-300 font-semibold hover:bg-white/20 hover:text-white transition-all disabled:opacity-50 mt-4 sm:mt-0"
           >
             <svg
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
@@ -157,11 +165,11 @@ export default function StudentReviewsPage() {
 
         {/* Error state */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4 flex items-center justify-between">
-            <span>⚠️ {error}</span>
+          <div className="mb-6 bg-rose-400/10 backdrop-blur-md border border-rose-400/40 text-rose-300 rounded-2xl p-4 flex items-center justify-between">
+            <span className="font-medium">⚠️ {error}</span>
             <button
               onClick={() => fetchReviews()}
-              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 rounded-xl font-medium text-sm transition"
+              className="px-4 py-1.5 bg-rose-400/20 hover:bg-rose-400/30 rounded-xl font-medium text-sm text-rose-200 transition"
             >
               Retry
             </button>
@@ -170,10 +178,10 @@ export default function StudentReviewsPage() {
 
         {/* Empty state */}
         {!error && reviews.length === 0 && !loading && (
-          <div className="text-center py-20 bg-white/50 backdrop-blur-sm rounded-2xl border border-white/60 shadow-sm">
+          <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl">
             <div className="text-6xl mb-4">📝</div>
-            <h2 className="text-2xl font-bold text-gray-700">No reviews yet</h2>
-            <p className="text-gray-500 mt-2">
+            <h2 className="text-2xl font-bold text-white">No reviews yet</h2>
+            <p className="text-white/50 mt-2">
               Once you complete a session, you can review your tutor here.
             </p>
           </div>
@@ -185,28 +193,28 @@ export default function StudentReviewsPage() {
             {reviews.map((review) => (
               <div
                 key={review.review_id}
-                className="group bg-white rounded-2xl p-6 shadow-md hover:shadow-xl hover:shadow-indigo-100/50 border border-gray-100 hover:border-indigo-200 transition-all duration-300 hover:-translate-y-1 flex flex-col"
+                className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl hover:shadow-2xl hover:border-violet-400/40 transition-all duration-300 hover:-translate-y-1 flex flex-col"
               >
                 {/* Tutor name & rating */}
                 <div className="flex justify-between items-start mb-3">
-                  <h2 className="text-lg font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">
+                  <h2 className="text-lg font-bold text-white group-hover:text-violet-300 transition-colors">
                     👨‍🏫 {review.tutor_name ?? "Unknown Tutor"}
                   </h2>
-                  <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
-                    <span className="text-yellow-600 font-bold text-sm">
+                  <div className="flex items-center gap-1 bg-amber-400/20 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40">
+                    <span className="text-amber-300 font-bold text-sm">
                       ⭐ {review.rating}.0
                     </span>
                   </div>
                 </div>
 
                 {/* Feedback */}
-                <p className="text-gray-600 text-sm leading-relaxed flex-1">
+                <p className="text-white/70 text-sm leading-relaxed flex-1">
                   {review.feedback?.trim() || "No feedback provided."}
                 </p>
 
                 {/* Date & Edit */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                  <span className="text-xs text-gray-400">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                  <span className="text-xs text-white/40">
                     {new Date(review.created_at).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
@@ -215,7 +223,7 @@ export default function StudentReviewsPage() {
                   </span>
                   <button
                     onClick={() => handleEdit(review)}
-                    className="inline-flex items-center gap-1 px-4 py-1.5 bg-indigo-50 text-indigo-700 font-medium rounded-full text-sm hover:bg-indigo-100 active:bg-indigo-200 transition-colors"
+                    className="inline-flex items-center gap-1 px-4 py-1.5 bg-violet-500/20 text-violet-300 font-medium rounded-full text-sm border border-violet-400/30 hover:bg-violet-500/30 transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -233,11 +241,11 @@ export default function StudentReviewsPage() {
 
       {/* Edit Modal */}
       {editingReview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Edit Review</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-4">Edit Review</h2>
 
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rating (1-5)</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">Rating (1-5)</label>
             <div className="flex gap-2 mb-5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -245,7 +253,7 @@ export default function StudentReviewsPage() {
                   type="button"
                   onClick={() => setEditRating(star)}
                   className={`text-3xl transition-transform hover:scale-110 ${
-                    editRating >= star ? "text-yellow-500" : "text-gray-300"
+                    editRating >= star ? "text-amber-300" : "text-white/20"
                   }`}
                 >
                   ★
@@ -253,9 +261,9 @@ export default function StudentReviewsPage() {
               ))}
             </div>
 
-            <label className="block text-sm font-medium text-gray-700 mb-2">Feedback</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">Feedback</label>
             <textarea
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 text-gray-800"
+              className="w-full bg-gray-900/60 border-2 border-white/20 rounded-xl p-3 text-sm min-h-[100px] text-white placeholder-white/40 focus:outline-none focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400"
               placeholder="Write your feedback..."
               value={editFeedback}
               onChange={(e) => setEditFeedback(e.target.value)}
@@ -264,14 +272,14 @@ export default function StudentReviewsPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setEditingReview(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-xl transition-colors"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-2.5 rounded-xl transition-colors border border-white/20"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={updating}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-2.5 rounded-xl disabled:opacity-70 transition-colors"
+                className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold py-2.5 rounded-xl disabled:opacity-60 shadow-lg shadow-violet-500/25 transition-all"
               >
                 {updating ? "Saving..." : "Save"}
               </button>

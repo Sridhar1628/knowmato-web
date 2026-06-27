@@ -8,7 +8,6 @@ import { getTransactionHistory, getAvailableWalletOffers } from "@/services/v1Se
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getTokens } from "@/services/storageService";
 import { apiGet } from "@/services/versionApiService";
-import styles from "./Wallet.module.css";
 
 import {
   walletCache
@@ -56,21 +55,15 @@ const StudentWalletScreen = () => {
   const [nextPage, setNextPage] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Animation for balance change (simple CSS transition)
+  // Animation for balance change
   const prevTotalRef = useRef(walletCache.wallet.total);
   const balanceRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-
-    const unsubscribe =
-      subscribeWallet(() => {
-
-        forceUpdate({});
-
-      });
-
+    const unsubscribe = subscribeWallet(() => {
+      forceUpdate({});
+    });
     return unsubscribe;
-
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -81,8 +74,7 @@ const StudentWalletScreen = () => {
       const res = await getTransactionHistory();
       const data = res.results;
 
-      const offerRes =
-        await getAvailableWalletOffers();
+      const offerRes = await getAvailableWalletOffers();
 
       const mapped = data.transactions.map((tx: any) => ({
         id: tx.id,
@@ -105,15 +97,9 @@ const StudentWalletScreen = () => {
       };
 
       walletCache.transactions = mapped;
-
-      walletCache.offer =
-        offerRes.data?.[0] || null;
-
-      walletCache.nextPage =
-        res.next || null;
-
+      walletCache.offer = offerRes.data?.[0] || null;
+      walletCache.nextPage = res.next || null;
       walletCache.initialized = true;
-
     } catch (err) {
       console.log("Wallet Error:", err);
     } finally {
@@ -199,18 +185,11 @@ const StudentWalletScreen = () => {
   // Initial fetch
   // ---------------------------------------------------------------------------
   useEffect(() => {
-
-    if (
-      walletCache.initialized
-    ) {
-
+    if (walletCache.initialized) {
       setLoading(false);
-
       return;
     }
-
     fetchData();
-
   }, [fetchData]);
 
   // ---------------------------------------------------------------------------
@@ -239,48 +218,55 @@ const StudentWalletScreen = () => {
   };
 
   // ---------------------------------------------------------------------------
-  // Render helpers
+  // Render transaction item
   // ---------------------------------------------------------------------------
   const renderTransaction = (tx: Transaction) => {
     const isCredit = tx.type === "credit";
     return (
       <div
         key={tx.id}
-        className={`${styles.txItem} ${highlightTxId === tx.id ? styles.highlightTx : ""}`}
+        className={`flex items-center justify-between p-3 sm:p-4 rounded-2xl border transition-all duration-300 ${
+          highlightTxId === tx.id
+            ? "border-emerald-400 bg-emerald-400/10 shadow-lg shadow-emerald-500/20 scale-[1.02]"
+            : "border-white/10 bg-white/5 hover:border-white/20"
+        }`}
       >
-        <div className={styles.txLeft}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div
-            className={styles.txIcon}
+            className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm"
             style={{
-              backgroundColor: isCredit ? "#DCFCE7" : "#FEE2E2",
+              backgroundColor: isCredit ? "rgba(52, 211, 153, 0.2)" : "rgba(248, 113, 113, 0.2)",
             }}
           >
             <span>{isCredit ? "⬇️" : "⬆️"}</span>
           </div>
-          <div className={styles.txContent}>
-            <p className={styles.txTitle}>{tx.description}</p>
-            <span className={styles.sourceBadge}>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">
+              {tx.description}
+            </p>
+            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 bg-white/10 text-white/70">
               {tx.source === "wallet_topup" ? "💰 Wallet Topup" : "📚 Doubt Payment"}
             </span>
-            <div className={styles.splitRow}>
-              <span className={styles.splitText}>
+            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+              <span className="text-[11px] text-white/50">
                 Main: ₹{(tx.real_amount || 0).toFixed(2)}
               </span>
               {tx.bonus_amount && tx.bonus_amount > 0 && (
-                <span className={styles.bonusSplit}>
+                <span className="text-[11px] text-amber-300">
                   Bonus: ₹{tx.bonus_amount.toFixed(2)}
                 </span>
               )}
             </div>
-            <span className={styles.txDate}>
+            <span className="text-[11px] text-white/40 block mt-1">
               {tx.date} • {tx.time}
             </span>
           </div>
         </div>
-        <div className={styles.txAmountWrapper}>
+        <div className="flex-shrink-0 ml-3">
           <span
-            className={styles.txAmount}
-            style={{ color: isCredit ? "#16A34A" : "#DC2626" }}
+            className={`text-base font-bold whitespace-nowrap ${
+              isCredit ? "text-emerald-400" : "text-rose-400"
+            }`}
           >
             {isCredit ? "+" : "-"} ₹{Math.abs(tx.amount).toFixed(2)}
           </span>
@@ -294,8 +280,8 @@ const StudentWalletScreen = () => {
   // ---------------------------------------------------------------------------
   if (loading) {
     return (
-      <div className={styles.center}>
-        <div className={styles.spinner}></div>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+        <div className="w-10 h-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
       </div>
     );
   }
@@ -304,96 +290,92 @@ const StudentWalletScreen = () => {
   // Main render
   // ---------------------------------------------------------------------------
   return (
-    <div className={styles.container}>
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
-      <div className={styles.scrollContainer}>
+      <div className="relative z-10 max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-3xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6">
         {/* Balance Card */}
-        <div className={styles.balanceCard}>
-          <p className={styles.balanceLabel}>
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl text-center">
+          <p className="text-xs sm:text-sm text-white/50 font-medium uppercase tracking-wide">
             Total Balance
           </p>
-
           <h2
             ref={balanceRef}
-            className={styles.balanceAmount}
+            className="text-3xl sm:text-4xl md:text-5xl font-extrabold mt-2 text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300"
           >
             ₹{walletCache.wallet.total.toFixed(2)}
           </h2>
-
           <button
-            className={styles.addMoneyBtn}
-            onClick={() =>
-              router.push("/add-money")
-            }
+            className="mt-4 px-5 py-3 sm:px-6 sm:py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 active:scale-95 transition"
+            onClick={() => router.push("/add-money")}
           >
             + Add Money
           </button>
-
           {walletCache.offer && (
-            <div className={styles.offerPill}>
-              🎁 {walletCache.offer.bonus_percentage}% Bonus
-              · Max ₹{walletCache.offer.max_bonus}
+            <div className="mt-3 inline-block rounded-full bg-amber-400/20 border border-amber-400/30 px-4 py-1.5 text-sm font-semibold text-amber-300">
+              🎁 {walletCache.offer.bonus_percentage}% Bonus · Max ₹{walletCache.offer.max_bonus}
             </div>
           )}
-
         </div>
 
         {/* Split Balances */}
-        <div className={styles.balanceRow}>
-          <div className={styles.balanceBox}>
-            <span className={styles.boxTitle}>💵 Available Balance</span>
-            <span className={styles.boxAmount}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-lg">
+            <span className="text-xs text-white/50">💵 Available Balance</span>
+            <span className="block text-lg sm:text-xl font-bold text-white mt-1">
               ₹{walletCache.wallet.real.toFixed(2)}
             </span>
           </div>
-          <div className={styles.balanceBox}>
-            <span className={styles.boxHint}>🎁 Bonus Balance</span>
-            <span className={styles.boxAmount}>
+          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 shadow-lg">
+            <span className="text-xs text-white/50">🎁 Bonus Balance</span>
+            <span className="block text-lg sm:text-xl font-bold text-white mt-1">
               ₹{walletCache.wallet.bonus.toFixed(2)}
             </span>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <h3 className={styles.sectionTitle}>Quick Actions</h3>
-        <div className={styles.quickRow}>
+        <h3 className="text-base sm:text-lg font-bold text-white">Quick Actions</h3>
+        <div className="flex gap-3">
           <button
-            className={styles.quickItem}
             onClick={() => router.push("/add-money")}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 active:scale-95 transition"
           >
-            <span>💰</span>
-            <span className={styles.quickText}>Add Money</span>
+            <span className="text-lg">💰</span> Add Money
           </button>
           <button
-            className={styles.quickItem}
             onClick={() => router.push("/transactions")}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 active:scale-95 transition"
           >
-            <span>📜</span>
-            <span className={styles.quickText}>History</span>
+            <span className="text-lg">📜</span> History
           </button>
         </div>
 
-
         {/* Transactions Header */}
-        <div className={styles.txHeader}>
-          <h4 className={styles.txHeaderText}>Recent Transactions</h4>
-          <button className={styles.refreshBtn} onClick={handleRefresh}>
+        <div className="flex items-center justify-between">
+          <h4 className="text-base sm:text-lg font-bold text-white">Recent Transactions</h4>
+          <button
+            onClick={handleRefresh}
+            className="text-sm font-medium text-violet-300 hover:text-violet-200 transition"
+          >
             Refresh
           </button>
         </div>
 
         {/* Transactions List */}
-        <div className={styles.txList}>
+        <div className="space-y-3">
           {walletCache.transactions.map(renderTransaction)}
         </div>
 
         {/* Load More Button */}
         {nextPage && (
           <button
-            className={styles.loadMoreBtn}
             onClick={loadMoreTransactions}
             disabled={loadingMore}
+            className="w-full py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 disabled:opacity-50 active:scale-95 transition"
           >
             {loadingMore ? "Loading..." : "Load More"}
           </button>

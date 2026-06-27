@@ -42,7 +42,7 @@ interface DoubtDetail {
 
 export default function MyDoubtsDetailsPage() {
   const params = useParams();
-  const doubtId = Number(params.doubtId); // assumes dynamic route [doubtId]
+  const doubtId = Number(params.doubtId);
   const router = useRouter();
 
   const [doubt, setDoubt] = useState<DoubtDetail | null>(null);
@@ -51,8 +51,6 @@ export default function MyDoubtsDetailsPage() {
 
   const hasReview = doubt?.review != null;
 
-
-  // ================== FETCH DETAILS ==================
   const fetchDetails = useCallback(async () => {
     try {
       const res = await getDoubtDetails(doubtId);
@@ -70,7 +68,6 @@ export default function MyDoubtsDetailsPage() {
     fetchDetails();
   }, [fetchDetails]);
 
-  // ================== SOCKET REAL‑TIME UPDATES ==================
   useEffect(() => {
     let mounted = true;
 
@@ -102,7 +99,6 @@ export default function MyDoubtsDetailsPage() {
     };
   }, [doubtId, fetchDetails]);
 
-  // ================== ACTIONS ==================
   const joinSession = () => {
     if (!doubt?.session?.id) return;
     const sessionType = doubt.session.session_type;
@@ -113,7 +109,6 @@ export default function MyDoubtsDetailsPage() {
     }
   };
 
-  // ================== HELPERS ==================
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -127,29 +122,29 @@ export default function MyDoubtsDetailsPage() {
       case "open":
         return {
           emoji: "🟢",
-          color: "text-emerald-700",
-          bg: "bg-emerald-100",
+          color: "text-emerald-300",
+          bg: "bg-emerald-400/20 border-emerald-400/40",
           text: "Open",
         };
       case "assigned":
         return {
           emoji: "🔵",
-          color: "text-blue-700",
-          bg: "bg-blue-100",
+          color: "text-sky-300",
+          bg: "bg-sky-400/20 border-sky-400/40",
           text: "Assigned",
         };
       case "completed":
         return {
           emoji: "✅",
-          color: "text-gray-700",
-          bg: "bg-gray-100",
+          color: "text-gray-300",
+          bg: "bg-gray-400/20 border-gray-400/40",
           text: "Completed",
         };
       default:
         return {
           emoji: "⚪",
-          color: "text-gray-700",
-          bg: "bg-gray-100",
+          color: "text-gray-300",
+          bg: "bg-gray-400/20 border-gray-400/40",
           text: status,
         };
     }
@@ -158,10 +153,13 @@ export default function MyDoubtsDetailsPage() {
   // ================== LOADING STATE ==================
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
-          <p className="mt-4 text-gray-600">Loading doubt details...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+        <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+        <div className="relative z-10 text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
+          <p className="mt-4 text-white/80 font-medium">Loading doubt details...</p>
         </div>
       </div>
     );
@@ -170,9 +168,12 @@ export default function MyDoubtsDetailsPage() {
   // ================== NOT FOUND ==================
   if (!doubt) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-xl text-red-500">Doubt not found</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex items-center justify-center">
+        <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+        <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+        <div className="relative z-10 text-center text-white">
+          <p className="text-xl text-rose-400">Doubt not found</p>
         </div>
       </div>
     );
@@ -183,323 +184,181 @@ export default function MyDoubtsDetailsPage() {
   const hasDirectRequest = doubt.direct_request && doubt.status === "open";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 text-white px-4 py-5 flex items-center justify-between shadow-md">
-        <button
-          onClick={() => router.back()}
-          className="p-1 rounded hover:bg-white/20"
-        >
-          <span className="text-lg">←</span>
-        </button>
-        <h1 className="text-lg font-bold">📄 Doubt Details</h1>
-        <div className="w-8" /> {/* spacer */}
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <div className="relative z-10 max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="p-2 rounded-xl hover:bg-white/10 transition text-white/80 hover:text-white"
+          >
+            <span className="text-lg">←</span>
+          </button>
+          <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
+            📄 Doubt Details
+          </h1>
+          <div className="w-10" /> {/* spacer */}
+        </div>
+
         {/* Main Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-            <h2 className="text-xl font-bold text-gray-800 flex-1">
+            <h2 className="text-xl font-bold text-white flex-1">
               {doubt.title}
             </h2>
             <span
-              className={`self-start inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${statusStyle.bg} ${statusStyle.color}`}
+              className={`self-start inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${statusStyle.bg} ${statusStyle.color}`}
             >
               {statusStyle.emoji} {statusStyle.text}
             </span>
           </div>
 
-          <p className="text-gray-600 mb-4">{doubt.description}</p>
+          <p className="text-white/70 mb-4">{doubt.description}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-gray-500">📂 Category:</span>{" "}
-              <span className="font-medium">{doubt.category}</span>
+              <span className="text-white/50">📂 Category:</span>{" "}
+              <span className="font-medium text-white">{doubt.category}</span>
             </div>
             <div>
-              <span className="text-gray-500">🎯 Mode:</span>{" "}
-              <span className="font-medium capitalize">{doubt.mode}</span>
+              <span className="text-white/50">🎯 Mode:</span>{" "}
+              <span className="font-medium text-white capitalize">{doubt.mode}</span>
             </div>
             <div>
-              <span className="text-gray-500">💬 Explanation:</span>{" "}
-              <span className="font-medium">{doubt.preferred_explanation}</span>
+              <span className="text-white/50">💬 Explanation:</span>{" "}
+              <span className="font-medium text-white">{doubt.preferred_explanation}</span>
             </div>
             <div>
-              <span className="font-semibold text-emerald-600">
+              <span className="text-white/50">💰 Price:</span>{" "}
+              <span className="font-bold text-emerald-300">
                 {doubt.price ? `₹${doubt.price}` : "Free"}
               </span>
             </div>
             <div className="sm:col-span-2">
-              <span className="text-gray-500">📅 Created:</span>{" "}
-              <span>{formatDate(doubt.created_at)}</span>
+              <span className="text-white/50">📅 Created:</span>{" "}
+              <span className="text-white">{formatDate(doubt.created_at)}</span>
             </div>
             {doubt.tutor && (
               <div className="sm:col-span-2">
-                <span className="text-gray-500">👨‍🏫 Tutor:</span>{" "}
-                <span className="font-medium">{doubt.tutor.name}</span>
+                <span className="text-white/50">👨‍🏫 Tutor:</span>{" "}
+                <span className="font-medium text-white">{doubt.tutor.name}</span>
               </div>
             )}
             {doubt.keywords && (
               <div className="sm:col-span-2">
-                <span className="text-gray-500">🔑 Keywords:</span>{" "}
-                <span>{doubt.keywords}</span>
+                <span className="text-white/50">🔑 Keywords:</span>{" "}
+                <span className="text-white">{doubt.keywords}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* STATUS ACTION CARD */}
+        {/* STATUS ACTION CARDS */}
 
-        {doubt.status === 'open' &&
-          doubt.mode === 'pool' && (
-
-            <div
-              className="
-                mb-6
-                rounded-2xl
-                border
-                border-amber-200
-                bg-amber-50
-                p-6
-                text-center
-              "
+        {/* Open pool – waiting */}
+        {doubt.status === "open" && doubt.mode === "pool" && (
+          <div className="mb-6 rounded-3xl border border-amber-400/30 bg-amber-400/10 backdrop-blur-md p-6 text-center shadow-xl">
+            <div className="text-5xl">⏳</div>
+            <h3 className="mt-3 text-xl font-bold text-amber-300">Waiting For Tutor</h3>
+            <p className="mt-2 text-sm text-amber-200/80">
+              Your doubt is visible to online tutors.
+            </p>
+            <button
+              onClick={fetchDetails}
+              className="mt-4 rounded-xl bg-amber-500/20 border border-amber-400/40 px-5 py-3 font-semibold text-amber-300 hover:bg-amber-500/30 transition"
             >
-              <div className="text-5xl">
-                ⏳
-              </div>
+              🔄 Refresh Status
+            </button>
+          </div>
+        )}
 
-              <h3
-                className="
-                  mt-3
-                  text-xl
-                  font-bold
-                  text-amber-900
-                "
-              >
-                Waiting For Tutor
-              </h3>
-
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-amber-700
-                "
-              >
-                Your doubt is visible
-                to online tutors.
-              </p>
-
-              <button
-                onClick={fetchDetails}
-                className="
-                  mt-4
-                  rounded-xl
-                  bg-amber-600
-                  px-5
-                  py-3
-                  font-semibold
-                  text-white
-                "
-              >
-                🔄 Refresh Status
-              </button>
-            </div>
-
-          )}
-
-        {hasSession &&
-          doubt.status === 'assigned' && (
-
-            <div
-              className="
-                mb-6
-                rounded-2xl
-                border
-                border-green-200
-                bg-green-50
-                p-6
-              "
+        {/* Tutor accepted / session ready */}
+        {hasSession && doubt.status === "assigned" && (
+          <div className="mb-6 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 backdrop-blur-md p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-emerald-300">🎉 Tutor Accepted</h3>
+            <p className="mt-2 text-emerald-200/80">Your session is ready.</p>
+            <button
+              onClick={joinSession}
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:to-green-600 transition"
             >
-              <h3
-                className="
-                  text-xl
-                  font-bold
-                  text-green-800
-                "
-              >
-                🎉 Tutor Accepted
-              </h3>
-
-              <p
-                className="
-                  mt-2
-                  text-green-700
-                "
-              >
-                Your session is ready.
-              </p>
-
-              <button
-                onClick={joinSession}
-                className="
-                  mt-5
-                  w-full
-                  rounded-xl
-                  bg-green-600
-                  py-4
-                  text-lg
-                  font-bold
-                  text-white
-                  shadow-lg
-                  hover:bg-green-700
-                "
-              >
-                🚀 Join Session
-              </button>
-            </div>
-
-          )}
+              🚀 Join Session
+            </button>
+          </div>
+        )}
 
         {/* Specific Mode: Tutor Proposal */}
         {hasDirectRequest && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 mb-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-2xl mb-6">
+            <h3 className="text-lg font-bold text-white mb-4">
               📨 Tutor Proposal
             </h3>
             <div className="flex justify-between mb-3">
-              <span className="text-gray-600">👨‍🏫 Tutor:</span>
-              <span className="font-medium">
+              <span className="text-white/60">👨‍🏫 Tutor:</span>
+              <span className="font-medium text-white">
                 {doubt.direct_request?.tutor_name}
               </span>
             </div>
             <div className="flex justify-between mb-6">
-              <span className="text-gray-600">💰 Proposed Price:</span>
-              <span className="font-bold text-indigo-600 text-lg">
+              <span className="text-white/60">💰 Proposed Price:</span>
+              <span className="font-bold text-violet-300 text-lg">
                 ₹{doubt.direct_request?.price}
               </span>
             </div>
-
             <div className="flex gap-3">
+              {/* Action buttons if needed */}
             </div>
           </div>
         )}
 
-        {doubt.status === 'completed' &&
-        !hasReview && (
-
-          <div
-            className="
-              mb-6
-              rounded-2xl
-              border
-              border-indigo-200
-              bg-indigo-50
-              p-6
-            "
-          >
-            <h3
-              className="
-                text-xl
-                font-bold
-                text-indigo-800
-              "
-            >
-              ⭐ Session Completed
-            </h3>
-
-            <p
-              className="
-                mt-2
-                text-indigo-700
-              "
-            >
-              Share your feedback.
-            </p>
-
+        {/* Completed – no review */}
+        {doubt.status === "completed" && !hasReview && (
+          <div className="mb-6 rounded-3xl border border-violet-400/30 bg-violet-400/10 backdrop-blur-md p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-violet-300">⭐ Session Completed</h3>
+            <p className="mt-2 text-violet-200/80">Share your feedback.</p>
             <button
-              onClick={() =>
-                router.push(
-                  `/student/submit-review/${doubt.session?.id}`
-                )
-              }
-              className="
-                mt-4
-                w-full
-                rounded-xl
-                bg-indigo-600
-                py-3
-                font-bold
-                text-white
-              "
+              onClick={() => router.push(`/student/submit-review/${doubt.session?.id}`)}
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition"
             >
               ⭐ Submit Review
             </button>
           </div>
-
         )}
 
-        {doubt.status === 'completed' &&
-          hasReview && (
-
-            <div
-              className="
-                mb-6
-                rounded-2xl
-                border
-                border-gray-200
-                bg-white
-                p-6
-              "
-            >
-              <h3
-                className="
-                  text-xl
-                  font-bold
-                  text-gray-800
-                "
-              >
-                ✅ Session Completed
-              </h3>
-
-              <p
-                className="
-                  mt-2
-                  text-gray-600
-                "
-              >
-                Review already submitted.
-              </p>
-
-              <div className="mt-4">
-                {'⭐'.repeat(
-                  doubt.review?.rating || 0
-                )}
-              </div>
+        {/* Completed – review done */}
+        {doubt.status === "completed" && hasReview && (
+          <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-white">✅ Session Completed</h3>
+            <p className="mt-2 text-white/70">Review already submitted.</p>
+            <div className="mt-4 text-amber-300 text-xl">
+              {"⭐".repeat(doubt.review?.rating || 0)}
             </div>
+          </div>
+        )}
 
-          )}
-
-        {/* Pool Mode: Waiting */}
-        {doubt.mode === "pool" && doubt.status === "open" && !hasSession && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center mb-6">
-            <span className="text-4xl block mb-3">⏳</span>
-            <p className="text-lg font-semibold text-amber-800">
-              Waiting for a tutor to accept your doubt...
-            </p>
-            <p className="text-sm text-amber-700 mt-2">
-              You will be notified when a tutor responds.
+        {/* Assigned but no session yet */}
+        {doubt.status === "assigned" && !hasSession && (
+          <div className="mb-6 rounded-3xl border border-sky-400/30 bg-sky-400/10 backdrop-blur-md p-6 text-center shadow-xl">
+            <span className="text-4xl block mb-3">🔵</span>
+            <p className="text-lg font-semibold text-sky-300">
+              Assigned to a tutor. Session will start soon.
             </p>
           </div>
         )}
 
-        {/* Assigned but no session */}
-        {doubt.status === "assigned" && !hasSession && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 text-center mb-6">
-            <span className="text-4xl block mb-3">🔵</span>
-            <p className="text-lg font-semibold text-blue-800">
-              Assigned to a tutor. Session will start soon.
+        {/* Pool Mode: Waiting (fallback) */}
+        {doubt.mode === "pool" && doubt.status === "open" && !hasSession && (
+          <div className="border border-amber-400/30 bg-amber-400/10 backdrop-blur-md rounded-3xl p-6 text-center mb-6 shadow-xl">
+            <span className="text-4xl block mb-3">⏳</span>
+            <p className="text-lg font-semibold text-amber-300">
+              Waiting for a tutor to accept your doubt...
+            </p>
+            <p className="text-sm text-amber-200/80 mt-2">
+              You will be notified when a tutor responds.
             </p>
           </div>
         )}
