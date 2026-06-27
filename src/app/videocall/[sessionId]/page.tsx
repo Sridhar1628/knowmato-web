@@ -893,17 +893,11 @@ const VideoCallScreen: React.FC = () => {
         </button>
 
         {/* End Call */}
-        <button className={styles.endCallButton} onClick={() => {
-                                                    setAlertData({
-                                                      title: "End Session",
-                                                      message: "Are you sure you want to end this session?",
-                                                      onAccept: async () => {
-                                                        await handleLeaveCall(true);
-                                                        setAlertData(null);
-                                                      },
-                                                      onReject: () => setAlertData(null),
-                                                    });
-                                                  }}>
+        {/* End Call */}
+        <button
+          className={styles.endCallButton}
+          onClick={handleEndRequest}
+        >
           📞
         </button>
       </div>
