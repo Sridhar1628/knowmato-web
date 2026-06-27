@@ -213,6 +213,7 @@ export default function AdminDashboardPage() {
               <QuickAction title="Current Affairs" icon="📰" path="/admin/current-affairs" />
               <QuickAction title="Tutor Applications" icon="📝" path="/admin/tutor-applications" />
               <QuickAction title="Tutor Wallet Verifications" icon="📝" path="/admin/verifications" />
+              <QuickAction title="Withdrawal Requests" icon="📝" path="/admin/withdrawals" />
             </div>
           </motion.div>
 

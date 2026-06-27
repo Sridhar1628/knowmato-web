@@ -300,6 +300,54 @@ export const getStudentSessions = async (): Promise<StudentSession[]> => {
 // ================== Wallet Services ==================
 // ================== Wallet Services ==================
 
+// ======================================================
+// 💰 MY WALLET
+// ======================================================
+
+export interface WalletEarnings {
+
+  total_earnings: number;
+
+  paid_earnings: number;
+
+  pending_earnings: number;
+
+  sessions_count: number;
+
+}
+
+export interface WalletDetails {
+
+  real_balance: number;
+
+  bonus_balance: number;
+
+  total_balance: number;
+
+  earnings: WalletEarnings | null;
+
+}
+
+export interface WalletResponse {
+
+  message: string;
+
+  data: WalletDetails;
+
+}
+
+// ============================================
+// My Wallet
+// ============================================
+
+export const getMyWallet =
+  async () => {
+
+    return await apiGet(
+      "/wallet/my"
+    );
+
+};
 // ---------- Razorpay ----------
 export interface CreateOrderRequest {
   amount: number; // in rupees (will be converted to paise on backend)
@@ -456,6 +504,47 @@ export const getOnlineTutors =
 
     return await apiGet(
       "/accounts/online-tutors/"
+    );
+
+};
+
+export interface MyTutorEarning {
+
+  earning_id: number;
+
+  session_id: number;
+
+  amount: number;
+
+  is_paid: boolean;
+
+  created_at: string;
+
+}
+
+export interface MyTutorEarningsResponse {
+
+  summary: {
+
+    total_earnings: number;
+
+    paid_earnings: number;
+
+    pending_earnings: number;
+
+    total_sessions: number;
+
+  };
+
+  data: MyTutorEarning[];
+
+}
+
+export const getMyTutorEarnings =
+  async (): Promise<MyTutorEarningsResponse> => {
+
+    return await apiGet(
+      "/wallet/tutor/earnings/"
     );
 
 };

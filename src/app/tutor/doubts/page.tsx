@@ -1,10 +1,34 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { getTutorPoolDoubts, AcceptPoolDoubt } from "@/services/v1Service";
 import { subscribeSocket } from "@/services/socketEventBus";
 import { SocketEvents } from "@/services/versionSocketEvents";
+
+import {
+
+    tutorPoolCache,
+
+} from "@/store/tutorPoolCache";
+
+import {
+
+    subscribeTutorPool,
+
+    setTutorPool,
+
+    addPoolDoubt,
+
+    acceptPoolDoubt,
+
+    removePoolDoubt,
+
+    tickPoolTimers,
+
+    clearTutorPool,
+
+} from "@/store/tutorPoolRealtime";
 
 // ---------- Type definition (mirroring Android) ----------
 interface Doubt {
@@ -37,19 +61,32 @@ const categories = [
 
 export default function TutorDoubtsPage() {
   const router = useRouter();
+  const [, forceUpdate] = useState({});
 
   // ---------- State ----------
-  const [doubts, setDoubts] = useState<Doubt[]>([]);         // open doubts
-  const [filteredDoubts, setFilteredDoubts] = useState<Doubt[]>([]);
-  const [acceptedDoubts, setAcceptedDoubts] = useState<Doubt[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [activeTab, setActiveTab] = useState<"new" | "accepted">("new");
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
-  const [timers, setTimers] = useState<Record<number, number>>({});
   const hasNavigated = useRef(false);
+
+  useEffect(() => {
+
+      const unsubscribe =
+          subscribeTutorPool(() => {
+
+              forceUpdate({});
+
+          });
+
+      return () => {
+          unsubscribe();
+      };
+
+  }, []);
 
   // ---------- Fetch pool doubts ----------
   const fetchDoubts = async () => {
@@ -59,16 +96,13 @@ export default function TutorDoubtsPage() {
       const open = data.filter((d: Doubt) => d.status === "open");
       const assigned = data.filter((d: Doubt) => d.status === "assigned");
 
-      setDoubts(open);
-      setFilteredDoubts(open);
-      setAcceptedDoubts(assigned);
+      setTutorPool(
 
-      // Initialize timers for open doubts
-      const initialTimers: Record<number, number> = {};
-      open.forEach((d: Doubt) => {
-        initialTimers[d.doubt_id] = d.expires_in;
-      });
-      setTimers(initialTimers);
+          open,
+
+          assigned
+
+      );
     } catch (err) {
       console.error("❌ Fetch pool doubts error:", err);
       alert("Failed to load available doubts.");
@@ -77,6 +111,7 @@ export default function TutorDoubtsPage() {
       setRefreshing(false);
     }
   };
+
 
   // ---------- Accept doubt ----------
   const handleAccept = async (doubtId: number, title: string) => {
@@ -87,7 +122,26 @@ export default function TutorDoubtsPage() {
 
     setAcceptingId(doubtId);
     try {
-      await AcceptPoolDoubt({ doubt_id: doubtId });
+      const res =
+    await AcceptPoolDoubt({
+
+            doubt_id : doubtId
+
+        });
+
+    if (
+        res?.session_id
+    ) {
+
+        acceptPoolDoubt(
+
+            doubtId,
+
+            res.session_id
+
+        );
+
+    }
       alert("Your session is being created...");
     } catch (error) {
       console.error("Accept error:", error);
@@ -99,55 +153,82 @@ export default function TutorDoubtsPage() {
 
   // ---------- Socket real‑time updates ----------
   useEffect(() => {
-    const unsubscribe = subscribeSocket((event, data) => {
-      console.log("📡 POOL EVENT:", event, data);
 
-      if (event === SocketEvents.NEW_DOUBT_REQUEST) {
-        fetchDoubts();
-      }
+      const unsubscribe =
+          subscribeSocket((event, data) => {
 
-      if (event === SocketEvents.POOL_DOUBT_ACCEPTED) {
-        const acceptedDoubt = doubts.find(
-          (d) => d.doubt_id === data.doubt_id
-        );
+              console.log(
+                  "📡 POOL EVENT:",
+                  event,
+                  data
+              );
 
-        // Remove from new
-        setDoubts((prev) => prev.filter((d) => d.doubt_id !== data.doubt_id));
-        setFilteredDoubts((prev) =>
-          prev.filter((d) => d.doubt_id !== data.doubt_id)
-        );
+              switch (event) {
 
-        // Add to accepted
-        if (acceptedDoubt) {
-          setAcceptedDoubts((prev) => [
-            {
-              ...acceptedDoubt,
-              status: "assigned",
-              session_id: data.session_id,
-            },
-            ...prev,
-          ]);
-        }
+                  case SocketEvents.NEW_DOUBT_REQUEST:
 
-        // Auto‑navigate (only once)
-        if (hasNavigated.current) return;
-        hasNavigated.current = true;
+                      addPoolDoubt(data);
 
-        const { session_id, session_type } = data;
-        if (!session_id) return;
+                      break;
 
-        setTimeout(() => {
-          if (session_type === "live_video") {
-            router.push(`/videocall/${session_id}`);
-          } else {
-            router.push(`/chat/${session_id}`);
-          }
-        }, 800);
-      }
-    });
+                  case SocketEvents.POOL_DOUBT_ACCEPTED:
 
-    return unsubscribe;
-  }, [doubts, router]);
+                      acceptPoolDoubt(
+
+                          data.doubt_id,
+
+                          data.session_id
+
+                      );
+
+                      if (
+                          hasNavigated.current
+                      ) return;
+
+                      hasNavigated.current = true;
+
+                      setTimeout(() => {
+
+                          if (
+                              data.session_type ===
+                              "live_video"
+                          ) {
+
+                              router.push(
+                                  `/videocall/${data.session_id}`
+                              );
+
+                          } else {
+
+                              router.push(
+                                  `/chat/${data.session_id}`
+                              );
+
+                          }
+
+                      }, 800);
+
+                      break;
+
+                  case "DOUBT_EXPIRED":
+
+                      removePoolDoubt(
+                          data.doubt_id
+                      );
+
+                      break;
+
+                  default:
+
+                      break;
+
+              }
+
+          });
+
+      return unsubscribe;
+
+  }, [router]);
 
   // Reset navigation flag on tab focus
   useEffect(() => {
@@ -160,53 +241,44 @@ export default function TutorDoubtsPage() {
 
   // Initial load
   useEffect(() => {
-    fetchDoubts();
+
+          if (
+        tutorPoolCache.loaded
+    ) {
+
+        setLoading(false);
+
+    } else {
+
+        fetchDoubts();
+
+    }
+
   }, []);
 
   // ---------- Timer countdown ----------
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimers((prev) => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach((id) => {
-          updated[Number(id)] = Math.max(0, updated[Number(id)] - 1);
-        });
-        return updated;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+
+      const timer = setInterval(() => {
+
+          tickPoolTimers();
+
+      }, 1000);
+
+      return () => clearInterval(timer);
+
   }, []);
 
-  // Filter out expired doubts from display
-  useEffect(() => {
-    const updated = doubts.filter((d) => (timers[d.doubt_id] ?? 0) > 0);
-    setFilteredDoubts(updated);
-  }, [timers, doubts]);
-
-  // ---------- Local filters (search + category) ----------
-  const applyLocalFilters = useCallback(() => {
-    let filtered = [...doubts];
-    if (searchQuery.trim()) {
-      filtered = filtered.filter((d) =>
-        d.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter(
-        (d) => d.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
-    setFilteredDoubts(filtered);
-  }, [doubts, searchQuery, selectedCategory]);
-
-  useEffect(() => {
-    applyLocalFilters();
-  }, [searchQuery, selectedCategory, doubts]);
 
   // ---------- Refresh handler ----------
   const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchDoubts();
+
+      setRefreshing(true);
+
+      clearTutorPool();
+
+      await fetchDoubts();
+
   };
 
   // ---------- Helpers ----------
@@ -225,10 +297,67 @@ export default function TutorDoubtsPage() {
   const isVideo = (item: Doubt) =>
     item.preferred_explanation === "live_video";
 
+  const filteredDoubts = useMemo(() => {
+
+      return tutorPoolCache.openDoubts
+
+          // Remove expired
+          .filter((d) =>
+
+              (
+                  tutorPoolCache.timers[
+                      d.doubt_id
+                  ] ?? d.expires_in
+
+              ) > 0
+
+          )
+
+          // Search
+          .filter((d) =>
+
+              searchQuery.trim() === ""
+
+                  ||
+
+              d.title
+                  .toLowerCase()
+                  .includes(
+                      searchQuery.toLowerCase()
+                  )
+
+          )
+
+          // Category
+          .filter((d) =>
+
+              selectedCategory === "All"
+
+                  ||
+
+              d.category.toLowerCase() ===
+              selectedCategory.toLowerCase()
+
+          );
+
+  }, [
+
+      searchQuery,
+
+      selectedCategory,
+
+      tutorPoolCache.openDoubts,
+
+      tutorPoolCache.timers,
+
+  ]);
+
+  
+
   // ---------- Render card ----------
   const renderCard = (item: Doubt) => {
     const video = isVideo(item);
-    const remaining = timers[item.doubt_id] ?? item.expires_in;
+    const remaining = tutorPoolCache.timers[item.doubt_id] ?? item.expires_in;
     const isExpired = remaining <= 0;
 
     return (
@@ -422,7 +551,7 @@ export default function TutorDoubtsPage() {
               : "text-gray-600"
           }`}
         >
-          Accepted ({acceptedDoubts.length})
+          Accepted ({tutorPoolCache.acceptedDoubts.length})
         </button>
       </div>
 
@@ -435,12 +564,12 @@ export default function TutorDoubtsPage() {
         ) : (
           filteredDoubts.map(renderCard)
         )
-      ) : acceptedDoubts.length === 0 ? (
+      ) : tutorPoolCache.acceptedDoubts.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           You haven't accepted any doubts yet.
         </div>
       ) : (
-        acceptedDoubts.map(renderCard)
+        tutorPoolCache.acceptedDoubts.map(renderCard)
       )}
     </div>
   );

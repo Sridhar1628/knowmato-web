@@ -1,5 +1,5 @@
 // 👇 Your PC local IP
-const LOCAL_IP = '10.37.106.211';
+const LOCAL_IP = '127.0.0.1';
 
 const DEV = process.env.NODE_ENV !== 'production';
 
