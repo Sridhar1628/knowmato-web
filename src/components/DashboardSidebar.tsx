@@ -1,6 +1,10 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { logout } from '@/redux/slices/authSlice';
+import { clearTokens } from '@/services/storageService';
+import toast from 'react-hot-toast';
 
 interface NavItemProps {
   icon: string;
@@ -36,6 +40,8 @@ interface DashboardSidebarProps {
 }
 
 export default function DashboardSidebar({ open, onClose }: DashboardSidebarProps) {
+  const router = useRouter();
+  const dispatch = useDispatch();
   const pathname = usePathname();
   const routes = [
     { icon: '🏠', label: 'Home', href: '/student/dashboard' },
@@ -44,8 +50,32 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
     { icon: '📰', label: 'Current Affairs', href: '/student/current-affairs' },
     { icon: '💰', label: 'My Wallet', href: '/student/wallet' },
     { icon: '🏆', label: 'Leaderboard', href: '/student/leaderboard' },
+    { icon: '🧑‍🎓', label: 'My Profile', href: '/student/profile' },
+
     { icon: '⚙️', label: 'Settings', href: '#' },
   ];
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to logout?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await clearTokens();
+
+      dispatch(logout());
+
+      toast.success("Logged out successfully");
+
+      router.push("/entry");
+    } catch {
+      toast.error("Logout failed");
+    }
+
+    onClose();
+  };
 
   return (
     <>
@@ -107,6 +137,15 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
             />
           ))}
         </nav>
+
+        <div className="border-t border-white/10 p-4">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-500/10 text-rose-300 font-bold border border-rose-400/30 hover:border-rose-400/50 transition"
+          >
+            🚪 Sign Out
+          </button>
+        </div>
 
         {/* Upgrade to Pro – you can uncomment and style later */}
         {/*

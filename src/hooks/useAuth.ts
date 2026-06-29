@@ -11,30 +11,43 @@ export const useAuth = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
+    console.log("🔥 useAuth mounted");
+
     const loadUser = async () => {
+      console.log("🔥 loadUser called");
+
       try {
-        const tokens = getTokens(); // ❗ no await
+        const tokens = getTokens();
+
+        console.log("🔥 Tokens:", tokens);
 
         if (tokens?.access) {
+          console.log("🔥 Fetching profile...");
+
           const res = await getProfile();
+
+          console.log("🔥 Profile Response:", res);
 
           dispatch(
             loginSuccess({
               access: tokens.access,
               refresh: tokens.refresh,
-              user: res.data,
+              user: res.data.data,
             })
           );
+
+          console.log("🔥 Redux Updated");
+        } else {
+          console.log("❌ No Tokens");
         }
-      } catch (error) {
-        console.log('Auth load error:', error);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.log("❌ useAuth Error:", err);
       }
     };
 
     loadUser();
   }, []);
 
+  
   return { loading };
 };

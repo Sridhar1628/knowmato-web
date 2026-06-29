@@ -35,13 +35,24 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const displayEmail = user?.email || "";
 
   const handleLogout = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to logout?"
+    );
+
+    if (!confirmed) return;
+
     try {
       await clearTokens();
+
       dispatch(logout());
+
+      toast.success("Logged out successfully");
+
       router.push("/entry");
     } catch {
       toast.error("Logout failed");
     }
+
     onClose();
   };
 

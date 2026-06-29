@@ -110,7 +110,7 @@ export default function LoginPage() {
               </motion.div>
 
               <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-                Knowmato
+                KnowMato
               </h1>
               <p className="mt-2 text-white/70">Instant doubt solving, anytime</p>
             </div>
@@ -289,7 +289,7 @@ export default function LoginPage() {
                       onClick={() => router.push('/register')}
                       className="text-white/50 transition hover:text-violet-300"
                     >
-                      New to Knowmato?
+                      New to KnowMato?
                       <span className="font-semibold text-violet-400"> Sign Up</span>
                     </button>
                     <button

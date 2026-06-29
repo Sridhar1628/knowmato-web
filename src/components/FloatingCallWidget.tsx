@@ -17,9 +17,35 @@ export default function FloatingCallWidget() {
     connectionState,
   } = useCall();
 
-  const [seconds, setSeconds] =
-    useState(0);
+  const [seconds, setSeconds] = useState(0);
 
+  useEffect(() => {
+      if (!isInCall) return;
+
+      const updateTimer = () => {
+          const data = JSON.parse(
+              localStorage.getItem("active_call") || "{}"
+          );
+
+          if (!data.startedAt) return;
+
+          setSeconds(
+              Math.floor(
+                  (Date.now() - data.startedAt) / 1000
+              )
+          );
+      };
+
+      updateTimer();
+
+      const interval = setInterval(
+          updateTimer,
+          1000
+      );
+
+      return () => clearInterval(interval);
+
+  }, [isInCall]);
   useEffect(() => {
     if (!isInCall) return;
 
@@ -84,14 +110,24 @@ export default function FloatingCallWidget() {
       "
     >
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900">
-            Active Call
+        <div className="flex items-center gap-2">
+
+          <span className="text-green-500">
+          🟢
+          </span>
+
+          <h3 className="font-semibold">
+          Live Call
           </h3>
 
           <p className="text-xs text-gray-500">
-            Session #{sessionId}
+
+          {remoteUid
+              ? "Participant Connected"
+              : "Waiting for Participant"}
+
           </p>
+
         </div>
 
         <span
@@ -108,7 +144,7 @@ export default function FloatingCallWidget() {
       </div>
 
       <div className="mt-3">
-        <p className="text-sm font-medium text-gray-700">
+        <p className="text-2xl font-bold tracking-wider">
           {formatTime(seconds)}
         </p>
 
@@ -131,7 +167,8 @@ export default function FloatingCallWidget() {
           className="
             flex-1
             rounded-xl
-            bg-indigo-600
+            bg-green-600
+            hover:bg-green-700
             py-2
             text-white
             font-semibold

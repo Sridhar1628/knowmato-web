@@ -185,7 +185,7 @@ export default function BecomeTutorPage() {
           </div>
           <h1 className="text-3xl font-bold text-white">Application Submitted!</h1>
           <p className="mt-4 text-lg text-violet-200">
-            Thank you for applying to become a Knowmato Tutor.
+            Thank you for applying to become a KnowMato Tutor.
           </p>
           <div className="mt-8 rounded-2xl bg-white/10 backdrop-blur-sm p-6">
             <p className="text-sm text-violet-200">Application ID</p>
@@ -228,7 +228,7 @@ export default function BecomeTutorPage() {
         {/* Hero */}
         <div className="mb-10 overflow-hidden rounded-3xl bg-gradient-to-r from-violet-500 to-fuchsia-500 p-8 text-center shadow-2xl sm:p-10">
           <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
-            Become a Knowmato Tutor
+            Become a KnowMato Tutor
           </h1>
           <p className="mt-3 text-lg text-white/80">
             Share your knowledge, earn money, and inspire students worldwide.

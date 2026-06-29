@@ -11,7 +11,7 @@ import { motion } from "framer-motion";
 // ---------------------------------------------------------------------------
 const REDIRECT_DELAY_MS = 2000;
 const FAILURE_REDIRECT_DELAY_MS = 1500;
-const APP_DEEPLINK = "knowmato://payment-success";
+const APP_DEEPLINK = "knowMato://payment-success";
 const FROM_APP_STORAGE_KEY = "from_app";
 
 // ---------------------------------------------------------------------------

@@ -1827,3 +1827,174 @@ export const updateAdminWithdrawal =
     );
 
 };
+
+
+
+// ======================================================
+// 👨‍🎓 STUDENT PROFILE
+// ======================================================
+
+export interface StudentProfile {
+  id: number;
+
+  full_name: string;
+
+  email: string;
+
+  mobile_number: string;
+
+  profile_photo?: string;
+
+  education_level: string;
+
+  grade_year: string;
+
+  stream_category: string;
+
+  stream: string;
+
+  preferred_languages: string[];
+
+  subjects: string[];
+
+  learning_goals: string[];
+
+  session_types: string[];
+
+  preferred_time: string[];
+
+  skill_level: string;
+
+  about_learning: string;
+
+  profile_completed: boolean;
+
+  created_at: string;
+
+  updated_at: string;
+}
+
+// ======================================================
+// 👨‍🎓 GET STUDENT PROFILE
+// ======================================================
+
+export const getStudentProfile =
+  async (): Promise<{
+    success: boolean;
+    data: StudentProfile;
+  }> => {
+
+    return await apiGet(
+      "/accounts/student/profile/"
+    );
+
+};
+
+// ======================================================
+// ✏️ UPDATE STUDENT PROFILE REQUEST
+// ======================================================
+
+export interface UpdateStudentProfileRequest {
+
+  full_name?: string;
+
+  email?: string;
+
+  mobile_number?: string;
+
+  education_level?: string;
+
+  grade_year?: string;
+
+  stream_category?: string;
+
+  stream?: string;
+
+  preferred_languages?: string[];
+
+  subjects?: string[];
+
+  learning_goals?: string[];
+
+  session_types?: string[];
+
+  preferred_time?: string[];
+
+  skill_level?: string;
+
+  about_learning?: string;
+
+}
+
+// ======================================================
+// ✏️ UPDATE STUDENT PROFILE
+// ======================================================
+
+export const updateStudentProfile =
+  async (
+    data: FormData
+  ) => {
+
+    return await apiPut(
+      "/accounts/student/profile/",
+      data,
+      {
+        headers: {
+          "Content-Type":
+            "multipart/form-data",
+        },
+      }
+    );
+
+};
+
+// ======================================================
+// 📦 BUILD STUDENT PROFILE FORM DATA
+// ======================================================
+
+export const buildStudentProfileFormData = (
+  form: UpdateStudentProfileRequest,
+  profilePhoto?: File | null
+) => {
+
+  const formData = new FormData();
+
+  Object.entries(form).forEach(([key, value]) => {
+
+    if (
+      value === undefined ||
+      value === null
+    ) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+
+      formData.append(
+        key,
+        JSON.stringify(value)
+      );
+
+    } else {
+
+      formData.append(
+        key,
+        String(value)
+      );
+
+    }
+
+  });
+
+  if (profilePhoto) {
+
+    formData.append(
+      "profile_photo",
+      profilePhoto
+    );
+
+  }
+
+  return formData;
+
+};

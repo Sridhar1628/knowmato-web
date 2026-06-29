@@ -17,6 +17,7 @@ import { subscribeDashboard } from '@/store/dashboardRealtime';
 import PostDoubtModal from '@/components/dashboard/PostDoubtModal';
 import { connectSocket } from '@/services/versionSocketService';
 import { updateDashboardCache } from '@/store/dashboardEvents';
+import { getStudentProfile } from "@/services/v1Service";
 
 interface OnlineTutor {
   id: number;
@@ -58,6 +59,55 @@ export default function DashboardPage() {
   const [showPostModal, setShowPostModal] = useState(false);
   const [quickDoubt, setQuickDoubt] = useState('');
   const [recentDoubts, setRecentDoubts] = useState<RecentDoubt[]>([]);
+
+  const [showProfileAlert, setShowProfileAlert] =
+  useState(false);
+
+  const [checkingProfile, setCheckingProfile] =
+  useState(true);
+
+  useEffect(() => {
+
+    const checkStudentProfile =
+      async () => {
+
+        try {
+
+          const profile =
+            await getStudentProfile();
+
+          if (
+            !profile.data.profile_completed
+          ) {
+
+            setShowProfileAlert(true);
+            return;
+
+          }
+
+          fetchDashboardData();
+
+        } catch (err) {
+
+          toast.error(
+            "Unable to verify your profile."
+          );
+
+          router.replace(
+            "/student/profile"
+          );
+
+        } finally {
+
+          setCheckingProfile(false);
+
+        }
+
+      };
+
+    checkStudentProfile();
+
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -144,7 +194,7 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  if (loading) {
+  if (loading || checkingProfile) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
@@ -519,6 +569,75 @@ export default function DashboardPage() {
           onClose={() => setShowPostModal(false)}
         />
       </div>
+
+      {showProfileAlert && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+
+          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+
+            <div className="text-center">
+
+              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-violet-100 text-5xl">
+                🎓
+              </div>
+
+              <h2 className="text-2xl font-bold text-gray-900">
+                Welcome to Knowmato!
+              </h2>
+
+              <p className="mt-4 text-gray-600 leading-7">
+
+                To give you the best learning experience,
+                we need to know a little more about you.
+
+                <br /><br />
+
+                Completing your profile helps us:
+
+              </p>
+
+              <div className="mt-5 space-y-2 text-left text-sm text-gray-700">
+
+                <p>✅ Match you with the best tutors</p>
+
+                <p>✅ Recommend relevant subjects</p>
+
+                <p>✅ Personalize your learning journey</p>
+
+                <p>✅ Connect you faster with experts</p>
+
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowProfileAlert(false);
+                    localStorage.setItem(
+                      "profile_reminder_dismissed",
+                      "true"
+                    );
+                  }}
+                  className="flex-1 rounded-2xl border border-gray-300 py-3 font-semibold text-gray-700 transition hover:bg-gray-100"
+                >
+                  Ask Me Later
+                </button>
+
+                <button
+                  onClick={() => {
+                    router.replace("/student/profile");
+                  }}
+                  className="flex-1 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 font-semibold text-white transition hover:opacity-90"
+                >
+                  Complete Profile
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }

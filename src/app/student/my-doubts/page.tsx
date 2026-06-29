@@ -82,11 +82,16 @@ const MyDoubtsScreen = () => {
 
     try {
       if (loadMore && nextPageUrl) {
+        console.log("Before API Call");
+        console.log("nextPageUrl =", nextPageUrl);
         const res = await apiGet(nextPageUrl);
+        console.log("After API Call");
         const data = res?.data || res;
         const newDoubts = data.results?.data || [];
         setAllDoubts(prev => [...prev, ...newDoubts]);
-        setNextPageUrl(data.next?.replace('http://', 'https://') || null);
+        setNextPageUrl(
+          data.next || null
+        );
         return;
       }
 
@@ -95,8 +100,20 @@ const MyDoubtsScreen = () => {
       const data = res?.data || res;
       const newDoubts = data.results?.data || [];
 
+      const nextUrl =
+        process.env.NODE_ENV === "production"
+          ? data.next?.replace("http://", "https://")
+          : data.next;
+
       myDoubtsCache.doubts = newDoubts;
-      myDoubtsCache.nextPageUrl = data.next?.replace('http://', 'https://') || null;
+      myDoubtsCache.nextPageUrl = nextUrl || null;
+      myDoubtsCache.totalCount = data.count || 0;
+      myDoubtsCache.initialized = true;
+
+      setAllDoubts(newDoubts as Doubt[]);
+      setNextPageUrl(myDoubtsCache.nextPageUrl);
+      setTotalCount(myDoubtsCache.totalCount);
+
       myDoubtsCache.totalCount = data.count || 0;
       myDoubtsCache.initialized = true;
 
@@ -459,7 +476,7 @@ const MyDoubtsScreen = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={e => { e.stopPropagation(); router.push(`/chat-history?sessionId=${item.session?.session_id}&tutorId=${item.tutor_id}&tutorName=${item.tutor || 'Tutor'}`); }}
+                            onClick={e => { e.stopPropagation(); router.push(`/student/chat-history?sessionId=${item.session?.session_id}&tutorId=${item.tutor_id}&tutorName=${item.tutor || 'Tutor'}`); }}
                             className="flex-1 rounded-lg border border-violet-400/40 bg-white/10 backdrop-blur-sm py-2 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 transition"
                           >
                             💬 View Chat History

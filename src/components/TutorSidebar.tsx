@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { logout } from "@/redux/slices/authSlice";
+import { clearTokens } from "@/services/storageService";
+import toast from "react-hot-toast";
+
 interface TutorSidebarProps {
   open: boolean;
   onClose: () => void;
@@ -36,13 +42,38 @@ const menuItems = [
   },
   {
     label: "Profile",
-    href: "/profile",
+    href: "/tutor/profile",
     icon: "👤",
   },
 ];
 
 export default function TutorSidebar({ open, onClose }: TutorSidebarProps) {
   const pathname = usePathname();
+
+  const router = useRouter();
+  const dispatch = useDispatch();
+
+  const handleLogout = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to logout?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await clearTokens();
+
+      dispatch(logout());
+
+      toast.success("Logged out successfully");
+
+      router.push("/entry");
+    } catch {
+      toast.error("Logout failed");
+    }
+
+    onClose();
+  };
 
   return (
     <>
@@ -100,7 +131,7 @@ export default function TutorSidebar({ open, onClose }: TutorSidebarProps) {
         </nav>
 
         {/* FOOTER */}
-        <div className="border-t border-white/10 p-4">
+        <div className="border-t border-white/10 p-4 space-y-4">
           <div className="rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
             <p className="text-sm font-semibold text-violet-300">
               🚀 Ready to teach?
@@ -109,6 +140,25 @@ export default function TutorSidebar({ open, onClose }: TutorSidebarProps) {
               Stay online to receive realtime doubt requests instantly.
             </p>
           </div>
+
+          <button
+            onClick={handleLogout}
+            className="
+              w-full
+              flex items-center justify-center gap-2
+              px-4 py-3.5
+              rounded-xl
+              bg-rose-500/10
+              text-rose-300
+              font-bold
+              border border-rose-400/30
+              hover:border-rose-400/50
+              hover:bg-rose-500/20
+              transition
+            "
+          >
+            🚪 Sign Out
+          </button>
         </div>
       </aside>
     </>

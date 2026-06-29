@@ -43,7 +43,7 @@ export default function AdminLayout({
             </button>
 
             <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-              Knowmato Admin
+              KnowMato Admin
             </h1>
 
             <button

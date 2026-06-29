@@ -147,7 +147,7 @@ export default function RegisterPage() {
               </motion.div>
 
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-                Join Knowmato
+                Join KnowMato
               </h1>
               <p className="mt-3 text-sm text-white/80">
                 ⚡ Learn smarter with instant doubt solving

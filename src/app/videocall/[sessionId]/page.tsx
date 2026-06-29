@@ -9,15 +9,12 @@ import {
   disconnectChatSocket,
 } from "@/services/chatSocket";
 import axios from "@/api/axiosInstance";
-import styles from "./VideoCall.module.css";
 import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { useCall } from "@/contexts/CallContext";
 
-import { useCall } from '@/contexts/CallContext';
-
-// ----- Agora SDK (client-only import to avoid SSR issues) -----
-
+// ----- Agora App ID -----
 const APP_ID = "19789ef2ac6e48e89404f52c1c3231a5";
-let AgoraRTC: any = null;
 
 // ----- Types -----
 interface Message {
@@ -27,82 +24,53 @@ interface Message {
   timestamp?: string;
 }
 
-
+// ----- Inline Profile Card (dark glass) -----
+const ProfileCard: React.FC = () => (
+  <div className="flex flex-col items-center justify-center h-full text-white/50">
+    <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center text-4xl mb-4">
+      👤
+    </div>
+    <p className="text-lg font-semibold text-white/80">Remote Participant</p>
+    <p className="text-sm text-white/50 mt-1">Waiting for video...</p>
+  </div>
+);
 
 const VideoCallScreen: React.FC = () => {
   const router = useRouter();
   const params = useParams();
 
-
-  const sessionIdParam =
-    Array.isArray(params.sessionId)
-      ? params.sessionId[0]
-      : params.sessionId;
-
-  const sessionId =
-    sessionIdParam
-      ? Number(sessionIdParam)
-      : null;
-
-  console.log(
-    "🔥 SESSION ID:",
-    sessionId
-  );
+  const sessionIdParam = Array.isArray(params.sessionId)
+    ? params.sessionId[0]
+    : params.sessionId;
+  const sessionId = sessionIdParam ? Number(sessionIdParam) : null;
 
   const {
     startCall,
     minimizeCall,
     leaveAgoraCall,
-
-    clientRef,
-    micTrackRef,
-    cameraTrackRef,
-    screenTrackRef,
-
-    joinAgoraCall,
-
     remoteUid,
-    setRemoteUid,
-
+    joined,
     isMuted,
-
     toggleMute,
-
     isScreenSharing,
-
     toggleScreenShare,
-
     connectionState,
     initializeAgora,
-
+    isRemoteScreenSharing,
   } = useCall();
 
-  // ----- User -----
-  const [userRole, setUserRole] = useState<"student" | "tutor">("student");
+  // User info
+  const user = useSelector((state: RootState) => state.auth.user);
+  const [userRole, setUserRole] = useState<string | null>(user?.role || null);
   const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState("");
-  const user = useSelector(
-    (state: any) => state.auth.user
-  );
 
-  // ----- Agora Engine & Tracks -----
-
-  const callInitializedRef =
-  useRef(false);
-  const localVideoRef =
-  useRef<HTMLDivElement>(null);
-  const [micTrack, setMicTrack] = useState<any>(null);
-  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
-  const [remoteVideoMuted, setRemoteVideoMuted] = useState(false);
-  const {
-    joined,
-    setJoined,
-  } = useCall();
+  // Agora UI
   const [showJoinToast, setShowJoinToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const localScreenShareContainerRef = useRef<HTMLDivElement>(null);
 
-  // ----- Timer -----
+  // Timer
   const [seconds, setSeconds] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const formatTime = (totalSeconds: number) => {
@@ -111,7 +79,7 @@ const VideoCallScreen: React.FC = () => {
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  // ----- Session & UI -----
+  // Session state
   const [isLoading, setIsLoading] = useState(true);
   const [ending, setEnding] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
@@ -119,14 +87,13 @@ const VideoCallScreen: React.FC = () => {
   const [isSessionCompleted, setIsSessionCompleted] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  // ----- Chat -----
+  // Chat
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [showChatModal, setShowChatModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-
-  // ----- Alert/Confirm modal -----
+  // Alert/Confirm modal
   const [alertData, setAlertData] = useState<{
     title: string;
     message: string;
@@ -134,84 +101,28 @@ const VideoCallScreen: React.FC = () => {
     onReject?: () => void;
   } | null>(null);
 
+  // ========== Initialisation ==========
   useEffect(() => {
-  console.log("Redux User:", user);
-}, [user]);
-
-  // ---------------------------------------------------------------------------
-  // Initialisation: load user, start call
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (
-      sessionId === null ||
-      Number.isNaN(sessionId)
-    ) {
-      console.log(
-        "❌ INVALID SESSION ID"
-      );
-      return;
-    }
+    if (sessionId === null || Number.isNaN(sessionId)) return;
 
     const initCall = async () => {
-
-
-      if (
-        clientRef.current &&
-        joined
-      ) {
-
-        console.log(
-          'Reusing active call'
-        );
-
-        setIsLoading(false);
-
-        return;
-      }
-
-      if (
-        callInitializedRef.current
-      ) {
-
-        console.log(
-          "⚠️ Call already initialized"
-        );
-
-        return;
-      }
-
-      if (
-        clientRef.current
-      ) {
-
-        console.log(
-          "⚠️ Agora client already exists"
-        );
-
-        return;
-      }
-
-      callInitializedRef.current =
-        true;
-      const AgoraModule = await import(
-        "agora-rtc-sdk-ng"
-      );
-
-      AgoraRTC = AgoraModule.default;
-
-      console.log("✅ Agora SDK Loaded");
       try {
         setIsLoading(true);
 
-        // 1. Get user info from token
         const tokens = await getTokens();
+        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
+        const currentUserId = Number(payload.user_id);
+
+        const sessionRes = await axios.get(`/v1/session/${sessionId}/`);
+        if (currentUserId === Number(sessionRes.data.student_id)) {
+          setUserRole("student");
+        } else {
+          setUserRole("tutor");
+        }
+
         if (!tokens?.access) throw new Error("No token");
-        
-        // 2. Request permissions (web mic) – done later via Agora
 
-        // 3. Fetch video session details
         const res = await axios.post(`sessions/${sessionId}/start-video/`);
-
         const { channel_name, token, uid } = res.data;
 
         await initializeAgora({
@@ -228,9 +139,6 @@ const VideoCallScreen: React.FC = () => {
         }, 1000);
       } catch (err) {
         console.error("Init error:", err);
-        callInitializedRef.current = false;
-
-        clientRef.current = null; 
         window.alert("Failed to start video call.");
       } finally {
         setIsLoading(false);
@@ -240,96 +148,37 @@ const VideoCallScreen: React.FC = () => {
     initCall();
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-
-      console.log(
-        "VideoCallScreen unmounted - keeping Agora alive"
-      );
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [sessionId]);
 
-
-
   // ----- Leave Call -----
-  const handleLeaveCall = async (
-    forceEnd = false
-  ) => {
-
-    if (ending) {
-      console.log(
-        "⚠️ Leave already in progress"
-      );
-      return;
-    }
-
+  const handleLeaveCall = async (forceEnd = false) => {
+    if (ending) return;
     setEnding(true);
-
     try {
+      if (timerRef.current) clearInterval(timerRef.current);
 
-      if (timerRef.current) {
-        clearInterval(
-          timerRef.current
-        );
-      }
-
-      callInitializedRef.current =
-        false;
-
-
-      if (
-        forceEnd &&
-        sessionId
-      ) {
-
+      if (forceEnd && sessionId) {
         try {
-
-          await axios.post(
-            `sessions/${sessionId}/end-video/`
-          );
-
+          await axios.post(`sessions/${sessionId}/end-video/`);
         } catch (err) {
-
-          console.error(
-            "Failed to end session:",
-            err
-          );
-
+          console.error("Failed to end session:", err);
         }
-
       }
 
       await leaveAgoraCall();
-
       disconnectChatSocket();
-
-      exitCallScreen(
-        forceEnd
-      );
-
+      exitCallScreen(forceEnd);
     } catch (err) {
-
-      console.error(
-        "Leave call error:",
-        err
-      );
-
-      exitCallScreen(
-        false
-      );
-
+      console.error("Leave call error:", err);
+      exitCallScreen(false);
     } finally {
-
       setEnding(false);
-
     }
   };
 
   const exitCallScreen = (completed: boolean) => {
-    console.log("EXIT CALL");
-    console.log("Role:", userRole);
-    console.log("Completed:", completed);
     if (userRole === "tutor") {
       router.replace("/tutor/dashboard");
     } else {
@@ -349,10 +198,7 @@ const VideoCallScreen: React.FC = () => {
       message: "Do you want to request to end the call?",
       onAccept: () => {
         setRequestSent(true);
-        sendChatMessage({
-          type: "END_SESSION_REQUEST",
-          session_id: sessionId,
-        });
+        sendChatMessage({ type: "END_SESSION_REQUEST", session_id: sessionId });
         window.alert("Request Sent: Waiting for other user...");
         setAlertData(null);
       },
@@ -360,138 +206,101 @@ const VideoCallScreen: React.FC = () => {
     });
   };
 
-  const showCallNotification =
-    (sessionId: number) => {
-
-      if (
-        typeof window === 'undefined' ||
-        !('Notification' in window) ||
-        Notification.permission !== 'granted'
-      ) {
-        return;
-      } {
-        return;
-      }
-
-      const notification =
-        new Notification(
-          'Knowmato Call',
-          {
-            body:
-              'Click to return to your active session',
-            icon:
-              '/logo.png',
-            tag:
-              `call-${sessionId}`,
-          }
-        );
-
-      notification.onclick =
-        () => {
-
-          window.focus();
-
-          window.focus();
-
-          window.open(
-            `/videocall/${sessionId}`,
-            "_self"
-          );
-        };
+  const showCallNotification = (sessionId: number) => {
+    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+    const notification = new Notification("Knowmato Call", {
+      body: "Click to return to your active session",
+      icon: "/logo.png",
+      tag: `call-${sessionId}`,
+    });
+    notification.onclick = () => {
+      window.focus();
+      window.open(`/videocall/${sessionId}`, "_self");
     };
+  };
 
   // ----- Chat Socket -----
   useEffect(() => {
     if (!sessionId) return;
-
     let mounted = true;
-    disconnectChatSocket();
 
     const initChatSocket = async () => {
-      const tokens = await getTokens();
-      const token = tokens?.access;
-      if (!token || !sessionId) return;
+      try {
+        const tokens = getTokens();
+        const token = tokens?.access;
+        if (!token) return;
 
-      connectChatSocket(sessionId, token, (data: any) => {
-        if (!mounted) return;
+        connectChatSocket(sessionId, token, (data: any) => {
+          if (!mounted) return;
 
-        // End session request (incoming)
-        if (data?.type === "END_SESSION_REQUEST") {
-          setAlertData({
-            title: "End Call Request",
-            message: `${data.user_name || "User"} wants to end the call.`,
-            onAccept: async () => {
-              try {
-                sendChatMessage({
-                  type: "END_SESSION_ACCEPTED",
-                  session_id: sessionId,
-                });
-                await handleLeaveCall(true);
-              } catch {
-                // ignore
-              } finally {
+          // END_SESSION_REQUEST
+          if (data?.type === "END_SESSION_REQUEST") {
+            setAlertData({
+              title: "End Call Request",
+              message: `${data.user_name || "User"} wants to end the call.`,
+              onAccept: async () => {
+                try {
+                  sendChatMessage({ type: "END_SESSION_ACCEPTED", session_id: sessionId });
+                  await handleLeaveCall(true);
+                } finally {
+                  setAlertData(null);
+                }
+              },
+              onReject: () => {
+                sendChatMessage({ type: "END_SESSION_REJECTED", session_id: sessionId });
                 setAlertData(null);
-              }
-            },
-            onReject: () => {
-              sendChatMessage({
-                type: "END_SESSION_REJECTED",
-                session_id: sessionId,
-              });
-              setAlertData(null);
-            },
-          });
-          return;
-        }
+              },
+            });
+            return;
+          }
 
-        if (data?.type === "END_SESSION_ACCEPTED") {
-          if (!ending) handleLeaveCall(true);
-          return;
-        }
+          // END_SESSION_ACCEPTED
+          if (data?.type === "END_SESSION_ACCEPTED") {
+            if (!ending) handleLeaveCall(true);
+            return;
+          }
 
-        if (data?.type === "END_SESSION_REJECTED") {
-          window.alert("Request Rejected: User declined to end the call.");
-          setRequestSent(false);
-          return;
-        }
+          // END_SESSION_REJECTED
+          if (data?.type === "END_SESSION_REJECTED") {
+            window.alert("Request Rejected: User declined to end the call.");
+            setRequestSent(false);
+            return;
+          }
 
-        // Chat messages
-        if (data?.type === "typing" || data?.type === "USER_STATUS") return;
-        if (!data?.id) return;
+          // Ignore system events
+          if (data?.type === "typing" || data?.type === "USER_STATUS") return;
+          if (!data?.id) return;
 
-        const text =
-          typeof data.text === "string"
-            ? data.text
-            : data.text?.text || "";
-        if (!text) return;
+          const text = typeof data.text === "string" ? data.text : data.text?.text || "";
+          if (!text) return;
 
-        const newMsg: Message = {
-          id: data.id,
-          text,
-          sender_id: data.sender_id || data.sender,
-          timestamp: data.timestamp,
-        };
+          const newMsg: Message = {
+            id: data.id,
+            text,
+            sender_id: data.sender_id || data.sender,
+            timestamp: data.timestamp,
+          };
 
-        setMessages((prev) => [...prev, newMsg]);
-        if (!showChatModal) setUnreadCount((prev) => prev + 1);
-      });
+          setMessages((prev) => [...prev, newMsg]);
+          if (!showChatModal) setUnreadCount((prev) => prev + 1);
+        });
+      } catch (err) {
+        console.error("Chat socket init failed:", err);
+      }
     };
 
     initChatSocket();
 
     return () => {
       mounted = false;
-      disconnectChatSocket();
+      console.log("VideoCallScreen unmounted - keeping chat socket alive");
+      // Do NOT disconnect here. Only inside handleLeaveCall().
     };
   }, [sessionId]);
 
-  // ----- Send chat message -----
   const handleSendMessage = () => {
     if (!inputText.trim()) return;
-    sendChatMessage({
-      type: "text",
-      text: inputText.trim(),
-    });
+    sendChatMessage({ type: "text", text: inputText.trim() });
     setInputText("");
   };
 
@@ -507,20 +316,7 @@ const VideoCallScreen: React.FC = () => {
     }
   }, [joined, remoteUid, isLoading, userLeftTimeoutReached]);
 
-  // ----- Session completed & review status (student) -----
-  useEffect(() => {
-    const checkReview = async () => {
-      try {
-        const res = await axios.get(`reviews/check/${sessionId}/`);
-        setReviewSubmitted(res.data.review_submitted);
-      } catch {}
-    };
-    if (isSessionCompleted && userRole === "student") {
-      checkReview();
-    }
-  }, [isSessionCompleted, userRole]);
-
-  // ----- Prevent accidental page leave -----
+  // ----- Beforeunload -----
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -546,179 +342,190 @@ const VideoCallScreen: React.FC = () => {
       ? "#ff9800"
       : "#f44336";
 
-  // ----- Render -----
   if (isLoading) {
     return (
-      <div className={styles.loadingOverlay}>
-        <div className={styles.spinner}></div>
-        <p className={styles.loadingText}>Establishing connection...</p>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="w-12 h-12 animate-spin rounded-full border-4 border-violet-400 border-t-transparent mx-auto" />
+          <p className="mt-4 text-lg">Establishing connection...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.container}>
-      {/* Header / Timer + Status */}
-      <div className={styles.topBar}>
-        <span className={styles.timer}>{formatTime(seconds)}</span>
-        <div className={styles.connectionBadge}>
-          <span className={styles.connectionDot} style={{ backgroundColor: dotColor }}></span>
-          <span className={styles.connectionText}>{connectionStatusText}</span>
+    <div className="relative w-full h-screen bg-black overflow-hidden select-none">
+      {/* Top overlay: Timer & Status */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
+        <div className="bg-white/10 backdrop-blur-md rounded-full px-4 py-1.5 text-white font-mono text-sm shadow-lg">
+          {formatTime(seconds)}
+        </div>
+        <div className="bg-white/10 backdrop-blur-md rounded-full px-4 py-1.5 flex items-center gap-2 shadow-lg">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: dotColor }} />
+          <span className="text-white text-xs font-medium">{connectionStatusText}</span>
         </div>
       </div>
 
-      {/* Session info & Live badge */}
-      <div className={styles.topOverlay}>
-        <div className={styles.sessionInfo}>
-          <span className={styles.sessionLabel}>Session with</span>
-          <span className={styles.sessionName}>
+      {/* Session info + Live badge */}
+      <div className="absolute top-16 left-4 z-20 flex flex-col gap-2">
+        <div className="bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 shadow-lg">
+          <p className="text-white/60 text-xs">Session with</p>
+          <p className="text-white font-bold text-sm">
             {userRole === "student" ? "Tutor" : "Student"}
-          </span>
+          </p>
         </div>
-        <div className={styles.liveBadge}>
-          <span className={styles.liveDot}></span>
-          <span className={styles.liveText}>Live</span>
+        <div className="bg-red-500/90 backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-1.5 w-fit shadow-lg">
+          <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          <span className="text-white text-xs font-bold uppercase">Live</span>
         </div>
-      </div>
-
-      {/* Local Video Preview */}
-      <div className={styles.localPreviewWrapper}>
-        <div
-          ref={localVideoRef}
-          id="local-video-container"
-          className={styles.localPreviewVideo}
-        />
       </div>
 
       {/* Remote Video Area */}
-      <div className={styles.remoteContainer}>
-        {remoteUid ? (
-          
-          <div id="remote-video-container" className={styles.remoteVideo}></div>
-        ) : remoteVideoMuted ? (
-          <div className={styles.placeholder}>
-            <span className={styles.placeholderIcon}>📵</span>
-            <p>Camera is off</p>
-          </div>
-        ) : (
-          <div className={styles.placeholder}>
-            <div className={styles.spinner}></div>
-            <p>Waiting for other user...</p>
+      <div className="absolute inset-0 z-0 bg-black">
+        {/* Screen share view */}
+        <div
+          id="remote-video-container"
+          className="w-full h-full"
+          style={{ display: isRemoteScreenSharing ? "block" : "none" }}
+        />
+        {!isRemoteScreenSharing && (
+          <div className="w-full h-full flex items-center justify-center">
+            <ProfileCard />
           </div>
         )}
       </div>
 
-      {/* Local Screen Share Preview (if sharing) */}
+      {/* Local Screen Share Preview (floating) */}
       {isScreenSharing && (
-        <div className={styles.localScreenContainer}>
-          <div id="local-screen-container" className={styles.localScreenVideo}></div>
+        <div className="absolute bottom-28 right-6 z-20 w-40 h-28 rounded-xl overflow-hidden border-2 border-violet-400/50 shadow-2xl">
+          <div id="local-screen-container" className="w-full h-full" />
         </div>
       )}
 
-      {/* No local camera (camera always off per requirement) */}
-      <div className={styles.localCameraOff}>
-        <span className={styles.localInitial}>{userName.charAt(0)?.toUpperCase() || "?"}</span>
+      {/* Local camera off indicator */}
+      <div className="absolute bottom-28 left-6 z-20 flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-full px-3 py-2 shadow-lg">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold">
+          👤
+        </div>
+        <span className="text-white text-sm font-medium">{userName || "Participant"}</span>
       </div>
 
-      {/* User joined/left toast */}
+      {/* Join/Leave toast */}
       {showJoinToast && (
-        <div className={styles.toast}>
-          <span>👤 {toastMessage}</span>
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 bg-white/10 backdrop-blur-xl rounded-full px-5 py-2 text-white text-sm shadow-lg">
+          👤 {toastMessage}
         </div>
       )}
 
       {/* Control Bar */}
-      <div className={styles.controlBar}>
-        {/* Mic */}
-        <button
-          className={`${styles.controlButton} ${isMuted ? styles.controlButtonActive : ""}`}
-          onClick={toggleMute}
-        >
-          {isMuted ? "🔇" : "🎤"}
-        </button>
+      <div className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-6 sm:pb-8">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 max-w-md mx-auto">
+          {/* Mic */}
+          <button
+            onClick={toggleMute}
+            className={`w-14 h-14 rounded-full flex items-center justify-center text-xl transition ${
+              isMuted
+                ? "bg-red-500/80 text-white backdrop-blur-md"
+                : "bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            }`}
+          >
+            {isMuted ? "🔇" : "🎤"}
+          </button>
 
-        <button
-          onClick={() => {
+          {/* Minimize */}
+          <button
+            onClick={() => {
+              minimizeCall();
+              showCallNotification(sessionId!);
+              router.replace(userRole === "tutor" ? "/tutor/dashboard" : "/student/dashboard");
+            }}
+            className="w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center text-sm backdrop-blur-md hover:bg-white/20 transition"
+          >
+            _
+          </button>
 
-            minimizeCall();
+          {/* Screen Share */}
+          <button
+            onClick={toggleScreenShare}
+            className={`w-14 h-14 rounded-full flex items-center justify-center text-xl transition ${
+              isScreenSharing
+                ? "bg-violet-500/80 text-white backdrop-blur-md"
+                : "bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+            }`}
+          >
+            🖥️
+          </button>
 
-            showCallNotification(
-              sessionId!
-            );
+          {/* Chat */}
+          <button
+            onClick={() => {
+              setShowChatModal(true);
+              setUnreadCount(0);
+            }}
+            className="w-14 h-14 rounded-full bg-white/10 text-white flex items-center justify-center text-xl relative backdrop-blur-md hover:bg-white/20 transition"
+          >
+            💬
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
 
-            router.replace(
-              userRole === 'tutor'
-                ? '/tutor/dashboard'
-                : '/student/dashboard'
-            );
-
-          }}
-        >
-          _
-        </button>
-
-        {/* Screen Share (camera removed) */}
-        <button
-          className={`${styles.controlButton} ${isScreenSharing ? styles.controlButtonActive : ""}`}
-          onClick={toggleScreenShare}
-        >
-          🖥️
-        </button>
-
-        {/* Chat */}
-        <button
-          className={styles.controlButton}
-          onClick={() => {
-            setShowChatModal(true);
-            setUnreadCount(0);
-          }}
-        >
-          💬
-          {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
-        </button>
-
-        {/* End Call */}
-        {/* End Call */}
-        <button
-          className={styles.endCallButton}
-          onClick={handleEndRequest}
-        >
-          📞
-        </button>
+          {/* End Call */}
+          <button
+            onClick={handleEndRequest}
+            className="w-16 h-16 rounded-full bg-red-500 text-white flex items-center justify-center text-2xl shadow-lg shadow-red-500/30 hover:scale-105 transition"
+          >
+            📞
+          </button>
+        </div>
       </div>
 
       {/* Chat Modal */}
       {showChatModal && (
-        <div className={styles.chatModalOverlay} onClick={() => setShowChatModal(false)}>
-          <div className={styles.chatModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.chatHeader}>
-              <h3>Live Chat</h3>
-              <button className={styles.chatClose} onClick={() => setShowChatModal(false)}>
+        <div
+          className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          onClick={() => setShowChatModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-md h-[80vh] sm:h-[70vh] bg-gradient-to-br from-[#1a1742] to-[#24243e] rounded-t-3xl sm:rounded-3xl flex flex-col overflow-hidden shadow-2xl border border-white/10"
+          >
+            <div className="flex justify-between items-center p-4 border-b border-white/10">
+              <h3 className="text-white font-bold text-lg">Live Chat</h3>
+              <button onClick={() => setShowChatModal(false)} className="text-white/60 hover:text-white text-xl">
                 ✕
               </button>
             </div>
-            <div className={styles.chatMessagesContainer}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.length === 0 ? (
-                <p className={styles.emptyChat}>No messages yet</p>
+                <p className="text-white/40 text-center mt-8">No messages yet</p>
               ) : (
                 messages.map((msg, idx) => {
                   const isOwn = Number(msg.sender_id) === Number(userId);
                   return (
                     <div
                       key={idx}
-                      className={`${styles.messageBubble} ${
-                        isOwn ? styles.ownBubble : styles.otherBubble
-                      }`}
+                      className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
                     >
-                      <p style={{ color: isOwn ? "#fff" : "#fff" }}>{msg.text}</p>
+                      <div
+                        className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm ${
+                          isOwn
+                            ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+                            : "bg-white/10 text-white"
+                        }`}
+                      >
+                        {msg.text}
+                      </div>
                     </div>
                   );
                 })
               )}
             </div>
-            <div className={styles.chatInputWrapper}>
+            <div className="p-3 border-t border-white/10 flex gap-2">
               <input
-                className={styles.chatInput}
+                className="flex-1 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white placeholder-white/40 outline-none focus:border-violet-400"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Type message..."
@@ -726,7 +533,10 @@ const VideoCallScreen: React.FC = () => {
                   if (e.key === "Enter") handleSendMessage();
                 }}
               />
-              <button className={styles.sendButton} onClick={handleSendMessage}>
+              <button
+                onClick={handleSendMessage}
+                className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white flex items-center justify-center"
+              >
                 ➤
               </button>
             </div>
@@ -734,20 +544,26 @@ const VideoCallScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Custom Confirm Modal (for End Request) */}
+      {/* Alert Modal */}
       {alertData && (
-        <div className={styles.confirmOverlay}>
-          <div className={styles.confirmBox}>
-            <h4>{alertData.title}</h4>
-            <p>{alertData.message}</p>
-            <div className={styles.confirmActions}>
+        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-gradient-to-br from-[#1a1742] to-[#24243e] rounded-3xl p-6 max-w-xs w-full shadow-2xl border border-white/10">
+            <h4 className="text-white font-bold text-lg mb-2">{alertData.title}</h4>
+            <p className="text-white/80 text-sm mb-6">{alertData.message}</p>
+            <div className="flex gap-3 justify-end">
               {alertData.onReject && (
-                <button className={styles.confirmReject} onClick={alertData.onReject}>
+                <button
+                  onClick={alertData.onReject}
+                  className="px-4 py-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
+                >
                   Reject
                 </button>
               )}
               {alertData.onAccept && (
-                <button className={styles.confirmAccept} onClick={alertData.onAccept}>
+                <button
+                  onClick={alertData.onAccept}
+                  className="px-5 py-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-semibold hover:shadow-lg transition"
+                >
                   Accept
                 </button>
               )}

@@ -197,7 +197,7 @@ export default function EntryPage() {
             animate={titleControls}
             className="mb-4 text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300"
           >
-            Welcome to Knowmato 🎓
+            Welcome to KnowMato 🎓
           </motion.h1>
 
           {/* Animated Subtitle */}

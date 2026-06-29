@@ -39,6 +39,18 @@ interface CallContextType {
 
   isJoining: boolean;
 
+  isRemoteScreenSharing: boolean;
+
+  setIsRemoteScreenSharing: (
+      value: boolean
+  ) => void;
+
+  showNotification: (
+      title: string,
+      body: string
+  ) => void;
+
+
   toggleMute: () => Promise<void>;
 
   toggleScreenShare: () => Promise<void>;
@@ -147,6 +159,15 @@ export function CallProvider({
   const [isScreenSharing, setIsScreenSharing] =
       useState(false);
 
+  const callInitializedRef =
+    useRef(false);
+
+  const [
+      isRemoteScreenSharing,
+      setIsRemoteScreenSharing,
+  ] = useState(false);
+
+
     const [
     connectionState,
     setConnectionState
@@ -176,17 +197,122 @@ export function CallProvider({
         null
     );
 
+    useEffect(() => {
+
+      const visibilityChanged = () => {
+
+          if (
+              document.hidden
+          ) {
+
+          } else {
+          }
+
+      };
+
+      document.addEventListener(
+          "visibilitychange",
+          visibilityChanged
+      );
+
+      return () => {
+
+          document.removeEventListener(
+              "visibilitychange",
+              visibilityChanged
+          );
+
+      };
+
+  }, []);
+
+    useEffect(() => {
+
+        if (
+            typeof window === "undefined"
+        ) return;
+
+        if (
+            !("Notification" in window)
+        ) return;
+
+        if (
+            Notification.permission === "default"
+        ) {
+
+            Notification.requestPermission();
+
+        }
+
+    }, []);
+
+    useEffect(() => {
+
+      const handleOffline = () => {
+
+          setConnectionState(
+              "disconnected"
+          );
+
+      };
+
+      const handleOnline = async () => {
+
+          if (
+              clientRef.current
+          ) {
+
+              return;
+          }
+
+          setConnectionState(
+              "connecting"
+          );
+
+      };
+
+      window.addEventListener(
+          "offline",
+          handleOffline
+      );
+
+      window.addEventListener(
+          "online",
+          handleOnline
+      );
+
+      return () => {
+
+          window.removeEventListener(
+              "offline",
+              handleOffline
+          );
+
+          window.removeEventListener(
+              "online",
+              handleOnline
+          );
+
+      };
+
+  }, []);
+
   const startCall = (
     sessionId: number
     ) => {
 
     localStorage.setItem(
-        'active_call',
-        JSON.stringify({
-        sessionId,
-        startedAt: Date.now(),
-        })
-    );
+      "active_call",
+      JSON.stringify({
+
+          sessionId,
+
+          startedAt: Date.now(),
+
+          minimized: false,
+
+      })
+  );
 
     setSessionId(sessionId);
 
@@ -221,11 +347,54 @@ export function CallProvider({
     };
 
   const minimizeCall = () => {
-    setIsMinimized(true);
+
+      setIsMinimized(true);
+
+      showNotification(
+
+          "📞 Call Running",
+
+          "Your KnowMato session is still active."
+
+      );
+
+      const data = JSON.parse(
+          localStorage.getItem("active_call") || "{}"
+      );
+
+      localStorage.setItem(
+          "active_call",
+          JSON.stringify({
+
+              ...data,
+
+              minimized: true,
+
+          })
+      );
+
+
   };
 
   const restoreCall = () => {
-    setIsMinimized(false);
+
+      setIsMinimized(false);
+
+      const data = JSON.parse(
+          localStorage.getItem("active_call") || "{}"
+      );
+
+      localStorage.setItem(
+          "active_call",
+          JSON.stringify({
+
+              ...data,
+
+              minimized: false,
+
+          })
+      );
+
   };
 
   useEffect(() => {
@@ -258,6 +427,9 @@ export function CallProvider({
         'Failed to restore call:',
         err
         );
+
+        callInitializedRef.current = false;
+
 
     }
 
@@ -312,6 +484,8 @@ export function CallProvider({
 
             } catch (err) {
 
+              callInitializedRef.current = false;
+
             console.error(
                 'Agora cleanup error:',
                 err
@@ -342,7 +516,41 @@ export function CallProvider({
 
     };
 
+    const stopScreenShare = async () => {
+
+      const client = clientRef.current;
+
+      if (!client) return;
+
+      if (!screenTrackRef.current) return;
+
+      await client.unpublish([
+          screenTrackRef.current,
+      ]);
+
+      try {
+
+          screenTrackRef.current.close();
+
+      } catch (e) {
+
+          console.log(e);
+
+      }
+
+      screenTrackRef.current = null;
+
+      setIsScreenSharing(false);
+
+  };
+
     const toggleScreenShare = async () => {
+
+      console.log("Publishing Screen Track");
+      console.log(screenTrackRef.current);
+      console.log(document.getElementById("local-screen-container"));
+
+      console.log("🖥️ Screen share started");
 
       const client = clientRef.current;
 
@@ -370,33 +578,50 @@ export function CallProvider({
               screenTrackRef.current =
                   track;
 
-              if (cameraTrackRef.current) {
+              track.on(
+                "track-ended",
+                async () => {
 
-                  await client.unpublish(
-                      cameraTrackRef.current
-                  );
+                    console.log(
+                        "🖥️ Screen share stopped by browser"
+                    );
 
-              }
+                    await stopScreenShare();
+
+                }
+            );
+
 
               await client.publish(track);
+
+              console.log(
+                  "✅ Published screen track:",
+                  track.getTrackId()
+              );
+
+              console.log(
+                  "Video Enabled:",
+                  track.enabled
+              );
+
+              console.log(
+                  "Ready State:",
+                  track.getMediaStreamTrack().readyState
+              );
+
+              const container = document.getElementById("local-screen-container");
+
+                if (container) {
+                    track.play(container);
+                } else {
+                    console.error("local-screen-container not found");
+                }
 
               setIsScreenSharing(true);
 
           } else {
 
-              if (screenTrackRef.current) {
-
-                  await client.unpublish(
-                      screenTrackRef.current
-                  );
-
-                  screenTrackRef.current.stop();
-
-                  screenTrackRef.current.close();
-
-                  screenTrackRef.current = null;
-
-              }
+              await stopScreenShare();
 
               setIsScreenSharing(false);
 
@@ -425,13 +650,28 @@ export function CallProvider({
       uid: number;
   }) => {
 
-      if (clientRef.current) {
+      if (callInitializedRef.current) {
+          console.log("Agora already initialized");
           return;
       }
+
+      callInitializedRef.current = true;
 
       const AgoraRTC = (
           await import("agora-rtc-sdk-ng")
       ).default;
+
+      if (
+          clientRef.current
+      ) {
+
+          console.log(
+              "♻️ Reusing Agora client"
+          );
+
+          return;
+
+      }
 
       const client =
           AgoraRTC.createClient({
@@ -441,16 +681,132 @@ export function CallProvider({
 
       clientRef.current = client;
 
-      const tracks =
-          await AgoraRTC.createMicrophoneAndCameraTracks();
+      client.on(
+          "user-unpublished",
+          (
+              user: any,
+              mediaType: "video" | "audio"
+          ) => {
 
-      const micTrack = tracks[0];
-      const cameraTrack = tracks[1];
+              if (mediaType === "video") {
 
-      await cameraTrack.setEnabled(false);
+                  user.videoTrack?.stop();
+
+                  setIsRemoteScreenSharing(false);
+
+              }
+
+          }
+      );
+
+      client.on(
+        "user-published",
+        async (user: any, mediaType: "video" | "audio") => {
+
+          console.log("Remote published");
+          console.log(user.videoTrack);
+          console.log(document.getElementById("remote-video-container"));
+
+            await client.subscribe(
+                user,
+                mediaType
+            );
+
+            if (
+                !remoteUid
+            ) {
+
+                setRemoteUid(
+                    Number(user.uid)
+                );
+
+                showNotification(
+
+                    "👤 Participant Connected",
+
+                    "The other participant joined the session."
+
+                );
+
+            }
+
+            if (mediaType === "video") {
+
+              setIsRemoteScreenSharing(true);
+
+              showNotification(
+                  "🖥️ Screen Sharing",
+                  "The participant started sharing their screen."
+              );
+
+              user.videoTrack?.play(
+                  "remote-video-container"
+              );
+
+          }
+
+            if (
+                mediaType === "audio"
+            ) {
+                user.audioTrack?.play();
+            }
+
+        }
+    );
+
+    client.on(
+      "user-left",
+      () => {
+
+          console.log(
+              "👋 Remote user left"
+          );
+
+          showNotification(
+
+              "👋 Participant Left",
+
+              "The participant left the session."
+
+          );
+
+          setRemoteUid(null);
+
+          setIsRemoteScreenSharing(
+              false
+          );
+
+      }
+  );
+
+    client.on(
+        "connection-state-change",
+        (state: string) => {
+
+            switch (state) {
+
+                case "CONNECTED":
+                    setConnectionState("connected");
+                    break;
+
+                case "CONNECTING":
+                    setConnectionState("connecting");
+                    break;
+
+                default:
+                    setConnectionState("disconnected");
+
+            }
+
+        }
+    );
+
+      const micTrack =
+          await AgoraRTC.createMicrophoneAudioTrack();
 
       micTrackRef.current = micTrack;
-      cameraTrackRef.current = cameraTrack;
+
+      cameraTrackRef.current = null;
 
       await client.join(
           appId,
@@ -460,8 +816,7 @@ export function CallProvider({
       );
 
       await client.publish([
-          micTrack,
-          cameraTrack,
+          micTrack
       ]);
 
       setJoined(true);
@@ -469,6 +824,49 @@ export function CallProvider({
       setConnectionState(
           "connected"
       );
+  };
+
+  const showNotification = (
+      title: string,
+      body: string
+  ) => {
+
+      if (
+          typeof window === "undefined"
+      ) return;
+
+      if (
+          !("Notification" in window)
+      ) return;
+
+      if (
+          Notification.permission !== "granted"
+      ) return;
+
+      const notification =
+          new Notification(
+              title,
+              {
+                  body,
+                  icon: "/logo.png",
+                  tag: "knowMato-call",
+                  requireInteraction: true,
+              }
+          );
+
+      notification.onclick = () => {
+
+          window.focus();
+
+          if (sessionId) {
+
+              window.location.href =
+                  `/videocall/${sessionId}`;
+
+          }
+
+      };
+
   };
 
   return (
@@ -530,6 +928,13 @@ export function CallProvider({
         toggleScreenShare,
 
         initializeAgora,
+
+        isRemoteScreenSharing,
+
+        setIsRemoteScreenSharing,
+
+        showNotification,
+
         }}
     >
       {children}
