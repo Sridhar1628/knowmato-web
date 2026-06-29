@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import styles from "./PaymentSuccess.module.css";
+import { motion } from "framer-motion";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -53,9 +53,9 @@ const usePaymentRedirect = () => {
 // ---------------------------------------------------------------------------
 const runConfetti = () => {
   if (typeof window === "undefined") return;
-  const duration = 1000; // ms
+  const duration = 1000;
   const end = Date.now() + duration;
-  const colors = ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
+  const colors = ["#a78bfa", "#f472b6", "#38bdf8", "#34d399"]; // violet, pink, cyan, emerald
 
   const frame = () => {
     if (Date.now() > end) return;
@@ -78,7 +78,6 @@ const runConfetti = () => {
   frame();
 };
 
-// Basic confetti function (minimal)
 function confetti(options: {
   particleCount: number;
   angle: number;
@@ -179,7 +178,6 @@ const PaymentSuccessPage: React.FC = () => {
       // Simulate backend verification (optional)
       // If you have a verification API, call it here.
       // For now, assume success.
-
       setSuccess(true);
       setMessage("Your wallet has been topped up!");
 
@@ -212,19 +210,33 @@ const PaymentSuccessPage: React.FC = () => {
   // Render
   // ---------------------------------------------------------------------------
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex items-center justify-center p-4">
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="relative z-10 w-full max-w-lg bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl text-center"
+      >
         {loading ? (
-          <div className={styles.loadingState}>
-            <div className={styles.spinner} />
-            <h2>Verifying payment...</h2>
-            <p className={styles.subtle}>Please do not close this window</p>
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
+            <h2 className="text-2xl font-bold text-white">Verifying payment...</h2>
+            <p className="text-white/50 text-sm">Please do not close this window</p>
           </div>
         ) : success ? (
           <>
-            <div className={styles.iconWrapper}>
-              <div className={`${styles.icon} ${styles.successIcon}`}>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 rounded-full bg-emerald-400/20 border-2 border-emerald-400/40 flex items-center justify-center">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-10 h-10 text-emerald-300"
+                >
                   <path
                     d="M20 6L9 17L4 12"
                     stroke="currentColor"
@@ -235,22 +247,32 @@ const PaymentSuccessPage: React.FC = () => {
                 </svg>
               </div>
             </div>
-            <h1 className={styles.title}>Payment Successful</h1>
-            <p className={styles.message}>{message}</p>
-            <button
-              type="button"
-              className={styles.btn}
-              onClick={() => router.push("/student/wallet")}
-            >
-              Go to Wallet
-              <span className={styles.btnArrow}>→</span>
-            </button>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300">
+              Payment Successful
+            </h1>
+            <p className="mt-3 text-lg text-white/80">{message}</p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => router.push("/student/wallet")}
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:to-cyan-600 transition flex items-center justify-center gap-2"
+              >
+                Go to Wallet
+                <span>→</span>
+              </motion.button>
+              <p className="text-white/40 text-sm">or wait for auto‑redirect</p>
+            </div>
           </>
         ) : (
           <>
-            <div className={styles.iconWrapper}>
-              <div className={`${styles.icon} ${styles.failedIcon}`}>
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 rounded-full bg-rose-400/20 border-2 border-rose-400/40 flex items-center justify-center">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="w-10 h-10 text-rose-300"
+                >
                   <path
                     d="M18 6L6 18M6 6L18 18"
                     stroke="currentColor"
@@ -261,18 +283,24 @@ const PaymentSuccessPage: React.FC = () => {
                 </svg>
               </div>
             </div>
-            <h1 className={styles.title}>Payment Failed</h1>
-            <p className={styles.message}>{message}</p>
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnOutline}`}
-              onClick={() => router.push("/wallet/add-money")}
-            >
-              Try Again
-            </button>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-pink-300">
+              Payment Failed
+            </h1>
+            <p className="mt-3 text-lg text-white/80">{message}</p>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => router.push("/wallet/add-money")}
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-500/20 border border-rose-400/40 text-rose-300 font-bold hover:bg-rose-500/30 transition"
+              >
+                Try Again
+              </motion.button>
+              <p className="text-white/40 text-sm">Redirecting soon</p>
+            </div>
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

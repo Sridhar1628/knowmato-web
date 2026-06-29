@@ -13,16 +13,7 @@ import {
 import { getTokens } from "@/services/storageService";
 import { endSession } from "@/services/sessionService";
 import axiosInstance from "@/api/axiosInstance";
-import styles from "./ChatScreen.module.css";
 import { createReport } from "@/services/v1Service";
-
-/* ----- Constants ----- */
-const PRIMARY = "#5B4CF0";
-const OWN_BUBBLE = "#EEF2FF";
-const OTHER_BUBBLE = "#F8FAFC";
-const TEXT_DARK = "#111827";
-const TEXT_MUTED = "#6B7280";
-const BORDER = "#E5E7EB";
 
 /* ----- Types ----- */
 interface Message {
@@ -80,13 +71,8 @@ const ChatScreen = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [showReportModal, setShowReportModal] = useState(false);
-
-  const [reportReason, setReportReason] =
-    useState("");
-
-  const [reportDescription, setReportDescription] =
-    useState("");
-
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
 
   // Format time
@@ -120,7 +106,7 @@ const ChatScreen = () => {
       if (currentUserId === Number(res.data.student_id)) {
         router.replace(`/student/submit-review/${sessionId}`);
       } else {
-        router.replace("/tutor/dashboard"); // adjust to your tutor sessions route
+        router.replace("/tutor/dashboard");
       }
     } catch {
       router.back();
@@ -320,11 +306,9 @@ const ChatScreen = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Went to background
         disconnectChatSocket();
         socketInitialized.current = false;
       } else {
-        // Came back to foreground
         if (!currentUserId || !otherUserId) return;
         (async () => {
           const tokens = await getTokens();
@@ -381,186 +365,148 @@ const ChatScreen = () => {
   // ----- Render loading state -----
   if (isLoading) {
     return (
-      <div className={styles.loader}>
-        <div className={styles.spinner}></div>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+        <div className="w-10 h-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
       </div>
     );
   }
 
   const handleSubmitReport = async () => {
-
     if (!reportReason) {
       window.alert("Please select a reason.");
       return;
     }
-
     if (!reportDescription.trim()) {
       window.alert("Please enter a description.");
       return;
     }
-
     if (reportDescription.trim().length < 10) {
-      window.alert(
-        "Please provide a little more detail."
-      );
+      window.alert("Please provide a little more detail.");
       return;
     }
 
     try {
-
       setReportLoading(true);
-
       await createReport({
-
         session_id: Number(sessionId),
-
         reason: reportReason as any,
-
         description: reportDescription.trim(),
-
       });
-
-      window.alert(
-        "✅ Your report has been submitted successfully."
-      );
-
+      window.alert("✅ Your report has been submitted successfully.");
       setShowReportModal(false);
-
       setReportReason("");
-
       setReportDescription("");
-
     } catch (error: any) {
-
-        console.log("REPORT ERROR");
-
-        console.log(error.response);
-
-        console.log(error.response?.data);
-
-        window.alert(
-          JSON.stringify(error.response?.data, null, 2)
-        );
-
-      } finally {
-
+      console.log("REPORT ERROR", error.response);
+      window.alert(JSON.stringify(error.response?.data, null, 2));
+    } finally {
       setReportLoading(false);
-
     }
-
   };
 
   const WARNING_MESSAGE =
-  "⚠️ Please communicate respectfully. Abuse, harassment, offensive language, sharing personal contact information, or inappropriate behaviour may result in account suspension.";
+    "⚠️ Please communicate respectfully. Abuse, harassment, offensive language, sharing personal contact information, or inappropriate behaviour may result in account suspension.";
 
   return (
-    <div className={styles.container}>
-      {/* ---- Header ---- */}
-      <div className={styles.header}>
+    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex flex-col">
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
+      {/* ---- Header ---- */}
+      <header className="relative z-10 flex items-center justify-between px-4 py-3 bg-white/5 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <button
-          className={styles.backButton}
           onClick={() => router.back()}
+          className="p-2 text-white/80 hover:text-white transition"
           aria-label="Go back"
         >
           ←
         </button>
 
-        <div className={styles.profileAvatar}>
-          <span className={styles.profileAvatarText}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold shadow-lg">
             {otherUserName?.charAt(0) || "?"}
-          </span>
-        </div>
-
-        <div className={styles.headerInfo}>
-          <span className={styles.headerName}>
-            {otherUserName || "Chat"}
-          </span>
-
-          <span className={styles.headerStatus}>
-            {typingUser
-              ? "✍️ typing..."
-              : onlineStatus === "online"
-              ? "🟢 Online"
-              : onlineStatus === "connecting"
-              ? "🟡 Connecting..."
-              : "⚫ Offline"}
-          </span>
-        </div>
-
-        {/* Student Menu */}
-        {isStudent && (
-          <div className={styles.menuWrapper}>
-
-            <button
-              className={styles.menuButton}
-              onClick={() => setShowMenu((v) => !v)}
-            >
-              ⋮
-            </button>
-
-            {showMenu && (
-
-              <div className={styles.menuDropdown}>
-
-                <button
-                  className={styles.menuItem}
-                  onClick={() => {
-
-                    setShowMenu(false);
-
-                    // Step 2
-                    setShowReportModal(true);
-
-                  }}
-                >
-                  🚨 Report Tutor
-                </button>
-
-              </div>
-
-            )}
-
           </div>
-        )}
-
-        <button
-          className={styles.endButton}
-          onClick={handleEndSession}
-          disabled={ending || requestSent}
-        >
-          End
-        </button>
-
-      </div>
-
-      <div className={styles.warningBar}>
-
-        <div className={styles.warningTrack}>
-
-          <span>
-
-            {WARNING_MESSAGE}
-
-          </span>
-
-          <span>
-
-            {WARNING_MESSAGE}
-
-          </span>
-
+          <div>
+            <p className="text-white font-semibold">{otherUserName || "Chat"}</p>
+            <p className="text-xs text-white/60">
+              {typingUser
+                ? "✍️ typing..."
+                : onlineStatus === "online"
+                ? "🟢 Online"
+                : onlineStatus === "connecting"
+                ? "🟡 Connecting..."
+                : "⚫ Offline"}
+            </p>
+          </div>
         </div>
 
+        <div className="flex items-center gap-2">
+          {isStudent && (
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu((v) => !v)}
+                className="text-white/70 hover:text-white text-2xl px-2 py-1 transition"
+              >
+                ⋮
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-44 bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-20">
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      setShowReportModal(true);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 transition"
+                  >
+                    🚨 Report Tutor
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleEndSession}
+            disabled={ending || requestSent}
+            className="px-4 py-2 bg-rose-500/20 border border-rose-400/30 text-rose-300 rounded-xl font-semibold hover:bg-rose-500/30 disabled:opacity-50 transition"
+          >
+            End
+          </button>
+        </div>
+      </header>
+
+      {/* ---- Scrolling Warning Bar ---- */}
+      <div className="relative z-10 overflow-hidden bg-amber-400/10 border-y border-amber-400/20 h-8">
+        <style jsx>{`
+          @keyframes scrollWarning {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .warning-track {
+            display: flex;
+            width: max-content;
+            animation: scrollWarning 30s linear infinite;
+          }
+        `}</style>
+        <div className="warning-track whitespace-nowrap py-1.5">
+          <span className="text-amber-300 text-xs font-medium px-4 inline-block">
+            {WARNING_MESSAGE}
+          </span>
+          <span className="text-amber-300 text-xs font-medium px-4 inline-block">
+            {WARNING_MESSAGE}
+          </span>
+        </div>
       </div>
 
       {/* ---- Messages ---- */}
-      <div className={styles.messagesContainer}>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
         {messages.length === 0 ? (
-          <div className={styles.emptyBox}>
-            <span className={styles.emptyEmoji}>💬</span>
-            <h3 className={styles.emptyTitle}>Start your conversation</h3>
-            <p className={styles.emptySub}>Messages will appear here</p>
+          <div className="flex flex-col items-center justify-center h-full text-white/50">
+            <span className="text-4xl mb-3">💬</span>
+            <h3 className="text-lg font-semibold text-white/80">Start your conversation</h3>
+            <p className="text-sm text-white/50">Messages will appear here</p>
           </div>
         ) : (
           messages.map((item, index) => {
@@ -568,29 +514,25 @@ const ChatScreen = () => {
             return (
               <div
                 key={item.id?.toString() || index.toString()}
-                className={`${styles.messageRow} ${
-                  isOwn ? styles.rowRight : styles.rowLeft
-                }`}
+                className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`${styles.bubble} ${
-                    isOwn ? styles.ownBubble : styles.otherBubble
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-lg ${
+                    isOwn
+                      ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+                      : "bg-white/10 backdrop-blur-md border border-white/10 text-white"
                   }`}
                 >
-                  <p className={styles.messageText}>{item.text}</p>
-                  <div className={styles.metaRow}>
-                    <span className={styles.timeText}>
+                  <p className="text-sm whitespace-pre-wrap">{item.text}</p>
+                  <div className="flex items-center justify-end gap-2 mt-2">
+                    <span className="text-[10px] opacity-70">
                       {formatTime(item.timestamp)}
                     </span>
                     {isOwn && (
                       <span
-                        className={styles.readReceipt}
+                        className="text-xs"
                         style={{
-                          color: item.is_seen
-                            ? "#38BDF8"
-                            : item.is_delivered
-                            ? "#CBD5F5"
-                            : "#64748B",
+                          color: item.is_seen ? "#38BDF8" : item.is_delivered ? "#CBD5F5" : "#64748B",
                         }}
                       >
                         {item.is_seen || item.is_delivered ? "✓✓" : "✓"}
@@ -606,9 +548,9 @@ const ChatScreen = () => {
       </div>
 
       {/* ---- Input area ---- */}
-      <div className={styles.inputContainer}>
+      <div className="relative z-10 border-t border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 flex items-center gap-3">
         <input
-          className={styles.input}
+          className="flex-1 bg-gray-900/60 border-2 border-white/20 rounded-2xl px-5 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 transition"
           value={input}
           onChange={(e) => handleTyping(e.target.value)}
           placeholder="Type a message..."
@@ -619,155 +561,90 @@ const ChatScreen = () => {
             }
           }}
         />
-        <button className={styles.sendButton} onClick={handleSend}>
+        <button
+          onClick={handleSend}
+          className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shadow-lg hover:scale-105 transition"
+        >
           ➤
         </button>
       </div>
 
+      {/* ---- Report Modal ---- */}
       {showReportModal && (
-
-        <div className={styles.modalOverlay}>
-
-          <div className={styles.reportModal}>
-
-            <h3 className={styles.reportTitle}>
-              🚨 Report Tutor
-            </h3>
-
-            <p className={styles.reportSubtitle}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-1">🚨 Report Tutor</h3>
+            <p className="text-sm text-white/60 mb-4">
               Your report will be reviewed by our moderation team.
             </p>
 
-            <label className={styles.reportLabel}>
-              Reason
-            </label>
-
+            <label className="block text-sm font-medium text-white/80 mb-1">Reason</label>
             <select
-              className={styles.reportSelect}
+              className="w-full bg-gray-800 border border-white/20 rounded-xl px-4 py-3 text-white mb-4 focus:ring-4 focus:ring-violet-500/50 outline-none"
               value={reportReason}
-              onChange={(e) =>
-                setReportReason(e.target.value)
-              }
+              onChange={(e) => setReportReason(e.target.value)}
             >
-
-              <option value="">
-                Select a reason
-              </option>
-
-              <option value="rude">
-                Rude Behaviour
-              </option>
-
-              <option value="late">
-                Tutor Was Late
-              </option>
-
-              <option value="poor_explanation">
-                Poor Explanation
-              </option>
-
-              <option value="wrong_information">
-                Wrong Information
-              </option>
-
-              <option value="harassment">
-                Harassment
-              </option>
-
-              <option value="spam">
-                Spam
-              </option>
-
-              <option value="other">
-                Other
-              </option>
-
+              <option value="">Select a reason</option>
+              <option value="rude">Rude Behaviour</option>
+              <option value="late">Tutor Was Late</option>
+              <option value="poor_explanation">Poor Explanation</option>
+              <option value="wrong_information">Wrong Information</option>
+              <option value="harassment">Harassment</option>
+              <option value="spam">Spam</option>
+              <option value="other">Other</option>
             </select>
 
-            <label className={styles.reportLabel}>
-              Description
-            </label>
-
+            <label className="block text-sm font-medium text-white/80 mb-1">Description</label>
             <textarea
-
-              className={styles.reportTextarea}
-
-              rows={5}
-
+              className="w-full bg-gray-800 border border-white/20 rounded-xl px-4 py-3 text-white h-28 focus:ring-4 focus:ring-violet-500/50 outline-none resize-none"
               value={reportDescription}
-
-              onChange={(e) =>
-                setReportDescription(e.target.value)
-              }
-
+              onChange={(e) => setReportDescription(e.target.value)}
               placeholder="Describe what happened..."
-
             />
 
-            <div className={styles.reportActions}>
-
+            <div className="flex justify-end gap-3 mt-6">
               <button
-
-                className={styles.cancelButton}
                 disabled={reportLoading}
-
                 onClick={() => {
-
                   setShowReportModal(false);
-
                   setReportReason("");
-
                   setReportDescription("");
-
                 }}
-
+                className="px-5 py-2.5 bg-white/10 border border-white/20 text-white rounded-xl font-semibold hover:bg-white/20 transition"
               >
                 Cancel
               </button>
-
               <button
-
-                className={styles.submitButton}
-
                 disabled={reportLoading}
-
                 onClick={handleSubmitReport}
-
+                className="px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 transition"
               >
-
-                {reportLoading
-                  ? "Submitting..."
-                  : "Submit Report"}
-
+                {reportLoading ? "Submitting..." : "Submit Report"}
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
 
-      {/* ---- Custom Alert Modal for End Session Request ---- */}
+      {/* ---- End Session Alert Modal ---- */}
       {alertData && (
-        <div className={styles.alertOverlay}>
-          <div className={styles.alertBox}>
-            <h4 className={styles.alertTitle}>{alertData.title}</h4>
-            <p className={styles.alertMessage}>{alertData.message}</p>
-            <div className={styles.alertActions}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-center">
+            <h4 className="text-xl font-bold text-white mb-2">{alertData.title}</h4>
+            <p className="text-white/70 mb-6">{alertData.message}</p>
+            <div className="flex justify-center gap-4">
               {alertData.onReject && (
                 <button
-                  className={styles.alertCancel}
                   onClick={alertData.onReject}
+                  className="px-5 py-2.5 bg-rose-500/20 border border-rose-400/30 text-rose-300 rounded-xl font-semibold hover:bg-rose-500/30 transition"
                 >
                   Reject
                 </button>
               )}
               {alertData.onAccept && (
                 <button
-                  className={styles.alertAccept}
                   onClick={alertData.onAccept}
+                  className="px-5 py-2.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 rounded-xl font-semibold hover:bg-emerald-500/30 transition"
                 >
                   Accept
                 </button>

@@ -13,7 +13,6 @@ import { connectSocket } from '@/services/socketService';
 
 const OTP_LENGTH = 6;
 
-// Helper: show error/success toasts
 const showError = (message: string) => toast.error(message);
 const showSuccess = (message: string) => toast.success(message);
 
@@ -31,9 +30,6 @@ function OTPContent() {
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Entrance animations (using framer-motion)
-
 
   // Timer countdown and progress
   useEffect(() => {
@@ -120,15 +116,11 @@ function OTPContent() {
     setLoading(true);
     try {
       const res = await verifyOtpLogin({ identifier, otp: otpValue });
-
-      // Save tokens
       saveTokens(res.access, res.refresh);
 
-      // Fetch user profile
       const profileRes = await getProfile();
       const profile = profileRes.data;
 
-      // Update Redux store
       dispatch(
         loginSuccess({
           access: res.access,
@@ -137,16 +129,13 @@ function OTPContent() {
         })
       );
 
-      // Connect WebSocket
       connectSocket(profile.id, res.access);
-
       showSuccess('Login successful!');
       router.push('/');
     } catch (error: any) {
       const errorMsg = error?.response?.data?.error || error?.message || 'Invalid OTP. Please try again.';
       showError(errorMsg);
       triggerShake();
-      // Clear OTP fields
       setOtp(Array(OTP_LENGTH).fill(''));
       inputRefs.current[0]?.focus();
     } finally {
@@ -168,69 +157,62 @@ function OTPContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#F9F7FE] via-white to-[#F0F4FF] px-4">
-      <Toaster position="bottom-center" />
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] px-4">
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: '#1e1b4b',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(8px)',
+          },
+        }}
+      />
+
+      {/* Animated background blobs */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
       {/* Floating Emojis with Animation */}
       <motion.div
-        className="absolute left-[10%] top-[12%] text-4xl opacity-25"
-        animate={{
-          y: [0, -15, 0],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 15,
-          ease: "easeInOut",
-        }}
+        className="absolute left-[10%] top-[15%] text-4xl opacity-30"
+        animate={{ y: [0, -15, 0] }}
+        transition={{ repeat: Infinity, duration: 15, ease: "easeInOut" }}
       >
         📨
       </motion.div>
       <motion.div
-        className="absolute left-[10%] top-[12%] text-4xl opacity-25"
-        animate={{
-          y: [0, -15, 0],
-        }}
-        transition={{
-          repeat: Infinity,
-          duration: 15,
-          ease: "easeInOut",
-        }}
+        className="absolute right-[10%] bottom-[15%] text-4xl opacity-30"
+        animate={{ y: [0, -15, 0] }}
+        transition={{ repeat: Infinity, duration: 12, ease: "easeInOut", delay: 2 }}
       >
         🔐
       </motion.div>
 
       {/* Main Card */}
       <motion.div
-        className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-indigo-100/50"
         initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.5,
-          ease: "easeOut",
-        }}
-        style={shake ? { animation: 'shake 0.3s ease-in-out 0s 1' } : {}}
+        animate={shake ? { x: [0, -5, 5, -5, 5, 0] } : { opacity: 1, y: 0 }}
+        transition={shake ? { duration: 0.3 } : { duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-md rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-8 shadow-2xl relative z-10"
       >
         {/* Animated Emoji */}
         <motion.div
-          className="mb-4 text-center text-5xl"
-          animate={{
-            rotate: [0, 10, 0, -10, 0],
-          }}
-          transition={{
-            repeat: Infinity,
-            duration: 2,
-            ease: "easeInOut",
-          }}
+          className="mb-6 text-center text-5xl"
+          animate={{ rotate: [0, 10, 0, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         >
           ⚡
         </motion.div>
 
-        <h1 className="mb-2 text-center text-3xl font-extrabold text-gray-800">
+        <h1 className="mb-2 text-center text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
           Verification Code
         </h1>
-        <p className="mb-8 text-center text-gray-500">
+        <p className="mb-8 text-center text-white/70">
           We've sent a 6-digit code to<br />
-          <span className="font-bold text-indigo-600">{identifier || 'your device'}</span>
+          <span className="font-bold text-violet-300">{identifier || 'your device'}</span>
         </p>
 
         {/* OTP Input Boxes */}
@@ -252,12 +234,12 @@ function OTPContent() {
                 onFocus={() => handleFocus(idx)}
                 onBlur={handleBlur}
                 disabled={loading}
-                className={`h-14 w-14 rounded-xl border-2 text-center text-2xl font-bold text-gray-800 transition-all focus:outline-none ${
+                className={`h-14 w-14 rounded-xl border-2 text-center text-2xl font-bold text-white transition-all focus:outline-none ${
                   focusedIndex === idx
-                    ? 'border-indigo-500 bg-white shadow-md shadow-indigo-200'
+                    ? 'border-violet-400 bg-white/10 shadow-lg shadow-violet-500/20'
                     : otp[idx]
-                    ? 'border-indigo-300 bg-indigo-50'
-                    : 'border-gray-200 bg-gray-50'
+                    ? 'border-violet-400/40 bg-violet-400/10'
+                    : 'border-white/20 bg-white/5'
                 }`}
               />
             ))}
@@ -265,12 +247,12 @@ function OTPContent() {
 
         {/* Timer Progress Bar */}
         {timer > 0 && (
-          <div className="relative mb-4 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="relative mb-4 h-1 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-indigo-500 transition-all duration-1000 ease-linear"
+              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-fuchsia-400 transition-all duration-1000 ease-linear"
               style={{ width: `${(timer / 30) * 100}%` }}
             />
-            <div className="mt-1 text-right text-xs text-gray-400">⏳ {timer}s</div>
+            <div className="mt-1 text-right text-xs text-white/50">⏳ {timer}s</div>
           </div>
         )}
 
@@ -278,8 +260,10 @@ function OTPContent() {
         <button
           onClick={() => handleVerifyOtp(otp.join(''))}
           disabled={loading || otp.join('').length !== OTP_LENGTH}
-          className={`relative mb-5 w-full overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 font-bold text-white shadow-lg transition-all hover:shadow-xl ${
-            loading || otp.join('').length !== OTP_LENGTH ? 'opacity-60' : 'hover:scale-[1.02]'
+          className={`relative mb-5 w-full overflow-hidden rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-4 font-bold text-white shadow-lg shadow-violet-500/25 transition-all ${
+            loading || otp.join('').length !== OTP_LENGTH
+              ? 'opacity-60 cursor-not-allowed'
+              : 'hover:scale-[1.02] hover:shadow-xl'
           }`}
         >
           {loading ? (
@@ -297,12 +281,12 @@ function OTPContent() {
 
         {/* Resend Section */}
         <div className="mb-4 text-center">
-          <span className="text-gray-500">Didn't receive code? </span>
+          <span className="text-white/50">Didn't receive code? </span>
           <button
             onClick={handleResend}
             disabled={timer > 0}
             className={`font-semibold ${
-              timer > 0 ? 'cursor-not-allowed text-gray-400' : 'text-indigo-600 hover:underline'
+              timer > 0 ? 'cursor-not-allowed text-white/30' : 'text-violet-300 hover:underline'
             }`}
           >
             {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
@@ -314,37 +298,23 @@ function OTPContent() {
           <button
             onClick={() => router.back()}
             disabled={loading}
-            className="text-gray-500 transition hover:text-gray-700"
+            className="text-white/50 hover:text-white transition"
           >
             ← Back to Login
           </button>
         </div>
       </motion.div>
-
-      {/* Custom shake animation */}
-      <style jsx>{`
-        @keyframes shake {
-          0% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-5px);
-          }
-          75% {
-            transform: translateX(5px);
-          }
-          100% {
-            transform: translateX(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
 
 export default function OTPPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    }>
       <OTPContent />
     </Suspense>
   );

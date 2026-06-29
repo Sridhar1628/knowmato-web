@@ -29,9 +29,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // ============================================
-  // LOGIN HANDLER
-  // ============================================
   const handleLogin = async (values: { identifier: string; password: string }) => {
     setIsLoading(true);
     try {
@@ -67,38 +64,15 @@ export default function LoginPage() {
     }
   };
 
-  // ============================================
-  // RENDER
-  // ============================================
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950">
-      {/* Animated aurora blobs */}
-      <motion.div
-        animate={{ x: [0, 120, -60, 0], y: [0, -80, 60, 0], scale: [1, 1.2, 1] }}
-        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -top-40 -left-32 h-[500px] w-[500px] rounded-full bg-cyan-500/40 blur-[130px]"
-      />
-      <motion.div
-        animate={{ x: [0, -140, 80, 0], y: [0, 80, -50, 0], scale: [1.1, 0.9, 1.1] }}
-        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-10 right-[-120px] h-[450px] w-[450px] rounded-full bg-fuchsia-500/35 blur-[140px]"
-      />
-      <motion.div
-        animate={{ x: [0, 90, -120, 0], y: [0, -60, 80, 0] }}
-        transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute bottom-[-160px] left-1/3 h-[520px] w-[520px] rounded-full bg-violet-500/35 blur-[150px]"
-      />
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
+      {/* Animated background blobs (consistent with other pages) */}
+      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
       {/* Subtle grid overlay */}
-      <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(#ffffff_1px,transparent_1px),linear-gradient(to_right,#ffffff_1px,transparent_1px)] [background-size:45px_45px]" />
-
-      {/* Additional soft glows */}
-      <div className="absolute top-24 left-20 h-40 w-40 rounded-full bg-cyan-400/15 blur-[120px]" />
-      <div className="absolute bottom-10 right-10 h-48 w-48 rounded-full bg-pink-500/15 blur-[140px]" />
-      <div className="absolute top-1/2 left-1/2 h-60 w-60 rounded-full bg-violet-500/10 blur-[160px]" />
-
-      {/* Gradient overlay for depth */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-950/40 via-slate-900/20 to-slate-950/60" />
+      <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(#ffffff_1px,transparent_1px),linear-gradient(to_right,#ffffff_1px,transparent_1px)] [background-size:45px_45px]" />
 
       {/* Toast notifications */}
       <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
@@ -111,14 +85,14 @@ export default function LoginPage() {
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className="w-full max-w-md"
         >
-          <div className="rounded-3xl bg-white/15 border border-white/20 backdrop-blur-2xl shadow-[0_25px_70px_rgba(0,0,0,0.35)] p-8">
+          <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl p-8">
             {/* Header */}
             <div className="mb-8 text-center">
               {/* Animated logo icon */}
               <motion.div
                 animate={{ rotate: [0, 10, 0], scale: [1, 1.05, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
-                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-violet-600 shadow-lg mb-4"
+                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25 mb-4"
               >
                 <svg
                   className="w-10 h-10 text-white"
@@ -135,8 +109,10 @@ export default function LoginPage() {
                 </svg>
               </motion.div>
 
-              <h1 className="text-4xl font-extrabold tracking-tight text-white">Knowmato</h1>
-              <p className="mt-2 text-gray-300">Instant doubt solving, anytime</p>
+              <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
+                Knowmato
+              </h1>
+              <p className="mt-2 text-white/70">Instant doubt solving, anytime</p>
             </div>
 
             {/* Form */}
@@ -152,7 +128,7 @@ export default function LoginPage() {
                     <div className="relative">
                       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <svg
-                          className="h-5 w-5 text-gray-400"
+                          className="h-5 w-5 text-white/40"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -169,14 +145,14 @@ export default function LoginPage() {
                         name="identifier"
                         type="email"
                         placeholder="Email address"
-                        className={`block w-full rounded-xl border py-3 pl-10 pr-3 outline-none transition text-white placeholder:text-gray-400 backdrop-blur-md focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 ${
+                        className={`block w-full rounded-xl border-2 py-3 pl-10 pr-3 outline-none transition bg-gray-900/60 backdrop-blur-md text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 ${
                           errors.identifier && touched.identifier
-                            ? 'border-red-400/70 bg-red-500/10 placeholder:text-red-300/50 focus:border-red-400 focus:ring-red-400/30'
-                            : 'border-white/20 bg-white/10'
+                            ? 'border-rose-400/60 bg-rose-500/10 placeholder-rose-300/50 focus:border-rose-400 focus:ring-rose-400/30'
+                            : 'border-white/20'
                         }`}
                       />
                     </div>
-                    <ErrorMessage name="identifier" component="div" className="mt-1 text-xs text-red-400" />
+                    <ErrorMessage name="identifier" component="div" className="mt-1 text-xs text-rose-400" />
                   </div>
 
                   {/* Password field */}
@@ -184,7 +160,7 @@ export default function LoginPage() {
                     <div className="relative">
                       <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <svg
-                          className="h-5 w-5 text-gray-400"
+                          className="h-5 w-5 text-white/40"
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -201,16 +177,16 @@ export default function LoginPage() {
                         name="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Password"
-                        className={`block w-full rounded-xl border py-3 pl-10 pr-12 outline-none transition text-white placeholder:text-gray-400 backdrop-blur-md focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 ${
+                        className={`block w-full rounded-xl border-2 py-3 pl-10 pr-12 outline-none transition bg-gray-900/60 backdrop-blur-md text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 ${
                           errors.password && touched.password
-                            ? 'border-red-400/70 bg-red-500/10 placeholder:text-red-300/50 focus:border-red-400 focus:ring-red-400/30'
-                            : 'border-white/20 bg-white/10'
+                            ? 'border-rose-400/60 bg-rose-500/10 placeholder-rose-300/50 focus:border-rose-400 focus:ring-rose-400/30'
+                            : 'border-white/20'
                         }`}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-200 transition"
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-white/40 hover:text-white/80 transition"
                         tabIndex={-1}
                       >
                         {showPassword ? (
@@ -246,7 +222,7 @@ export default function LoginPage() {
                         )}
                       </button>
                     </div>
-                    <ErrorMessage name="password" component="div" className="mt-1 text-xs text-red-400" />
+                    <ErrorMessage name="password" component="div" className="mt-1 text-xs text-rose-400" />
                   </div>
 
                   {/* Submit button */}
@@ -254,7 +230,7 @@ export default function LoginPage() {
                     type="submit"
                     disabled={isLoading}
                     whileTap={{ scale: 0.97 }}
-                    className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(59,130,246,.55)] disabled:opacity-70"
+                    className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(167,139,250,.55)] disabled:opacity-70"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center gap-2">
@@ -311,15 +287,15 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={() => router.push('/register')}
-                      className="text-gray-300 transition hover:text-cyan-400"
+                      className="text-white/50 transition hover:text-violet-300"
                     >
                       New to Knowmato?
-                      <span className="font-semibold text-cyan-400"> Sign Up</span>
+                      <span className="font-semibold text-violet-400"> Sign Up</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push('/forgot-password')}
-                      className="text-gray-300 transition hover:text-cyan-400"
+                      className="text-white/50 transition hover:text-violet-300"
                     >
                       Forgot Password?
                     </button>

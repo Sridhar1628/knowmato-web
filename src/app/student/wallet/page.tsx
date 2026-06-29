@@ -347,7 +347,7 @@ const StudentWalletScreen = () => {
             <span className="text-lg">💰</span> Add Money
           </button>
           <button
-            onClick={() => router.push("/transactions")}
+            onClick={() => router.push("/student/transactions")}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/20 active:scale-95 transition"
           >
             <span className="text-lg">📜</span> History
