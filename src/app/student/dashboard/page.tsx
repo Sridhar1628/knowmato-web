@@ -101,6 +101,22 @@ export default function DashboardPage() {
 
           setCheckingProfile(false);
 
+          const lastShown = localStorage.getItem("profile_reminder_time");
+
+            if (lastShown) {
+              const diff = Date.now() - Number(lastShown);
+
+              const HOURS_24 = 24 * 60 * 60 * 1000;
+
+              if (diff < HOURS_24) {
+                await fetchDashboardData();
+                return;
+              }
+            }
+
+            setShowProfileAlert(true);
+            await fetchDashboardData();
+
         }
 
       };
@@ -613,8 +629,8 @@ export default function DashboardPage() {
                   onClick={() => {
                     setShowProfileAlert(false);
                     localStorage.setItem(
-                      "profile_reminder_dismissed",
-                      "true"
+                      "profile_reminder_time",
+                      Date.now().toString()
                     );
                   }}
                   className="flex-1 rounded-2xl border border-gray-300 py-3 font-semibold text-gray-700 transition hover:bg-gray-100"

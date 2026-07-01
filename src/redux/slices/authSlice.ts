@@ -19,10 +19,14 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     loginSuccess: (state, action: PayloadAction<any>) => {
+      console.log("Reducer received:", action.payload);
+
       state.isAuthenticated = true;
       state.accessToken = action.payload.access;
       state.refreshToken = action.payload.refresh;
       state.user = action.payload.user;
+
+      console.log("Reducer user:", state.user);
     },
     logout: (state) => {
       state.isAuthenticated = false;

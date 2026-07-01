@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getTokens } from '@/services/storageService';
 import { useDispatch } from 'react-redux';
-import { loginSuccess } from '@/redux/slices/authSlice';
+import { loginSuccess, logout } from '@/redux/slices/authSlice';
 import { getProfile } from '@/services/userService';
 
 export const useAuth = () => {
@@ -11,43 +11,41 @@ export const useAuth = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    console.log("🔥 useAuth mounted");
-
     const loadUser = async () => {
-      console.log("🔥 loadUser called");
-
       try {
         const tokens = getTokens();
 
-        console.log("🔥 Tokens:", tokens);
+        console.log("TOKENS", tokens);
 
-        if (tokens?.access) {
-          console.log("🔥 Fetching profile...");
-
-          const res = await getProfile();
-
-          console.log("🔥 Profile Response:", res);
-
-          dispatch(
-            loginSuccess({
-              access: tokens.access,
-              refresh: tokens.refresh,
-              user: res.data.data,
-            })
-          );
-
-          console.log("🔥 Redux Updated");
-        } else {
-          console.log("❌ No Tokens");
+        if (!tokens?.access) {
+          dispatch(logout());
+          return;
         }
+
+        const res = await getProfile();
+
+        console.log("FULL RESPONSE", res);
+        console.log("TYPE", typeof res);
+
+
+        dispatch(
+          loginSuccess({
+            access: tokens.access,
+            refresh: tokens.refresh,
+            user: res.data,
+          })
+        );
+
       } catch (err) {
-        console.log("❌ useAuth Error:", err);
+        console.log(err);
+        dispatch(logout());
+      } finally {
+        setLoading(false);
       }
     };
 
     loadUser();
-  }, []);
+  }, [dispatch]);
 
-  
   return { loading };
 };

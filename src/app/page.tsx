@@ -1,41 +1,48 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSelector } from 'react-redux';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/hooks/useAuth';
-import { RootState } from '@/redux/store';
-
-// ============================================
-// 1. Animated Gradient Background Component
-// ============================================
-const AnimatedGradient = () => {
-  return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-animate bg-gradient-to-r from-[#6366F1] via-[#8B5CF6] to-[#EC4899] bg-[length:200%_200%] animate-gradient" />
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/10" />
-    </div>
-  );
-};
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
+import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { RootState } from "@/redux/store";
 
 // ============================================
-// 2. Floating Particle Component
+// 1. Animated Gradient Background (Dark Theme)
+// ============================================
+const AnimatedGradient = () => (
+  <div className="fixed inset-0 -z-10 overflow-hidden">
+    {/* Dark gradient matching the app */}
+    <div className="absolute inset-0 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]" />
+    {/* Animated blobs for depth */}
+    <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+    <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+    <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+  </div>
+);
+
+// ============================================
+// 2. Floating Particle (Themed Colors)
 // ============================================
 const Particle = ({ index }: { index: number }) => {
-  // Generate random but deterministic values based on index
-  const size = 3 + (index % 5); // 3-7px
-  const startX = (index * 73) % 100; // vw percentage
-  const startY = (index * 37) % 100; // vh percentage
-  const duration = 8 + (index % 8); // 8-15s
-  const delay = (index * 0.4) % 5; // stagger
-  const xOffset = 20 + (index % 40); // 20-60px
-  const yOffset = 20 + (index % 50); // 20-70px
+  const colors = [
+    "bg-violet-400/60",
+    "bg-fuchsia-400/60",
+    "bg-purple-400/60",
+    "bg-cyan-400/60",
+  ];
+  const color = colors[index % colors.length];
+  const size = 4 + (index % 4);
+  const startX = (index * 73) % 100;
+  const startY = (index * 37) % 100;
+  const duration = 10 + (index % 6);
+  const delay = (index * 0.5) % 5;
+  const xOffset = 30 + (index % 40);
+  const yOffset = 30 + (index % 50);
 
   return (
     <motion.div
-      className="absolute rounded-full bg-white/70 backdrop-blur-[1px]"
+      className={`absolute rounded-full backdrop-blur-[2px] ${color}`}
       style={{
         width: size,
         height: size,
@@ -45,80 +52,76 @@ const Particle = ({ index }: { index: number }) => {
       animate={{
         x: [0, xOffset, -xOffset / 2, xOffset / 3, 0],
         y: [0, -yOffset, yOffset / 2, -yOffset / 3, 0],
-        opacity: [0.2, 0.6, 0.3, 0.7, 0.2],
+        opacity: [0.3, 0.8, 0.4, 0.9, 0.3],
       }}
       transition={{
-        duration: duration,
-        delay: delay,
+        duration,
+        delay,
         repeat: Infinity,
-        repeatType: "loop",
         ease: "easeInOut",
-        times: [0, 0.25, 0.5, 0.75, 1],
       }}
     />
   );
 };
 
 // ============================================
-// 3. Main Splash Screen Component
+// 3. Splash Screen Component
 // ============================================
 export default function SplashScreen() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
 
-  // Redirect logic after splash delay
+  // Redirect after splash
   useEffect(() => {
-    let redirectTimeout: NodeJS.Timeout;
+    console.log("authLoading =", authLoading);
+    console.log("user =", user);
 
-    const handleRedirect = () => {
-      if (!authLoading) {
-        redirectTimeout = setTimeout(() => {
-          if (user) {
-            // Role-based routing
-            switch (user.role) {
-              case 'student':
-                router.replace('/student/dashboard');
-                break;
-              case 'tutor':
-                router.replace('/tutor/dashboard');
-                break;
-              case 'admin':
-                router.replace('/admin/dashboard');
-                break;
-              default:
-                router.replace('/entry');
-            }
-          } else {
-            router.replace('/entry');
-          }
-        }, 2000); // 2 seconds splash display
+    if (authLoading) return;
+
+    const timer = setTimeout(() => {
+      console.log("Inside timer");
+      console.log("user =", user);
+
+      if (user) {
+        console.log("role =", user.role);
+      } else {
+        console.log("User is NULL");
       }
-    };
+      if (user) {
+        const role = user.role; // 'student' | 'tutor' | 'admin'
+        if (role === "student") {
+          router.replace("/student/dashboard");
+        } else if (role === "tutor") {
+          router.replace("/tutor/dashboard");
+        } else if (role === "admin") {
+          router.replace("/admin/dashboard");
+        } else {
+          router.replace("/entry");
+        }
+      } else {
+        router.replace("/entry");
+      }
+    }, 2200);
 
-    handleRedirect();
-
-    return () => {
-      if (redirectTimeout) clearTimeout(redirectTimeout);
-    };
+    return () => clearTimeout(timer);
   }, [authLoading, user, router]);
 
-  // Generate 16 particles for rich effect
   const particles = Array.from({ length: 16 }, (_, i) => (
     <Particle key={i} index={i} />
   ));
 
   return (
     <div className="relative flex h-screen w-full items-center justify-center overflow-hidden">
-      {/* Animated Gradient Background */}
+      {/* Gradient background */}
       <AnimatedGradient />
 
-      {/* Floating Particles Layer */}
+      {/* Particles */}
       <div className="absolute inset-0 pointer-events-none">{particles}</div>
 
-      {/* Content Layer */}
+      {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center px-4 text-center">
-        {/* Animated Logo */}
+        {/* Brand Name with gradient text */}
         <motion.div
           initial={{ opacity: 0, y: 50, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -126,60 +129,62 @@ export default function SplashScreen() {
             type: "spring",
             damping: 12,
             stiffness: 100,
-            duration: 0.8,
           }}
           className="mb-4"
         >
-          <h1 className="text-6xl font-extrabold tracking-wide text-white drop-shadow-2xl sm:text-7xl md:text-8xl">
+          <h1 className="text-6xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 drop-shadow-2xl sm:text-7xl md:text-8xl">
             KnowMato <span className="inline-block animate-bounce-slow">🚀</span>
           </h1>
         </motion.div>
 
-        {/* Animated Tagline */}
+        {/* Tagline */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{
-            delay: 0.4,
-            duration: 0.6,
-            ease: "easeOut",
-          }}
+          transition={{ delay: 0.5, duration: 0.8 }}
         >
-          <p className="text-xl font-medium text-white/95 drop-shadow-md sm:text-2xl md:text-3xl">
+          <p className="text-xl font-medium text-white/90 drop-shadow-md sm:text-2xl md:text-3xl">
             Learn. Solve. Grow.
           </p>
         </motion.div>
 
-        {/* Optional Loading Indicator */}
+        {/* Loading dots */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.5 }}
+          transition={{ delay: 1.2 }}
           className="mt-12"
         >
-          <div className="flex space-x-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-white/60" />
-            <div className="h-2 w-2 animate-pulse rounded-full bg-white/60 delay-150" />
-            <div className="h-2 w-2 animate-pulse rounded-full bg-white/60 delay-300" />
+          <div className="flex space-x-3">
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-violet-400" />
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-fuchsia-400 delay-150" />
+            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-violet-400 delay-300" />
           </div>
         </motion.div>
       </div>
 
-      {/* Add custom styles for animations */}
+      {/* Custom animation styles */}
       <style jsx>{`
-        @keyframes gradient {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
+        @keyframes blob {
+          0%,
           100% {
-            background-position: 0% 50%;
+            transform: translate(0, 0) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
           }
         }
-        .animate-gradient {
-          animation: gradient 8s ease infinite;
+        .animate-blob {
+          animation: blob 20s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
         }
         @keyframes bounce-slow {
           0%,

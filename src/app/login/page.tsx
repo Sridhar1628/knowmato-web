@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import toast, { Toaster } from 'react-hot-toast';
 import { loginWithOtp } from '@/services/authService';
 import { saveTokens } from '@/services/storageService';
+import { loginSuccess } from '@/redux/slices/authSlice';
+import { getProfile } from '@/services/userService';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -28,6 +31,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const dispatch = useDispatch();
 
   const handleLogin = async (values: { identifier: string; password: string }) => {
     setIsLoading(true);
@@ -40,6 +44,15 @@ export default function LoginPage() {
 
       if (res?.access) {
         saveTokens(res.access, res.refresh);
+        const profile = await getProfile();
+
+        dispatch(
+          loginSuccess({
+            access: res.access,
+            refresh: res.refresh,
+            user: profile.data,
+          })
+        );
         localStorage.setItem('user_id', res.user_id);
         localStorage.setItem('role', res.role);
         localStorage.setItem('display_name', res.display_name);
