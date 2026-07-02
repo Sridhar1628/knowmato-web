@@ -11,6 +11,7 @@ import { loginWithOtp } from '@/services/authService';
 import { saveTokens } from '@/services/storageService';
 import { loginSuccess } from '@/redux/slices/authSlice';
 import { getProfile } from '@/services/userService';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -32,6 +33,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
+  const { refreshAuth } = useAuthContext();
 
   const handleLogin = async (values: { identifier: string; password: string }) => {
     setIsLoading(true);
@@ -50,7 +52,7 @@ export default function LoginPage() {
           loginSuccess({
             access: res.access,
             refresh: res.refresh,
-            user: profile.data,
+            user: profile.user,
           })
         );
         localStorage.setItem('user_id', res.user_id);
@@ -58,6 +60,18 @@ export default function LoginPage() {
         localStorage.setItem('display_name', res.display_name);
 
         toast.success('Login successful 🎉');
+
+        saveTokens(res.access, res.refresh);
+
+        await refreshAuth();
+
+        dispatch(
+          loginSuccess({
+            access: res.access,
+            refresh: res.refresh,
+            user: profile.user,
+          })
+        );
 
         const roleRoutes: Record<string, string> = {
           student: '/student/dashboard',

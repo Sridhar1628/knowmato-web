@@ -10,6 +10,7 @@ import {
 import FloatingCallWidget
   from '@/components/FloatingCallWidget';
 import { useEffect } from 'react';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export function Providers({
   children,
@@ -31,13 +32,17 @@ export function Providers({
   }, []);
   return (
     <Provider store={store}>
-      <CallProvider>
+      <AuthProvider>
 
-        <FloatingCallWidget />
+        <CallProvider>
 
-        {children}
+          <FloatingCallWidget />
 
-      </CallProvider>
+          {children}
+
+        </CallProvider>
+
+      </AuthProvider>
     </Provider>
   );
 }

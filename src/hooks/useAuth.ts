@@ -32,7 +32,7 @@ export const useAuth = () => {
           loginSuccess({
             access: tokens.access,
             refresh: tokens.refresh,
-            user: res.data,
+            user: res.user,
           })
         );
 
