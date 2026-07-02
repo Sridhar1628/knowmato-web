@@ -83,7 +83,15 @@ axiosInstance.interceptors.request.use(
 
         config.headers.Authorization =
           `Bearer ${token}`;
+
+        console.log("TOKEN FROM STORAGE:", token);
+
+        console.log(
+          "AUTH HEADER:",
+          `Bearer ${token}`
+        );
       }
+      console.log(config.headers);
     }
 
     return config;

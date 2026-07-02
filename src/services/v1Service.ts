@@ -1998,3 +1998,21 @@ export const buildStudentProfileFormData = (
   return formData;
 
 };
+
+export const extendMatchingWait = async (
+  doubtId: number
+) => {
+  return await apiPost(
+    `/v1/student/doubts/${doubtId}/wait/`,
+    {}
+  );
+};
+
+export const requestStudentRefund = async (
+  doubtId: number
+) => {
+  return await apiPost(
+    `/v1/student/doubts/${doubtId}/refund/`,
+    {}
+  );
+};

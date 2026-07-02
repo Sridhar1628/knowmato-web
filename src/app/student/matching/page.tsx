@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getTokens } from "@/services/storageService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
-import { getOnlineTutors } from "@/services/v1Service";
+import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund } from "@/services/v1Service";
 
 type Tutor = {
   id: string;
@@ -25,6 +25,23 @@ export default function MatchingScreen() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [remainingSeconds, setRemainingSeconds] = useState(300);
+  const [waitingRound, setWaitingRound] = useState(1);
+  const [loadingTimer, setLoadingTimer] = useState(true);
+
+  const [matchingInfo, setMatchingInfo] = useState<any>(null);
+
+  const popupShownRef = useRef(false);
+
+  const [modalType, setModalType] = useState<
+    "none" |
+    "first_timeout" |
+    "final_timeout"
+  >("none");
+
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const [refundAmount, setRefundAmount] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -45,6 +62,48 @@ export default function MatchingScreen() {
     };
     loadTutors();
   }, []);
+
+  useEffect(() => {
+
+    if (loadingTimer) return;
+
+    if (remainingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+
+      setRemainingSeconds(prev => {
+
+        if (prev <= 1) {
+
+          clearInterval(timer);
+
+          return 0;
+
+        }
+
+        return prev - 1;
+
+      });
+
+    }, 1000);
+
+    return () => clearInterval(timer);
+
+  }, [remainingSeconds, loadingTimer]);
+
+  useEffect(() => {
+
+    if (!doubtId) return;
+
+    const interval = setInterval(() => {
+
+      loadMatchingStatus();
+
+    }, 15000);
+
+    return () => clearInterval(interval);
+
+  }, [doubtId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -118,11 +177,95 @@ export default function MatchingScreen() {
   }, [doubtId, router]);
 
   useEffect(() => {
+
+    if (!matchingInfo) return;
+
+    if (popupShownRef.current) return;
+
+    if (matchingInfo.matching_finished) {
+
+      popupShownRef.current = true;
+
+      setRefundAmount(
+        matchingInfo.refund_amount ?? 0
+      );
+
+      setModalType("final_timeout");
+
+      return;
+
+    }
+
+    if (
+      matchingInfo.can_wait &&
+      matchingInfo.can_refund
+    ) {
+
+      popupShownRef.current = true;
+
+      setRefundAmount(
+        matchingInfo.refund_amount ?? 0
+      );
+
+      setModalType("first_timeout");
+
+    }
+
+  }, [matchingInfo]);
+
+  useEffect(() => {
     if (error) {
       alert(error);
       router.back();
     }
   }, [error, router]);
+
+  const formatTime = (seconds: number) => {
+
+    const mins = Math.floor(seconds / 60);
+
+    const secs = seconds % 60;
+
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  };
+
+  const loadMatchingStatus = async () => {
+    try {
+      const numericDoubtId = Number(doubtId);
+      if (!doubtId || Number.isNaN(numericDoubtId)) return;
+
+      const res = await getDoubtDetails(numericDoubtId);
+
+      const matching = res?.data?.matching;
+
+      if (!matching) return;
+
+      setRemainingSeconds(
+        matching.remaining_seconds ?? 0
+      );
+
+      setWaitingRound(
+        matching.waiting_round ?? 1
+      );
+
+      setMatchingInfo(matching);
+
+      setLoadingTimer(false);
+
+    } catch (e) {
+      console.log(
+        "Failed to load matching status",
+        e
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!doubtId) return;
+
+    loadMatchingStatus();
+  }, [doubtId]);
 
   const handleCancel = () => {
     const confirmed = window.confirm("Are you sure you want to stop searching for a tutor?");
@@ -234,10 +377,29 @@ export default function MatchingScreen() {
         </div>
       </div>
 
-      {/* Status */}
-      <div className="flex items-center gap-3 bg-white/10 backdrop-blur-lg border border-white/10 rounded-full px-5 py-3 mb-4 z-10">
-        <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-        <span className="text-white/80 text-sm font-medium">Matching you with tutors...</span>
+      {/* Status + Countdown */}
+      <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl px-6 py-5 mb-4 z-10 text-center w-full max-w-md">
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+
+          <span className="text-white/80 text-sm font-medium">
+            Matching you with tutors...
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-xs uppercase tracking-wider text-white/50">
+            Time Remaining
+          </p>
+
+          <h2 className="mt-2 text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
+            {formatTime(remainingSeconds)}
+          </h2>
+
+          <p className="mt-2 text-xs text-white/50">
+            Waiting Round {waitingRound} of 2
+          </p>
+        </div>
       </div>
 
       {/* Current Affairs button */}
@@ -259,6 +421,157 @@ export default function MatchingScreen() {
       >
         Cancel Search
       </button>
+
+      {/* ==========================================
+            MATCHING TIMEOUT MODAL
+        ========================================== */}
+
+        {modalType !== "none" && (
+            <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center px-4">
+
+                <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#17152d] shadow-2xl overflow-hidden">
+
+                    <div className="p-8 text-center">
+
+                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
+
+                            <span className="text-5xl">
+                                {modalType === "first_timeout"
+                                  ? "⌛"
+                                  : "😔"}
+                            </span>
+
+                        </div>
+
+                        <h2 className="mt-6 text-2xl font-bold text-white">
+                            {modalType === "first_timeout"
+                              ? "We're Still Looking 👀"
+                              : "We Couldn't Find a Tutor"}
+                        </h2>
+
+                        {modalType === "first_timeout" ? (
+                          <>
+                            <p className="mt-4 text-sm leading-6 text-white/70">
+                              We've searched for the best tutor for the last
+                              <span className="font-semibold text-white">
+                                {" "}5 minutes
+                              </span>.
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-white/70">
+                              Continue waiting for another 5 minutes or receive your full refund instantly.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-4 text-sm leading-6 text-white/70">
+                              Unfortunately we couldn't find an available tutor for your doubt.
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-white/70">
+                              Your money is completely safe and ready to be returned to your Knowmato Wallet.
+                            </p>
+                          </>
+                        )}
+
+                        <div className="mt-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-5">
+
+                          <p className="text-xs uppercase tracking-widest text-emerald-300">
+                              Full Refund
+                          </p>
+
+                          <h3 className="mt-2 text-4xl font-extrabold text-emerald-400">
+                              ₹{refundAmount.toFixed(2)}
+                          </h3>
+
+                          <div className="mt-4 space-y-1 text-sm text-emerald-300">
+
+                              <p>✓ No platform fee</p>
+
+                              <p>✓ Instant wallet credit</p>
+
+                          </div>
+
+                      </div>
+
+                        <div className="mt-8 space-y-3">
+                          {modalType === "first_timeout" && (
+
+                            <button
+                                className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-4 font-bold text-white transition hover:scale-[1.02]"
+                                onClick={async () => {
+
+                                                        try {
+
+                                                          setModalLoading(true);
+
+                                                          await extendMatchingWait(
+                                                            Number(doubtId)
+                                                          );
+
+                                                          popupShownRef.current = false;
+
+                                                          setModalType("none");
+
+                                                          await loadMatchingStatus();
+
+                                                        } finally {
+
+                                                          setModalLoading(false);
+
+                                                        }
+
+                                                      }}
+                            >
+                                ⏰ Wait 5 More Minutes
+                                Continue searching for available tutors.
+                            </button>)}
+
+                            <button
+                                className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 py-4 font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                                onClick={async () => {
+
+                                                        try {
+
+                                                          setModalLoading(true);
+
+                                                          await requestStudentRefund(
+                                                            Number(doubtId)
+                                                          );
+
+                                                          popupShownRef.current = false;
+
+                                                          router.replace("/student/dashboard");
+
+                                                        } finally {
+
+                                                          setModalLoading(false);
+
+                                                        }
+
+                                                      }}
+                            >
+                                {modalLoading ? (
+                                    <div className="h-5 w-5 mx-auto rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+                                ) : (
+                                    <>
+                                        <div>💰 Return ₹{refundAmount.toFixed(2)} to My Wallet</div>
+                                        <div className="text-xs font-normal mt-1">
+                                            Credit the full amount back to your wallet.
+                                        </div>
+                                    </>
+                                )}
+                            </button>
+                            
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        )}
     </div>
   );
 }
