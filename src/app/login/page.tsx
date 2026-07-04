@@ -47,12 +47,13 @@ export default function LoginPage() {
       if (res?.access) {
         saveTokens(res.access, res.refresh);
         const profile = await getProfile();
+        console.log("PROFILE RESPONSE:", profile);
 
         dispatch(
           loginSuccess({
             access: res.access,
             refresh: res.refresh,
-            user: profile.user,
+            user: profile.data,
           })
         );
         localStorage.setItem('user_id', res.user_id);
