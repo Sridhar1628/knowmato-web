@@ -54,23 +54,28 @@ export function AuthProvider({
 
       console.log("AUTH RESPONSE:", res);
 
-      if (!res.data) {
+      if (!res.success || !res.user) {
         throw new Error("Authentication failed");
       }
 
-      setUser(res.data);
+      setUser(res.user);
 
     } catch (error) {
       console.error(error);
 
       clearTokens();
-
       setUser(null);
 
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    refreshAuth();
+  }, []);
+
+
   return (
     <AuthContext.Provider
       value={{
