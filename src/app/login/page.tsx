@@ -49,13 +49,6 @@ export default function LoginPage() {
         const profile = await getProfile();
         console.log("PROFILE RESPONSE:", profile);
 
-        dispatch(
-          loginSuccess({
-            access: res.access,
-            refresh: res.refresh,
-            user: profile.data,
-          })
-        );
         localStorage.setItem('user_id', res.user_id);
         localStorage.setItem('role', res.role);
         localStorage.setItem('display_name', res.display_name);

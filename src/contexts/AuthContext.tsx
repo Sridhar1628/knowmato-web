@@ -8,10 +8,14 @@ import {
   ReactNode,
 } from 'react';
 
+import {
+  checkAuthentication,
+} from '@/services/userService';
 
-
-import { checkAuthentication } from '@/services/userService';
-import { clearTokens, getTokens } from '@/services/storageService';
+import {
+  clearTokens,
+  getTokens,
+} from '@/services/storageService';
 
 interface AuthUser {
   id: number;
@@ -19,6 +23,9 @@ interface AuthUser {
   role: 'student' | 'tutor' | 'admin';
   display_name?: string;
   first_name?: string;
+  phone?: string;
+  profile?: any;
+  wallet_balance?: number;
 }
 
 interface AuthContextType {
@@ -28,17 +35,23 @@ interface AuthContextType {
   refreshAuth: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext =
+  createContext<AuthContextType | null>(null);
 
 export function AuthProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  const [user, setUser] =
+    useState<AuthUser | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
 
   const refreshAuth = async () => {
+
     const tokens = getTokens();
 
     if (!tokens?.access) {
@@ -50,31 +63,54 @@ export function AuthProvider({
     setLoading(true);
 
     try {
+
       const res = await checkAuthentication();
 
-      console.log("AUTH RESPONSE:", res);
+      console.log(
+        'AUTH RESPONSE:',
+        res
+      );
 
-      if (!res.success || !res.user) {
-        throw new Error("Authentication failed");
+      // -----------------------------
+      // Support BOTH response formats
+      // -----------------------------
+      const profile =
+        res?.user ??
+        res?.data ??
+        null;
+
+      if (!profile) {
+        throw new Error(
+          'Authentication failed'
+        );
       }
 
-      setUser(res.user);
+      setUser(profile);
 
     } catch (error) {
-      console.error(error);
+
+      console.error(
+        'AUTH ERROR:',
+        error
+      );
 
       clearTokens();
+
       setUser(null);
 
     } finally {
+
       setLoading(false);
+
     }
+
   };
 
   useEffect(() => {
-    refreshAuth();
-  }, []);
 
+    refreshAuth();
+
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -91,13 +127,18 @@ export function AuthProvider({
 }
 
 export function useAuthContext() {
-  const context = useContext(AuthContext);
+
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
+
     throw new Error(
       'useAuthContext must be used inside AuthProvider'
     );
+
   }
 
   return context;
+
 }
