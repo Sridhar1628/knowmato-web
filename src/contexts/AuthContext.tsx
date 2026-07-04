@@ -41,37 +41,36 @@ export function AuthProvider({
   const refreshAuth = async () => {
     const tokens = getTokens();
 
-    // No token → don't call backend
     if (!tokens?.access) {
-        setUser(null);
-        setLoading(false);
-        return;
+      setUser(null);
+      setLoading(false);
+      return;
     }
 
     setLoading(true);
 
     try {
-        const res = await checkAuthentication();
+      const res = await checkAuthentication();
 
-        if (!res.success || !res.user) {
-        throw new Error('Authentication failed');
-        }
+      console.log("AUTH RESPONSE:", res);
 
-        setUser(res.user);
+      if (!res.data) {
+        throw new Error("Authentication failed");
+      }
+
+      setUser(res.data);
+
     } catch (error) {
-        console.error(error);
+      console.error(error);
 
-        clearTokens();
-        setUser(null);
+      clearTokens();
+
+      setUser(null);
+
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-    };
-
-  useEffect(() => {
-    refreshAuth();
-  }, []);
-
+  };
   return (
     <AuthContext.Provider
       value={{
