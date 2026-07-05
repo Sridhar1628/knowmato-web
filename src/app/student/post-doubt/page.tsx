@@ -14,6 +14,7 @@ import { connectSocket, disconnectSocket } from '@/services/versionSocketService
 import { getTokens } from '@/services/storageService';
 import { dashboardCache } from '@/store/dashboardCache';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
+import { useTranslation } from 'react-i18next';
 
 // Types
 interface Tutor {
@@ -40,7 +41,19 @@ const DEFAULT_CATEGORIES = [
   'DevOps', 'Interview Preparation', 'Other',
 ];
 
+// ===== LOADING FALLBACK =====
+function LoadingFallback() {
+  const { t } = useTranslation();
+  return (
+    <div className="p-4 text-center text-white">
+      {t('common.loading') || 'Loading...'}
+    </div>
+  );
+}
+
+// ===== MAIN COMPONENT =====
 function PostDoubtContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tutorIdParam = searchParams.get('tutorId');
@@ -159,7 +172,7 @@ function PostDoubtContent() {
       setTutors(withPresence);
     } catch (error) {
       console.error('Failed to fetch tutors:', error);
-      alert('Could not load tutors. Please check your connection.');
+      alert(t('postDoubt.loadTutorsError') || 'Could not load tutors. Please check your connection.');
     } finally {
       setLoadingTutors(false);
     }
@@ -181,14 +194,14 @@ function PostDoubtContent() {
   // Submit flow
   const handleSubmit = async () => {
     if (mode === 'specific' && selectedTutor && !selectedTutor.is_online) {
-      alert('⚠️ The selected tutor is offline. Please select an online tutor or post in the Doubt Pool.');
+      alert(t('postDoubt.offlineError') || '⚠️ The selected tutor is offline. Please select an online tutor or post in the Doubt Pool.');
       return;
     }
 
-    if (!title.trim()) return alert('Please enter a title.');
-    if (!description.trim()) return alert('Please describe your doubt.');
-    if (!category) return alert('Please select a category.');
-    if (mode === 'specific' && !selectedTutor) return alert('Please select a tutor.');
+    if (!title.trim()) return alert(t('postDoubt.enterTitle') || 'Please enter a title.');
+    if (!description.trim()) return alert(t('postDoubt.enterDescription') || 'Please describe your doubt.');
+    if (!category) return alert(t('postDoubt.selectCategory') || 'Please select a category.');
+    if (mode === 'specific' && !selectedTutor) return alert(t('postDoubt.selectTutor') || 'Please select a tutor.');
     if (submitting) return;
 
     setSubmitting(true);
@@ -197,7 +210,9 @@ function PostDoubtContent() {
       const price = priceRes.data?.price ?? priceRes.price;
       if (!price) throw new Error('Price not available');
 
-      const confirmed = window.confirm(`💰 Posting this doubt will cost ₹${price}. Continue?`);
+      const confirmed = window.confirm(
+        t('postDoubt.confirmPayment', { price }) || `💰 Posting this doubt will cost ₹${price}. Continue?`
+      );
       if (!confirmed) {
         setSubmitting(false);
         return;
@@ -222,7 +237,10 @@ function PostDoubtContent() {
       router.replace(`/student/matching?doubtId=${doubtId}`);
     } catch (err: any) {
       console.error('Post error:', err?.response?.data || err.message);
-      alert(`Submission Failed: ${err?.response?.data?.message || err.message || 'Please try again.'}`);
+      alert(
+        t('postDoubt.submissionFailed') + ': ' +
+        (err?.response?.data?.message || err.message || t('postDoubt.tryAgain') || 'Please try again.')
+      );
       setSubmitting(false);
     }
   };
@@ -235,7 +253,7 @@ function PostDoubtContent() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
         </div>
       ) : tutors.length === 0 ? (
-        <p className="py-10 text-center text-white/50">No tutors available</p>
+        <p className="py-10 text-center text-white/50">{t('postDoubt.noTutors')}</p>
       ) : (
         <div className="space-y-3">
           {tutors.map((tutor) => {
@@ -245,7 +263,7 @@ function PostDoubtContent() {
                 key={tutor.id}
                 onClick={() => {
                   if (!isOnline) {
-                    alert('🔴 This tutor is offline. Please select an online tutor.');
+                    alert(t('postDoubt.offlineSelect') || '🔴 This tutor is offline. Please select an online tutor.');
                     return;
                   }
                   setSelectedTutor(tutor);
@@ -268,7 +286,7 @@ function PostDoubtContent() {
                     {tutor.name || tutor.display_name || 'Tutor'}
                   </p>
                   <p className="text-sm">
-                    {isOnline ? '🟢 Online' : '🔴 Offline'} ·{' '}
+                    {isOnline ? '🟢 ' + t('postDoubt.online') : '🔴 ' + t('postDoubt.offlineUnselectable')} ·{' '}
                     {tutor.skills || 'Coding Tutor'}
                   </p>
                 </div>
@@ -303,28 +321,28 @@ function PostDoubtContent() {
               <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-700 p-6 text-white shadow-lg">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h1 className="text-3xl font-bold">🚀 Post a Doubt</h1>
+                    <h1 className="text-3xl font-bold">🚀 {t('postDoubt.postTitle')}</h1>
                     <p className="mt-2 text-violet-100">
-                      Connect instantly with verified experts and get your doubts solved in minutes.
+                      {t('postDoubt.postSubtitle')}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
-                    <div className="text-xs text-violet-200">Average Response Time</div>
-                    <div className="text-xl font-bold">Under 60 Seconds</div>
+                    <div className="text-xs text-violet-200">{t('postDoubt.avgResponseTime')}</div>
+                    <div className="text-xl font-bold">{t('postDoubt.avgResponseValue')}</div>
                   </div>
                 </div>
                 <div className="mt-6 grid gap-4 md:grid-cols-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xl">📝</span>
-                    <span className="text-sm">Post Your Doubt</span>
+                    <span className="text-sm">{t('postDoubt.step1')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xl">👨‍🏫</span>
-                    <span className="text-sm">Expert Accepts</span>
+                    <span className="text-sm">{t('postDoubt.step2')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🎯</span>
-                    <span className="text-sm">Get It Solved</span>
+                    <span className="text-sm">{t('postDoubt.step3')}</span>
                   </div>
                 </div>
               </div>
@@ -333,11 +351,11 @@ function PostDoubtContent() {
               <div className="mb-6 grid gap-4 lg:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-white/80">
-                    1. Doubt Title
+                    {t('postDoubt.titleLabel')}
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. React useEffect Hook not working as expected"
+                    placeholder={t('postDoubt.titlePlaceholder')}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={200}
@@ -347,14 +365,14 @@ function PostDoubtContent() {
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-white/80">
-                    2. Category
+                    {t('postDoubt.categoryLabel')}
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full rounded-xl border-2 border-white/20 bg-gray-900/60 px-4 py-3 text-white focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 outline-none transition-all appearance-none"
                   >
-                    <option value="" className="bg-gray-900">Select Category</option>
+                    <option value="" className="bg-gray-900">{t('postDoubt.selectCategory')}</option>
                     {DEFAULT_CATEGORIES.map((cat) => (
                       <option key={cat} value={cat} className="bg-gray-900">{cat}</option>
                     ))}
@@ -364,7 +382,7 @@ function PostDoubtContent() {
                       type="text"
                       value={customCategory}
                       onChange={(e) => setCustomCategory(e.target.value)}
-                      placeholder="Enter custom category"
+                      placeholder={t('postDoubt.customCategoryPlaceholder')}
                       className="mt-3 w-full rounded-xl border-2 border-white/20 bg-gray-900/60 px-4 py-3 text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 outline-none transition-all"
                     />
                   )}
@@ -374,18 +392,18 @@ function PostDoubtContent() {
               {/* DESCRIPTION */}
               <div className="mb-6">
                 <label className="mb-2 block text-sm font-semibold text-white/80">
-                  3. Describe Your Doubt
+                  {t('postDoubt.descriptionLabel')}
                 </label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Explain your problem in detail..."
+                  placeholder={t('postDoubt.descriptionPlaceholder')}
                   maxLength={2000}
                   className="w-full rounded-xl border-2 border-white/20 bg-gray-900/60 px-4 py-3 text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 outline-none transition-all resize-y"
                 />
                 <div className="mt-2 flex justify-between text-xs text-white/40">
-                  <span>More details = faster Solution</span>
+                  <span>{t('postDoubt.descriptionHint')}</span>
                   <span>{description.length}/2000</span>
                 </div>
               </div>
@@ -394,7 +412,7 @@ function PostDoubtContent() {
               <div className="mb-6 grid gap-4 lg:grid-cols-2">
                 <div>
                   <h3 className="mb-2 text-sm font-semibold text-white/80">
-                    4. Preferred Explanation
+                    {t('postDoubt.preferredExplanationLabel')}
                   </h3>
                   <div className="space-y-3">
                     <button
@@ -406,7 +424,7 @@ function PostDoubtContent() {
                           : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                     >
-                      📹 Live Video
+                      📹 {t('postDoubt.liveVideoOption')}
                     </button>
                     <button
                       type="button"
@@ -417,13 +435,13 @@ function PostDoubtContent() {
                           : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                     >
-                      💬 Text / Chat
+                      💬 {t('postDoubt.textChatOption')}
                     </button>
                   </div>
                 </div>
                 <div>
                   <h3 className="mb-2 text-sm font-semibold text-white/80">
-                    5. Mode
+                    {t('postDoubt.modeLabel')}
                   </h3>
                   <div className="space-y-3">
                     <button
@@ -435,7 +453,7 @@ function PostDoubtContent() {
                           : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                     >
-                      📢 Doubt Pool
+                      📢 {t('postDoubt.doubtPool')}
                     </button>
                     <button
                       type="button"
@@ -446,7 +464,7 @@ function PostDoubtContent() {
                           : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'
                       }`}
                     >
-                      👨‍🏫 Specific Tutor
+                      👨‍🏫 {t('postDoubt.specificTutor')}
                     </button>
                   </div>
                 </div>
@@ -455,7 +473,7 @@ function PostDoubtContent() {
               {/* 6. Select Tutor (only in Specific Mode) */}
               {mode === 'specific' && (
                 <div className="mb-6">
-                  <h3 className="mb-1 text-sm font-semibold text-white/80">6. Select Tutor</h3>
+                  <h3 className="mb-1 text-sm font-semibold text-white/80">{t('postDoubt.selectTutorLabel')}</h3>
                   {selectedTutor ? (
                     <div>
                       <button
@@ -474,7 +492,7 @@ function PostDoubtContent() {
                             {selectedTutor.name || selectedTutor.display_name}
                           </p>
                           <p className={`text-sm ${selectedTutor.is_online ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {selectedTutor.is_online ? '🟢 Online Now' : '🔴 Currently Offline'}
+                            {selectedTutor.is_online ? '🟢 ' + t('postDoubt.onlineNow') : '🔴 ' + t('postDoubt.currentlyOffline')}
                           </p>
                         </div>
                         <span className="text-xl text-violet-400">✏️</span>
@@ -483,20 +501,20 @@ function PostDoubtContent() {
                       {!selectedTutor.is_online && (
                         <div className="mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 p-4 text-sm backdrop-blur-md">
                           <p className="text-rose-300">
-                            ⚠️ The selected tutor is offline. Please select an online tutor or switch to Doubt Pool.
+                            ⚠️ {t('postDoubt.offlineWarning')}
                           </p>
                           <div className="mt-3 flex flex-wrap gap-3">
                             <button
                               onClick={() => setShowTutorModal(true)}
                               className="rounded-lg bg-violet-500 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-600"
                             >
-                              👨‍🏫 View Online Tutors
+                              👨‍🏫 {t('postDoubt.viewOnlineTutors')}
                             </button>
                             <button
                               onClick={() => setMode('pool')}
                               className="rounded-lg border border-violet-400/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20"
                             >
-                              📢 Switch to Pool
+                              📢 {t('postDoubt.switchToPool')}
                             </button>
                           </div>
                         </div>
@@ -508,7 +526,7 @@ function PostDoubtContent() {
                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-violet-400/40 bg-white/5 p-4 text-violet-300 transition hover:bg-white/10"
                     >
                       <span className="text-2xl">➕</span>
-                      <span className="font-medium">Pick a Tutor</span>
+                      <span className="font-medium">{t('postDoubt.pickTutor')}</span>
                     </button>
                   )}
                 </div>
@@ -527,10 +545,10 @@ function PostDoubtContent() {
                 {submitting ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Submitting...
+                    {t('common.loading') || 'Submitting...'}
                   </div>
                 ) : (
-                  '🚀 Post Doubt'
+                  '🚀 ' + t('postDoubt.postDoubt')
                 )}
               </button>
             </motion.div>
@@ -541,19 +559,19 @@ function PostDoubtContent() {
             {/* Recent Doubts Posted */}
             <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white">Recent Doubts Posted</h3>
+                <h3 className="text-lg font-bold text-white">{t('postDoubt.recentDoubtsPosted')}</h3>
                 <button
                   onClick={() => router.push('/student/my-doubts')}
                   className="text-xs font-semibold text-violet-300 hover:underline"
                 >
-                  View All
+                  {t('common.viewAll')}
                 </button>
               </div>
               <div className="space-y-4">
                 {recentDoubts.map((doubt) => (
                   <div key={doubt.doubt_id} className="rounded-xl p-3 transition hover:bg-white/10">
                     <div className="flex items-center gap-2 text-[10px] font-semibold text-white/50">
-                      <span className="text-violet-400">⬇️</span> {doubt.mode === 'specific' ? 'Specific Tutor' : 'Doubt Pool'}
+                      <span className="text-violet-400">⬇️</span> {doubt.mode === 'specific' ? t('postDoubt.specificTutor') : t('postDoubt.doubtPool')}
                     </div>
                     <p className="text-sm font-semibold text-white">{doubt.title}</p>
                     <div className="mt-1 flex items-center justify-between text-[10px] text-white/40">
@@ -567,7 +585,7 @@ function PostDoubtContent() {
                 onClick={() => router.push('/student/my-doubts')}
                 className="mt-4 w-full rounded-lg bg-violet-500/20 py-2 text-center text-xs font-semibold text-violet-300 border border-violet-400/30 hover:bg-violet-500/30 transition"
               >
-                View All Doubts
+                {t('postDoubt.viewAllDoubts')}
               </button>
             </div>
           </div>
@@ -592,7 +610,7 @@ function PostDoubtContent() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-                  <h3 className="text-xl font-bold text-white">👨‍🏫 Choose a Tutor</h3>
+                  <h3 className="text-xl font-bold text-white">👨‍🏫 {t('postDoubt.chooseTutor')}</h3>
                   <button
                     onClick={() => setShowTutorModal(false)}
                     className="text-2xl text-white/50 hover:text-white"
@@ -602,7 +620,7 @@ function PostDoubtContent() {
                 </div>
                 {renderTutorList()}
                 <p className="border-t border-white/10 px-5 py-3 text-center text-xs text-white/40">
-                  🟢 Online · 🔴 Offline (Unselectable)
+                  🟢 {t('postDoubt.online')} · 🔴 {t('postDoubt.offlineUnselectable')}
                 </p>
               </motion.div>
             </motion.div>
@@ -613,9 +631,10 @@ function PostDoubtContent() {
   );
 }
 
+// ===== EXPORT =====
 export default function PostDoubtPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-center text-white">Loading...</div>}>
+    <Suspense fallback={<LoadingFallback />}>
       <PostDoubtContent />
     </Suspense>
   );

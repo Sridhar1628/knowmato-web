@@ -12,6 +12,7 @@ import { saveTokens } from '@/services/storageService';
 import { loginSuccess } from '@/redux/slices/authSlice';
 import { getProfile } from '@/services/userService';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -29,6 +30,7 @@ const LoginSchema = Yup.object().shape({
 // COMPONENT
 // ============================================
 export default function LoginPage() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +55,7 @@ export default function LoginPage() {
         localStorage.setItem('role', res.role);
         localStorage.setItem('display_name', res.display_name);
 
-        toast.success('Login successful 🎉');
+        toast.success(t('toast.loginSuccess') || 'Login successful 🎉');
 
         saveTokens(res.access, res.refresh);
 
@@ -85,9 +87,11 @@ export default function LoginPage() {
     }
   };
 
+  const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
-      {/* Animated background blobs (consistent with other pages) */}
+      {/* Animated background blobs */}
       <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
       <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
       <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
@@ -109,7 +113,6 @@ export default function LoginPage() {
           <div className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl p-8">
             {/* Header */}
             <div className="mb-8 text-center">
-              {/* Animated logo icon */}
               <motion.div
                 animate={{ rotate: [0, 10, 0], scale: [1, 1.05, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
@@ -131,9 +134,33 @@ export default function LoginPage() {
               </motion.div>
 
               <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-                KnowMato
+                {t('common.appName')}
               </h1>
-              <p className="mt-2 text-white/70">Instant doubt solving, anytime</p>
+              <p className="mt-2 text-white/70">{t('common.subtitle')}</p>
+            </div>
+
+            {/* Language Switcher */}
+            <div className="mb-6 flex justify-center gap-3">
+              <button
+                onClick={() => changeLanguage('en')}
+                className={`px-4 py-2 rounded-full border text-sm transition ${
+                  i18n.language === 'en'
+                    ? 'border-violet-400 bg-violet-500/20 text-white'
+                    : 'border-white/20 text-white/70 hover:border-violet-300 hover:text-white'
+                }`}
+              >
+                {t('common.languageEn')}
+              </button>
+              <button
+                onClick={() => changeLanguage('ta')}
+                className={`px-4 py-2 rounded-full border text-sm transition ${
+                  i18n.language === 'ta'
+                    ? 'border-violet-400 bg-violet-500/20 text-white'
+                    : 'border-white/20 text-white/70 hover:border-violet-300 hover:text-white'
+                }`}
+              >
+                {t('common.languageTa')}
+              </button>
             </div>
 
             {/* Form */}
@@ -165,7 +192,7 @@ export default function LoginPage() {
                       <Field
                         name="identifier"
                         type="email"
-                        placeholder="Email address"
+                        placeholder={t('login.emailPlaceholder')}
                         className={`block w-full rounded-xl border-2 py-3 pl-10 pr-3 outline-none transition bg-gray-900/60 backdrop-blur-md text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 ${
                           errors.identifier && touched.identifier
                             ? 'border-rose-400/60 bg-rose-500/10 placeholder-rose-300/50 focus:border-rose-400 focus:ring-rose-400/30'
@@ -197,7 +224,7 @@ export default function LoginPage() {
                       <Field
                         name="password"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Password"
+                        placeholder={t('login.passwordPlaceholder')}
                         className={`block w-full rounded-xl border-2 py-3 pl-10 pr-12 outline-none transition bg-gray-900/60 backdrop-blur-md text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 ${
                           errors.password && touched.password
                             ? 'border-rose-400/60 bg-rose-500/10 placeholder-rose-300/50 focus:border-rose-400 focus:ring-rose-400/30'
@@ -275,17 +302,16 @@ export default function LoginPage() {
                             d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                           />
                         </svg>
-                        <span>Logging in...</span>
+                        <span>{t('common.loading')}</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center gap-2">
-                        {/* Shine effect */}
                         <motion.div
                           animate={{ x: ['-120%', '220%'] }}
                           transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
                           className="absolute inset-y-0 w-20 bg-white/30 skew-x-12 blur-md"
                         />
-                        <span>Login</span>
+                        <span>{t('common.login')}</span>
                         <svg
                           className="h-5 w-5"
                           fill="none"
@@ -310,15 +336,15 @@ export default function LoginPage() {
                       onClick={() => router.push('/register')}
                       className="text-white/50 transition hover:text-violet-300"
                     >
-                      New to KnowMato?
-                      <span className="font-semibold text-violet-400"> Sign Up</span>
+                      {t('login.newUser')}{' '}
+                      <span className="font-semibold text-violet-400">{t('login.signUpLink')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push('/forgot-password')}
                       className="text-white/50 transition hover:text-violet-300"
                     >
-                      Forgot Password?
+                      {t('login.forgotPasswordLink')}
                     </button>
                   </div>
                 </Form>

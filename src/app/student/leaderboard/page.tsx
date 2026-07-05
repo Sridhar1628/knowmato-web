@@ -1,8 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function LeaderboardPage() {
+  const { t } = useTranslation();
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center p-4 overflow-hidden">
       {/* Animated background blobs */}
@@ -33,7 +36,7 @@ export default function LeaderboardPage() {
           transition={{ delay: 0.2, duration: 0.5 }}
           className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 sm:text-5xl"
         >
-          Leaderboard
+          {t("leaderboard.title")}
         </motion.h1>
 
         <motion.p
@@ -42,7 +45,7 @@ export default function LeaderboardPage() {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="mt-4 text-lg text-white/70"
         >
-          Compete with peers, climb the ranks, and earn recognition.
+          {t("leaderboard.subtitle")}
         </motion.p>
 
         <motion.div
@@ -53,11 +56,11 @@ export default function LeaderboardPage() {
         >
           <div className="flex items-center justify-center gap-2 text-2xl font-bold text-white">
             <span>🚀</span>
-            <span>Coming Soon</span>
+            <span>{t("leaderboard.comingSoon")}</span>
             <span>✨</span>
           </div>
           <p className="mt-3 text-sm text-white/60">
-            Our team is crafting a powerful leaderboard experience. Stay tuned!
+            {t("leaderboard.comingSoonDesc")}
           </p>
           <div className="mt-6 flex justify-center gap-2">
             <span className="inline-block h-2 w-2 rounded-full bg-violet-400 animate-pulse" />
@@ -72,7 +75,7 @@ export default function LeaderboardPage() {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="mt-10 text-sm text-white/40"
         >
-          🏅 Top performers will be rewarded. Keep learning, keep shining!
+          {t("leaderboard.footer")}
         </motion.p>
       </div>
     </div>

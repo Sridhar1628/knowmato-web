@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { getTokens } from "@/services/storageService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund } from "@/services/v1Service";
+import { useTranslation } from "react-i18next";
 
 type Tutor = {
   id: string;
@@ -18,6 +19,7 @@ type Tutor = {
 };
 
 export default function MatchingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [doubtId, setDoubtId] = useState("");
   const [acceptedTutor, setAcceptedTutor] = useState<any>(null);
@@ -30,17 +32,9 @@ export default function MatchingScreen() {
   const [loadingTimer, setLoadingTimer] = useState(true);
 
   const [matchingInfo, setMatchingInfo] = useState<any>(null);
-
   const popupShownRef = useRef(false);
-
-  const [modalType, setModalType] = useState<
-    "none" |
-    "first_timeout" |
-    "final_timeout"
-  >("none");
-
+  const [modalType, setModalType] = useState<"none" | "first_timeout" | "final_timeout">("none");
   const [modalLoading, setModalLoading] = useState(false);
-
   const [refundAmount, setRefundAmount] = useState(0);
 
   useEffect(() => {
@@ -64,45 +58,28 @@ export default function MatchingScreen() {
   }, []);
 
   useEffect(() => {
-
     if (loadingTimer) return;
-
     if (remainingSeconds <= 0) return;
 
     const timer = setInterval(() => {
-
       setRemainingSeconds(prev => {
-
         if (prev <= 1) {
-
           clearInterval(timer);
-
           return 0;
-
         }
-
         return prev - 1;
-
       });
-
     }, 1000);
 
     return () => clearInterval(timer);
-
   }, [remainingSeconds, loadingTimer]);
 
   useEffect(() => {
-
     if (!doubtId) return;
-
     const interval = setInterval(() => {
-
       loadMatchingStatus();
-
     }, 15000);
-
     return () => clearInterval(interval);
-
   }, [doubtId]);
 
   useEffect(() => {
@@ -147,10 +124,10 @@ export default function MatchingScreen() {
               break;
             }
             case "DIRECT_REJECTED":
-              alert("The selected tutor is not available. Finding another tutor...");
+              alert(t("matching.tutorUnavailable") || "The selected tutor is not available. Finding another tutor...");
               break;
             case "MATCHING_TIMEOUT":
-              setError("No tutors found at the moment. Please try again later.");
+              setError(t("matching.noTutorsFound") || "No tutors found at the moment. Please try again later.");
               break;
             default:
               break;
@@ -162,7 +139,7 @@ export default function MatchingScreen() {
       } catch (err: any) {
         console.error("Socket init error:", err);
         if (isMounted) {
-          setError(err.message || "Failed to connect to matching service");
+          setError(err.message || t("matching.connectionFailed") || "Failed to connect to matching service");
           setIsConnecting(false);
         }
       }
@@ -174,43 +151,24 @@ export default function MatchingScreen() {
       isMounted = false;
       if (socketConnected) disconnectSocket();
     };
-  }, [doubtId, router]);
+  }, [doubtId, router, t]);
 
   useEffect(() => {
-
     if (!matchingInfo) return;
-
     if (popupShownRef.current) return;
 
     if (matchingInfo.matching_finished) {
-
       popupShownRef.current = true;
-
-      setRefundAmount(
-        matchingInfo.refund_amount ?? 0
-      );
-
+      setRefundAmount(matchingInfo.refund_amount ?? 0);
       setModalType("final_timeout");
-
       return;
-
     }
 
-    if (
-      matchingInfo.can_wait &&
-      matchingInfo.can_refund
-    ) {
-
+    if (matchingInfo.can_wait && matchingInfo.can_refund) {
       popupShownRef.current = true;
-
-      setRefundAmount(
-        matchingInfo.refund_amount ?? 0
-      );
-
+      setRefundAmount(matchingInfo.refund_amount ?? 0);
       setModalType("first_timeout");
-
     }
-
   }, [matchingInfo]);
 
   useEffect(() => {
@@ -221,13 +179,9 @@ export default function MatchingScreen() {
   }, [error, router]);
 
   const formatTime = (seconds: number) => {
-
     const mins = Math.floor(seconds / 60);
-
     const secs = seconds % 60;
-
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-
   };
 
   const loadMatchingStatus = async () => {
@@ -236,39 +190,25 @@ export default function MatchingScreen() {
       if (!doubtId || Number.isNaN(numericDoubtId)) return;
 
       const res = await getDoubtDetails(numericDoubtId);
-
       const matching = res?.data?.matching;
-
       if (!matching) return;
 
-      setRemainingSeconds(
-        matching.remaining_seconds ?? 0
-      );
-
-      setWaitingRound(
-        matching.waiting_round ?? 1
-      );
-
+      setRemainingSeconds(matching.remaining_seconds ?? 0);
+      setWaitingRound(matching.waiting_round ?? 1);
       setMatchingInfo(matching);
-
       setLoadingTimer(false);
-
     } catch (e) {
-      console.log(
-        "Failed to load matching status",
-        e
-      );
+      console.log("Failed to load matching status", e);
     }
   };
 
   useEffect(() => {
     if (!doubtId) return;
-
     loadMatchingStatus();
   }, [doubtId]);
 
   const handleCancel = () => {
-    const confirmed = window.confirm("Are you sure you want to stop searching for a tutor?");
+    const confirmed = window.confirm(t("matching.cancelMessage") || "Are you sure you want to stop searching for a tutor?");
     if (confirmed) {
       disconnectSocket();
       router.back();
@@ -281,10 +221,10 @@ export default function MatchingScreen() {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center p-4">
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 text-center max-w-md w-full shadow-2xl">
           <div className="text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-white mb-2">Matching Failed</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">{t("matching.failed")}</h2>
           <p className="text-white/70 mb-6">{error}</p>
           <button onClick={() => router.back()} className="px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl hover:shadow-lg">
-            Go Back
+            {t("common.goBack") || "Go Back"}
           </button>
         </div>
       </div>
@@ -296,9 +236,9 @@ export default function MatchingScreen() {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center p-4">
         <div className="text-center">
           <div className="text-7xl mb-6">✅</div>
-          <h1 className="text-3xl font-bold text-white mb-3">Tutor Accepted!</h1>
+          <h1 className="text-3xl font-bold text-white mb-3">{t("matching.tutorAccepted")}</h1>
           <p className="text-lg text-white/80">
-            {acceptedTutor?.display_name || "A tutor"} accepted your request
+            {acceptedTutor?.display_name || "A tutor"} {t("matching.acceptedRequest")}
           </p>
         </div>
       </div>
@@ -310,8 +250,8 @@ export default function MatchingScreen() {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center p-4">
         <div className="text-center">
           <div className="text-7xl mb-6 animate-bounce">🤝</div>
-          <h1 className="text-3xl font-bold text-white mb-3">Connecting...</h1>
-          <p className="text-lg text-white/70">Preparing your session</p>
+          <h1 className="text-3xl font-bold text-white mb-3">{t("matching.connecting")}</h1>
+          <p className="text-lg text-white/70">{t("matching.preparingSession")}</p>
         </div>
       </div>
     );
@@ -327,24 +267,19 @@ export default function MatchingScreen() {
       {/* Header */}
       <div className="text-center mb-10 z-10">
         <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-          Finding Best Tutors For You...
+          {t("matching.findingTutors")}
         </h1>
-        <p className="mt-2 text-white/70 text-sm">Please wait while we find available experts.</p>
+        <p className="mt-2 text-white/70 text-sm">{t("matching.pleaseWait")}</p>
       </div>
 
       {/* Radar Animation */}
       <div className="relative w-64 h-64 mb-10 z-10">
-        {/* Outer circle */}
         <div className="absolute inset-0 rounded-full border-4 border-violet-400/20 animate-ping opacity-20" />
-        {/* Middle circle */}
         <div className="absolute inset-2 rounded-full border-2 border-fuchsia-400/30" />
-        {/* Inner circle */}
         <div className="absolute inset-6 rounded-full border border-cyan-400/40" />
-        {/* Rotating radar line */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-violet-400 to-transparent transform rotate-0 animate-[spin_4s_linear_infinite] origin-center" />
         </div>
-        {/* Center dot */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-6 h-6 bg-violet-500 rounded-full animate-pulse shadow-lg shadow-violet-500/50" />
           <span className="absolute text-white font-bold text-lg">👤</span>
@@ -353,7 +288,7 @@ export default function MatchingScreen() {
 
       {/* Tutor list */}
       <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-6 shadow-2xl z-10">
-        <h3 className="text-lg font-bold text-white mb-4">Top Matching Tutors</h3>
+        <h3 className="text-lg font-bold text-white mb-4">{t("matching.topTutors")}</h3>
         <div className="space-y-3">
           {tutors.map((tutor) => (
             <div key={tutor.id} className="flex items-center gap-4 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
@@ -363,14 +298,14 @@ export default function MatchingScreen() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-white truncate">{tutor.display_name}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  {tutor.is_verified && <span className="text-[10px] bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">✔ Verified</span>}
-                  {tutor.is_top_tutor && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30">TOP</span>}
+                  {tutor.is_verified && <span className="text-[10px] bg-emerald-400/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/30">✔ {t("matching.verified")}</span>}
+                  {tutor.is_top_tutor && <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/30">{t("matching.top")}</span>}
                 </div>
                 <p className="text-xs text-white/50 mt-1 truncate">{tutor.skills}</p>
               </div>
               <div className="flex flex-col items-end text-sm">
                 <span className="text-white/70">⭐ {tutor.average_rating || 0}</span>
-                <span className="text-emerald-300 font-medium">Online</span>
+                <span className="text-emerald-300 font-medium">{t("matching.online")}</span>
               </div>
             </div>
           ))}
@@ -381,23 +316,20 @@ export default function MatchingScreen() {
       <div className="bg-white/10 backdrop-blur-lg border border-white/10 rounded-2xl px-6 py-5 mb-4 z-10 text-center w-full max-w-md">
         <div className="flex items-center justify-center gap-3">
           <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
-
           <span className="text-white/80 text-sm font-medium">
-            Matching you with tutors...
+            {t("matching.matchingYou")}
           </span>
         </div>
 
         <div className="mt-4">
           <p className="text-xs uppercase tracking-wider text-white/50">
-            Time Remaining
+            {t("matching.timeRemaining")}
           </p>
-
           <h2 className="mt-2 text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
             {formatTime(remainingSeconds)}
           </h2>
-
           <p className="mt-2 text-xs text-white/50">
-            Waiting Round {waitingRound} of 2
+            {t("matching.waitingRound")} {waitingRound} {t("matching.of")} 2
           </p>
         </div>
       </div>
@@ -407,11 +339,12 @@ export default function MatchingScreen() {
         className="mb-4 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white/70 hover:bg-white/10 transition-colors z-10"
         onClick={() =>
           alert(
+            t("matching.affairsMessage") ||
             "India launched a new AI education initiative for students in 2026.\n\nPython and AI remain top in-demand skills globally."
           )
         }
       >
-        📰 Know Current Affairs While Waiting
+        📰 {t("matching.readWhileWaiting")}
       </button>
 
       {/* Cancel */}
@@ -419,159 +352,107 @@ export default function MatchingScreen() {
         onClick={handleCancel}
         className="px-6 py-2.5 bg-rose-500/20 border border-rose-400/30 text-rose-300 rounded-xl font-medium hover:bg-rose-500/30 transition-colors z-10"
       >
-        Cancel Search
+        {t("matching.cancelSearch")}
       </button>
 
       {/* ==========================================
             MATCHING TIMEOUT MODAL
         ========================================== */}
 
-        {modalType !== "none" && (
-            <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center px-4">
+      {modalType !== "none" && (
+        <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center px-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#17152d] shadow-2xl overflow-hidden">
+            <div className="p-8 text-center">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
+                <span className="text-5xl">
+                  {modalType === "first_timeout" ? "⌛" : "😔"}
+                </span>
+              </div>
 
-                <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#17152d] shadow-2xl overflow-hidden">
+              <h2 className="mt-6 text-2xl font-bold text-white">
+                {modalType === "first_timeout"
+                  ? t("matching.stillLooking")
+                  : t("matching.noTutorFound")}
+              </h2>
 
-                    <div className="p-8 text-center">
+              {modalType === "first_timeout" ? (
+                <>
+                  <p className="mt-4 text-sm leading-6 text-white/70">
+                    {t("matching.waitOptions").split('\n').map((line, i) => (
+                      <span key={i}>{line}<br /></span>
+                    ))}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-4 text-sm leading-6 text-white/70">
+                    {t("matching.moneySafe")}
+                  </p>
+                </>
+              )}
 
-                        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/15 border border-amber-500/30">
-
-                            <span className="text-5xl">
-                                {modalType === "first_timeout"
-                                  ? "⌛"
-                                  : "😔"}
-                            </span>
-
-                        </div>
-
-                        <h2 className="mt-6 text-2xl font-bold text-white">
-                            {modalType === "first_timeout"
-                              ? "We're Still Looking 👀"
-                              : "We Couldn't Find a Tutor"}
-                        </h2>
-
-                        {modalType === "first_timeout" ? (
-                          <>
-                            <p className="mt-4 text-sm leading-6 text-white/70">
-                              We've searched for the best tutor for the last
-                              <span className="font-semibold text-white">
-                                {" "}5 minutes
-                              </span>.
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 text-white/70">
-                              Continue waiting for another 5 minutes or receive your full refund instantly.
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="mt-4 text-sm leading-6 text-white/70">
-                              Unfortunately we couldn't find an available tutor for your doubt.
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 text-white/70">
-                              Your money is completely safe and ready to be returned to your Knowmato Wallet.
-                            </p>
-                          </>
-                        )}
-
-                        <div className="mt-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-5">
-
-                          <p className="text-xs uppercase tracking-widest text-emerald-300">
-                              Full Refund
-                          </p>
-
-                          <h3 className="mt-2 text-4xl font-extrabold text-emerald-400">
-                              ₹{refundAmount.toFixed(2)}
-                          </h3>
-
-                          <div className="mt-4 space-y-1 text-sm text-emerald-300">
-
-                              <p>✓ No platform fee</p>
-
-                              <p>✓ Instant wallet credit</p>
-
-                          </div>
-
-                      </div>
-
-                        <div className="mt-8 space-y-3">
-                          {modalType === "first_timeout" && (
-
-                            <button
-                                className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-4 font-bold text-white transition hover:scale-[1.02]"
-                                onClick={async () => {
-
-                                                        try {
-
-                                                          setModalLoading(true);
-
-                                                          await extendMatchingWait(
-                                                            Number(doubtId)
-                                                          );
-
-                                                          popupShownRef.current = false;
-
-                                                          setModalType("none");
-
-                                                          await loadMatchingStatus();
-
-                                                        } finally {
-
-                                                          setModalLoading(false);
-
-                                                        }
-
-                                                      }}
-                            >
-                                ⏰ Wait 5 More Minutes
-                                Continue searching for available tutors.
-                            </button>)}
-
-                            <button
-                                className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 py-4 font-bold text-emerald-400 transition hover:bg-emerald-500/20"
-                                onClick={async () => {
-
-                                                        try {
-
-                                                          setModalLoading(true);
-
-                                                          await requestStudentRefund(
-                                                            Number(doubtId)
-                                                          );
-
-                                                          popupShownRef.current = false;
-
-                                                          router.replace("/student/dashboard");
-
-                                                        } finally {
-
-                                                          setModalLoading(false);
-
-                                                        }
-
-                                                      }}
-                            >
-                                {modalLoading ? (
-                                    <div className="h-5 w-5 mx-auto rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-                                ) : (
-                                    <>
-                                        <div>💰 Return ₹{refundAmount.toFixed(2)} to My Wallet</div>
-                                        <div className="text-xs font-normal mt-1">
-                                            Credit the full amount back to your wallet.
-                                        </div>
-                                    </>
-                                )}
-                            </button>
-                            
-
-                        </div>
-
-                    </div>
-
+              <div className="mt-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-5">
+                <p className="text-xs uppercase tracking-widest text-emerald-300">
+                  {t("matching.fullRefund")}
+                </p>
+                <h3 className="mt-2 text-4xl font-extrabold text-emerald-400">
+                  ₹{refundAmount.toFixed(2)}
+                </h3>
+                <div className="mt-4 space-y-1 text-sm text-emerald-300">
+                  <p>✓ {t("matching.noFee")}</p>
+                  <p>✓ {t("matching.instantCredit")}</p>
                 </div>
+              </div>
 
+              <div className="mt-8 space-y-3">
+                {modalType === "first_timeout" && (
+                  <button
+                    className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-4 font-bold text-white transition hover:scale-[1.02]"
+                    onClick={async () => {
+                      try {
+                        setModalLoading(true);
+                        await extendMatchingWait(Number(doubtId));
+                        popupShownRef.current = false;
+                        setModalType("none");
+                        await loadMatchingStatus();
+                      } finally {
+                        setModalLoading(false);
+                      }
+                    }}
+                  >
+                    ⏰ {t("matching.waitMore")}
+                  </button>
+                )}
+
+                <button
+                  className="w-full rounded-2xl border border-emerald-500/40 bg-emerald-500/10 py-4 font-bold text-emerald-400 transition hover:bg-emerald-500/20"
+                  onClick={async () => {
+                    try {
+                      setModalLoading(true);
+                      await requestStudentRefund(Number(doubtId));
+                      popupShownRef.current = false;
+                      router.replace("/student/dashboard");
+                    } finally {
+                      setModalLoading(false);
+                    }
+                  }}
+                >
+                  {modalLoading ? (
+                    <div className="h-5 w-5 mx-auto rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+                  ) : (
+                    <>
+                      <div>💰 {t("matching.returnMoney")}</div>
+                      <div className="text-xs font-normal mt-1">
+                        {t("matching.instantCredit")}
+                      </div>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-        )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

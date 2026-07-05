@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { RootState } from '@/redux/store';
 import { getStudentDashboard } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
@@ -12,10 +12,14 @@ import {
   updateOnlineTutor,
   updateRecentDoubt,
 } from '@/store/dashboardRealtime';
+import { useTranslation } from 'react-i18next';
 
 export default function StudentLayoutContent({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
+  const pathname = usePathname(); // ✅ get current path for sidebar mode
+
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -29,6 +33,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
   } | null>(null);
   const [cachedName, setCachedName] = useState('');
 
+  // --- Search and debounce ---
   useEffect(() => {
     if (debouncedSearch.length >= 1) {
       saveRecentSearch(debouncedSearch);
@@ -48,6 +53,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
     return () => clearTimeout(timer);
   }, [search]);
 
+  // --- Cached name ---
   useEffect(() => {
     const storedName = localStorage.getItem('display_name');
     if (storedName) {
@@ -63,6 +69,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
     }
   }, [user]);
 
+  // --- Wallet fetch ---
   const fetchDashboardData = useCallback(async () => {
     try {
       const res = await getStudentDashboard();
@@ -88,7 +95,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
     setRecentSearches(updated);
   };
 
-  // Socket setup (shared across student pages)
+  // --- Socket setup ---
   useEffect(() => {
     const initSocket = async () => {
       try {
@@ -122,9 +129,9 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
     return () => disconnectSocket();
   }, []);
 
+  // --- Visibility change ---
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      // TAB ACTIVE AGAIN
       if (document.visibilityState === 'visible') {
         console.log('🌐 TAB ACTIVE AGAIN');
         try {
@@ -167,9 +174,9 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
       <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
       <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
-      {/* TOP HEADER – only once */}
+      {/* TOP HEADER */}
       <header className="sticky top-0 z-50 flex h-20 items-center justify-between border-b border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl px-6 lg:ml-72">
-        {/* Left: hamburger (mobile) + logo */}
+        {/* Left: hamburger (mobile) */}
         <div className="flex items-center gap-5">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -182,10 +189,9 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
           </button>
         </div>
 
-        {/* Center: Search */}
+        {/* Search Bar */}
         <div className="hidden flex-1 max-w-2xl mx-4 sm:block">
           <div className="relative group">
-            {/* Search Icon */}
             <svg
               className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40 transition group-focus-within:text-violet-400"
               fill="none"
@@ -195,26 +201,20 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.3-4.3m1.3-5.2a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-
             <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-violet-400 via-fuchsia-500 to-cyan-400 opacity-0 blur transition-all duration-300 group-focus-within:opacity-25" />
-
             <input
               type="text"
               value={search}
               onFocus={() => setShowSuggestions(true)}
-              onBlur={() => {
-                setTimeout(() => {
-                  setShowSuggestions(false);
-                }, 200);
-              }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tutors, doubts or topics..."
+              placeholder={t('studentHome.searchPlaceholder') || "Search tutors, doubts or topics..."}
               className="relative w-full rounded-2xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-xl py-3.5 pl-12 pr-20 text-sm font-medium text-white placeholder-white/40 shadow-sm transition-all duration-300 outline-none hover:border-violet-400/40 hover:shadow-md focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 focus:shadow-[0_0_40px_rgba(167,139,250,0.2)]"
             />
           </div>
         </div>
 
-        {/* Right: notifications, wallet, user */}
+        {/* Right: wallet + profile */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/student/wallet')}
@@ -237,9 +237,10 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
         </div>
       </header>
 
-      {/* MAIN LAYOUT: sidebar + page content */}
+      {/* Main area */}
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {/* ✅ Pass pathname to sidebar */}
+        <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} pathname={pathname} />
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6 lg:ml-72 relative z-10">
           {children}
         </main>

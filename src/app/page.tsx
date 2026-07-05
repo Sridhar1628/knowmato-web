@@ -1,20 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import { motion } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
-import { RootState } from "@/redux/store";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
+import { RootState } from '@/redux/store';
+import { useTranslation } from 'react-i18next';
 
 // ============================================
 // 1. Animated Gradient Background (Dark Theme)
 // ============================================
 const AnimatedGradient = () => (
   <div className="fixed inset-0 -z-10 overflow-hidden">
-    {/* Dark gradient matching the app */}
     <div className="absolute inset-0 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]" />
-    {/* Animated blobs for depth */}
     <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
     <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
     <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
@@ -68,6 +67,7 @@ const Particle = ({ index }: { index: number }) => {
 // 3. Splash Screen Component
 // ============================================
 export default function SplashScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { loading: authLoading } = useAuth();
   const user = useSelector((state: RootState) => state.auth.user);
@@ -132,8 +132,12 @@ export default function SplashScreen() {
           }}
           className="mb-4"
         >
-          <h1 className="text-6xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 drop-shadow-2xl sm:text-7xl md:text-8xl">
-            KnowMato <span className="inline-block animate-bounce-slow">🚀</span>
+          <h1
+            suppressHydrationWarning
+            className="text-6xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 drop-shadow-2xl sm:text-7xl md:text-8xl"
+          >
+            {t('common.appName')}{' '}
+            <span className="inline-block animate-bounce-slow">🚀</span>
           </h1>
         </motion.div>
 
@@ -143,8 +147,11 @@ export default function SplashScreen() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.8 }}
         >
-          <p className="text-xl font-medium text-white/90 drop-shadow-md sm:text-2xl md:text-3xl">
-            Learn. Solve. Grow.
+          <p
+            suppressHydrationWarning
+            className="text-xl font-medium text-white/90 drop-shadow-md sm:text-2xl md:text-3xl"
+          >
+            {t('splash.tagline')}
           </p>
         </motion.div>
 

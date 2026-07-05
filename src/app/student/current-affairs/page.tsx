@@ -2,13 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { getCurrentAffairs, CurrentAffair } from "@/services/v1Service";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-const LOADING_MESSAGE = "Loading latest affairs…";
-const ERROR_MESSAGE = "Could not load current affairs.";
-const EMPTY_MESSAGE = "No current affairs at the moment.";
+import { useTranslation } from "react-i18next";
 
 // Category colours – neon / vibrant palette
 const categoryColors: Record<string, string> = {
@@ -21,10 +15,8 @@ const categoryColors: Record<string, string> = {
   general: "#9CA3AF",      // gray-400
 };
 
-// ---------------------------------------------------------------------------
-// StudentCurrentAffairs
-// ---------------------------------------------------------------------------
 const StudentCurrentAffairs: React.FC = () => {
+  const { t } = useTranslation();
   const [affairs, setAffairs] = useState<CurrentAffair[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +34,11 @@ const StudentCurrentAffairs: React.FC = () => {
       setAffairs(sortedAffairs);
     } catch (err) {
       console.error("Failed to fetch current affairs:", err);
-      setError(ERROR_MESSAGE);
+      setError(t("currentAffairs.error") || "Could not load current affairs.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchAffairs();
@@ -82,10 +74,10 @@ const StudentCurrentAffairs: React.FC = () => {
     const created = new Date(dateString);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - created.getTime()) / 60000);
-    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    if (diffMinutes < 60) return `${diffMinutes} ${t("currentAffairs.minAgo") || "min ago"}`;
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours} hr ago`;
-    return `${Math.floor(diffHours / 24)} day ago`;
+    if (diffHours < 24) return `${diffHours} ${t("currentAffairs.hrAgo") || "hr ago"}`;
+    return `${Math.floor(diffHours / 24)} ${t("currentAffairs.dayAgo") || "day ago"}`;
   };
 
   const truncateText = (text: string, maxLength = 120) => {
@@ -141,7 +133,7 @@ const StudentCurrentAffairs: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-        <p className="mt-4 text-white/70">{LOADING_MESSAGE}</p>
+        <p className="mt-4 text-white/70">{t("currentAffairs.loading")}</p>
       </div>
     );
   }
@@ -157,7 +149,7 @@ const StudentCurrentAffairs: React.FC = () => {
           onClick={fetchAffairs}
           className="rounded-xl bg-white/10 border border-white/20 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-all"
         >
-          Try Again
+          {t("currentAffairs.retry") || "Try Again"}
         </button>
       </div>
     );
@@ -169,7 +161,7 @@ const StudentCurrentAffairs: React.FC = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-        Current Affairs
+        {t("currentAffairs.title")}
       </h1>
 
       {/* Tabs */}
@@ -182,7 +174,7 @@ const StudentCurrentAffairs: React.FC = () => {
               : "bg-white/10 border border-white/20 text-white/70 hover:bg-white/20"
           }`}
         >
-           Current Affairs
+          📰 {t("currentAffairs.current")}
         </button>
         <button
           onClick={() => setActiveTab("past")}
@@ -192,14 +184,14 @@ const StudentCurrentAffairs: React.FC = () => {
               : "bg-white/10 border border-white/20 text-white/70 hover:bg-white/20"
           }`}
         >
-           Past Affairs
+          📜 {t("currentAffairs.past")}
         </button>
       </div>
 
       {displayAffairs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-white/50">
           <span className="text-5xl mb-4">📰</span>
-          <p className="text-lg">{EMPTY_MESSAGE}</p>
+          <p className="text-lg">{t("currentAffairs.empty")}</p>
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -239,7 +231,7 @@ const StudentCurrentAffairs: React.FC = () => {
                   </h2>
                   {index === 0 && activeTab === "current" && (
                     <span className="rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2 py-1 text-[10px] font-bold text-white shadow">
-                      LATEST
+                      {t("currentAffairs.new") || "NEW"}
                     </span>
                   )}
                 </div>
