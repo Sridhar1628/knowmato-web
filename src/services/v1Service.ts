@@ -2016,3 +2016,120 @@ export const requestStudentRefund = async (
     {}
   );
 };
+
+
+// ======================================================
+// 💳 CREDITS
+// ======================================================
+
+// ---------- Student Endpoints ----------
+export interface CreditBalance {
+  id: number;
+  category: number;
+  category_name: string;
+  balance: number;
+}
+
+export interface CreditPlanItem {
+  id: number;
+  category: number;
+  category_id: number;
+  category_name: string;
+  quantity: number;
+}
+
+export interface CreditPlan {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  is_active: boolean;
+  created_at: string;
+  items: CreditPlanItem[];
+}
+
+export interface CreditTransaction {
+  id: number;
+  category: number;
+  category_name: string;
+  amount: number; // positive = credit, negative = debit
+  transaction_type: 'credit' | 'debit';
+  source: 'plan_purchase' | 'service_usage' | 'admin_adjustment' | 'refund';
+  description: string;
+  created_at: string;
+}
+
+export const getMyCreditBalances = async () => {
+  return await apiGet('/credits/my-balances/');
+};
+
+export const getPlans = async () => {
+  return await apiGet('/credits/plans/');
+};
+
+export const purchasePlan = async (planId: number) => {
+  return await apiPost('/credits/purchase/', { plan_id: planId });
+};
+
+export const getMyCreditTransactions = async (params?: { category?: number; source?: string }) => {
+  return await apiGetWithParams('/credits/my-transactions/', params);
+};
+
+// ---------- Admin Endpoints ----------
+export interface CreditCategory {
+  id: number;
+  name: string;
+  description: string;
+  is_active: boolean;
+}
+
+export interface CreditCost {
+  id: number;
+  category: number;
+  category_name: string;
+  cost: number;
+}
+
+export const adminGetCategories = async () => {
+  return await apiGet('/credits/admin/categories/');
+};
+
+export const adminCreateCategory = async (data: Partial<CreditCategory>) => {
+  return await apiPost('/credits/admin/categories/', data);
+};
+
+export const adminUpdateCategory = async (id: number, data: Partial<CreditCategory>) => {
+  return await apiPut(`/credits/admin/categories/${id}/`, data);
+};
+
+export const adminDeleteCategory = async (id: number) => {
+  return await apiDelete(`/credits/admin/categories/${id}/`);
+};
+
+export const adminGetPlans = async () => {
+  return await apiGet('/credits/admin/plans/');
+};
+
+export const adminCreatePlan = async (data: any) => {
+  return await apiPost('/credits/admin/plans/', data);
+};
+
+export const adminUpdatePlan = async (id: number, data: any) => {
+  return await apiPut(`/credits/admin/plans/${id}/`, data);
+};
+
+export const adminDeletePlan = async (id: number) => {
+  return await apiDelete(`/credits/admin/plans/${id}/`);
+};
+
+export const adminGetCosts = async () => {
+  return await apiGet('/credits/admin/costs/');
+};
+
+export const adminUpdateCost = async (id: number, data: { cost: number }) => {
+  return await apiPut(`/credits/admin/costs/${id}/`, data);
+};
+
+export const adminAdjustCredits = async (data: { user_id: number; category: string; amount: number; description?: string }) => {
+  return await apiPost('/credits/admin/adjust/', data);
+};
