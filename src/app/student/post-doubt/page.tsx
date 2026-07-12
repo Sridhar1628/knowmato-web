@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getTutors } from '@/services/tutorService';
 import {
   postDoubt,
-  getCurrentPrice,
-  paymentSuccess,
+  getBalanceByCategory,
+  getCreditCosts,
   getMyDoubts,
 } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
@@ -15,6 +15,7 @@ import { getTokens } from '@/services/storageService';
 import { dashboardCache } from '@/store/dashboardCache';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 // Types
 interface Tutor {
@@ -72,6 +73,11 @@ function PostDoubtContent() {
   const [submitting, setSubmitting] = useState(false);
   const [showTutorModal, setShowTutorModal] = useState(false);
   const [recentDoubts, setRecentDoubts] = useState<RecentDoubt[]>([]);
+
+  // Credit info state
+  const [doubtCredits, setDoubtCredits] = useState<number>(0);
+  const [doubtCreditCost, setDoubtCreditCost] = useState<number>(1);
+  const [loadingCredits, setLoadingCredits] = useState(true);
 
   useEffect(() => {
     const unsubscribe = subscribeDashboard(() => {
@@ -136,6 +142,35 @@ function PostDoubtContent() {
     };
   }, []);
 
+  // Load credit balance and cost
+  useEffect(() => {
+    loadCreditInformation();
+  }, []);
+
+  const loadCreditInformation = async () => {
+    try {
+      setLoadingCredits(true);
+      const [balanceRes, costRes] = await Promise.all([
+        getBalanceByCategory('doubts'),
+        getCreditCosts(),
+      ]);
+
+      setDoubtCredits(balanceRes?.data?.balance ?? 0);
+
+      const doubtCost = costRes?.data?.find(
+        (item: any) => item.category_name?.toLowerCase() === 'doubt'
+      );
+      if (doubtCost) {
+        setDoubtCreditCost(doubtCost.cost);
+      }
+    } catch (error) {
+      console.error('Failed to load credit information:', error);
+      // Fallback to default 1 credit cost if fetch fails
+    } finally {
+      setLoadingCredits(false);
+    }
+  };
+
   const fetchRecentDoubts = async () => {
     try {
       const res = await getMyDoubts({ page: 1 });
@@ -172,7 +207,7 @@ function PostDoubtContent() {
       setTutors(withPresence);
     } catch (error) {
       console.error('Failed to fetch tutors:', error);
-      alert(t('postDoubt.loadTutorsError') || 'Could not load tutors. Please check your connection.');
+      toast.error(t('postDoubt.loadTutorsError') || 'Could not load tutors. Please check your connection.');
     } finally {
       setLoadingTutors(false);
     }
@@ -191,33 +226,42 @@ function PostDoubtContent() {
     return false;
   }, [mode, selectedTutor]);
 
-  // Submit flow
+  // Submit flow – now credit‑based
   const handleSubmit = async () => {
     if (mode === 'specific' && selectedTutor && !selectedTutor.is_online) {
-      alert(t('postDoubt.offlineError') || '⚠️ The selected tutor is offline. Please select an online tutor or post in the Doubt Pool.');
+      toast.error(t('postDoubt.offlineError') || '⚠️ The selected tutor is offline. Please select an online tutor or post in the Doubt Pool.');
       return;
     }
 
-    if (!title.trim()) return alert(t('postDoubt.enterTitle') || 'Please enter a title.');
-    if (!description.trim()) return alert(t('postDoubt.enterDescription') || 'Please describe your doubt.');
-    if (!category) return alert(t('postDoubt.selectCategory') || 'Please select a category.');
-    if (mode === 'specific' && !selectedTutor) return alert(t('postDoubt.selectTutor') || 'Please select a tutor.');
+    if (!title.trim()) {
+      toast.error(t('postDoubt.enterTitle') || 'Please enter a title.');
+      return;
+    }
+    if (!description.trim()) {
+      toast.error(t('postDoubt.enterDescription') || 'Please describe your doubt.');
+      return;
+    }
+    if (!category) {
+      toast.error(t('postDoubt.selectCategory') || 'Please select a category.');
+      return;
+    }
+    if (mode === 'specific' && !selectedTutor) {
+      toast.error(t('postDoubt.selectTutor') || 'Please select a tutor.');
+      return;
+    }
     if (submitting) return;
+
+    // Show confirmation with credit cost
+    const confirmed = window.confirm(
+      `💳 ${t('postDoubt.confirmPayment') || 'Use Credits'}\n\n` +
+      `${t('postDoubt.costPerDoubt') || 'Cost'}: ${doubtCreditCost} ${t('postDoubt.doubtCredit') || 'Doubt Credit'}${doubtCreditCost > 1 ? 's' : ''}\n` +
+      `${t('postDoubt.availableCredits') || 'Available'}: ${doubtCredits}\n\n` +
+      `${t('postDoubt.continuePrompt') || 'Do you want to continue?'}`
+    );
+    if (!confirmed) return;
 
     setSubmitting(true);
     try {
-      const priceRes = await getCurrentPrice();
-      const price = priceRes.data?.price ?? priceRes.price;
-      if (!price) throw new Error('Price not available');
-
-      const confirmed = window.confirm(
-        t('postDoubt.confirmPayment', { price }) || `💰 Posting this doubt will cost ₹${price}. Continue?`
-      );
-      if (!confirmed) {
-        setSubmitting(false);
-        return;
-      }
-
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
@@ -231,16 +275,38 @@ function PostDoubtContent() {
 
       const postRes = await postDoubt(payload);
       const doubtId = postRes.data?.doubt_id || postRes.data?.id || postRes.doubt_id;
-      if (!doubtId) throw new Error('Doubt ID missing');
+      if (!doubtId) throw new Error('Doubt ID missing from response');
 
-      await paymentSuccess({ doubt_id: doubtId });
+      // Refresh credit info after successful deduction
+      await loadCreditInformation();
+
       router.replace(`/student/matching?doubtId=${doubtId}`);
     } catch (err: any) {
       console.error('Post error:', err?.response?.data || err.message);
-      alert(
-        t('postDoubt.submissionFailed') + ': ' +
-        (err?.response?.data?.message || err.message || t('postDoubt.tryAgain') || 'Please try again.')
-      );
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        t('postDoubt.tryAgain') || 'Please try again.';
+
+      if (
+        errorMessage.toLowerCase().includes('insufficient') &&
+        errorMessage.toLowerCase().includes('credit')
+      ) {
+        // Insufficient credits – show alert with option to buy credits
+        const shouldBuy = window.confirm(
+          `${t('postDoubt.insufficientCredits') || 'Insufficient Doubt Credits'}\n\n` +
+          `${errorMessage}\n\n` +
+          `${t('postDoubt.buyCreditsPrompt') || 'Would you like to buy more credits?'}`
+        );
+        if (shouldBuy) {
+          router.push('/student/credits');
+        }
+      } else {
+        toast.error(
+          (t('postDoubt.submissionFailed') || 'Submission failed') + ': ' + errorMessage
+        );
+      }
+    } finally {
       setSubmitting(false);
     }
   };
@@ -263,7 +329,7 @@ function PostDoubtContent() {
                 key={tutor.id}
                 onClick={() => {
                   if (!isOnline) {
-                    alert(t('postDoubt.offlineSelect') || '🔴 This tutor is offline. Please select an online tutor.');
+                    toast.error(t('postDoubt.offlineSelect') || '🔴 This tutor is offline. Please select an online tutor.');
                     return;
                   }
                   setSelectedTutor(tutor);
@@ -317,7 +383,7 @@ function PostDoubtContent() {
               transition={{ duration: 0.4 }}
               className="rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl md:p-8"
             >
-              {/* Banner */}
+              {/* Banner with credit info */}
               <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-700 p-6 text-white shadow-lg">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
@@ -326,9 +392,24 @@ function PostDoubtContent() {
                       {t('postDoubt.postSubtitle')}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
-                    <div className="text-xs text-violet-200">{t('postDoubt.avgResponseTime')}</div>
-                    <div className="text-xl font-bold">{t('postDoubt.avgResponseValue')}</div>
+                  <div className="flex items-center gap-4">
+                    <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
+                      <div className="text-xs text-violet-200">{t('postDoubt.avgResponseTime')}</div>
+                      <div className="text-xl font-bold">{t('postDoubt.avgResponseValue')}</div>
+                    </div>
+                    {/* Credit info card */}
+                    {!loadingCredits && (
+                      <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
+                        <div className="text-xs text-violet-200">💳 {t('postDoubt.availableCredits') || 'Available'}</div>
+                        <div className="text-xl font-bold">{doubtCredits}</div>
+                        <div className="text-xs text-violet-200 mt-1">⚡ {t('postDoubt.costPerDoubt') || 'Cost'}: {doubtCreditCost}</div>
+                      </div>
+                    )}
+                    {loadingCredits && (
+                      <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
+                        <div className="h-6 w-20 animate-pulse rounded bg-white/20" />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="mt-6 grid gap-4 md:grid-cols-3">

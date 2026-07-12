@@ -2059,16 +2059,61 @@ export interface CreditTransaction {
   created_at: string;
 }
 
-export const getMyCreditBalances = async () => {
-  return await apiGet('/credits/my-balances/');
+export interface CreateCreditOrderResponse {
+  success: boolean;
+  message: string;
+  payment_session_id: string;
+  order_id: string;
+  plan: {
+    id: number;
+    name: string;
+    price: string;
+  };
+}
+
+export interface VerifyCreditPaymentResponse {
+  success: boolean;
+  message: string;
+  credits_added: boolean;
+  plan?: {
+    id: number;
+    name: string;
+    price: string;
+  };
+}
+
+export const getMyCreditBalances = async (): Promise<{
+  message: string;
+  data: CreditBalance[];
+}> => {
+  return await apiGet("/credits/my-balances/");
 };
 
-export const getPlans = async () => {
-  return await apiGet('/credits/plans/');
+export const getPlans = async (): Promise<{
+  message: string;
+  data: CreditPlan[];
+}> => {
+  return await apiGet("/credits/plans/");
 };
 
 export const purchasePlan = async (planId: number) => {
   return await apiPost('/credits/purchase/', { plan_id: planId });
+};
+
+export const createCreditOrder = async (
+  planId: number
+): Promise<CreateCreditOrderResponse> => {
+  return await apiPost("/v2/create-order/", {
+    plan_id: planId,
+  });
+};
+
+export const verifyCreditPayment = async (
+  orderId: string
+): Promise<VerifyCreditPaymentResponse> => {
+  return await apiPost("/v2/verify-payment/", {
+    order_id: orderId,
+  });
 };
 
 export const getMyCreditTransactions = async (params?: { category?: number; source?: string }) => {
@@ -2130,6 +2175,61 @@ export const adminUpdateCost = async (id: number, data: { cost: number }) => {
   return await apiPut(`/credits/admin/costs/${id}/`, data);
 };
 
-export const adminAdjustCredits = async (data: { user_id: number; category: string; amount: number; description?: string }) => {
-  return await apiPost('/credits/admin/adjust/', data);
+
+export const getBalanceByCategory = async (
+  categoryName: string
+): Promise<{
+  message: string;
+  data: CreditBalance;
+}> => {
+  return await apiGet(`/credits/balance/${categoryName}/`);
+};
+
+export const getCreditCosts = async (): Promise<{
+  message: string;
+  data: CreditCost[];
+}> => {
+  return await apiGet('/credits/costs/');
+};
+
+export interface AdminAdjustCreditsPayload {
+  user_id: number;
+  category: string;
+  amount: number;
+  description?: string;
+}
+
+export interface AdminAdjustCreditsResponse {
+  message: string;
+  new_balance: number;
+}
+
+export const adminAdjustCredits = async (
+  payload: AdminAdjustCreditsPayload
+): Promise<AdminAdjustCreditsResponse> => {
+  const response = await apiPost(
+    "/credits/admin/adjust-credits/",
+    payload
+  );
+
+  return response.data;
+};
+
+// ======================================================
+// ❌ CANCEL DOUBT
+// ======================================================
+
+export interface CancelDoubtResponse {
+  success: boolean;
+  message: string;
+  refund_amount: number;
+  platform_fee: number;
+}
+
+export const cancelDoubt = async (
+  doubtId: number
+): Promise<CancelDoubtResponse> => {
+  return await apiPost("/doubts/cancel/", {
+    doubt_id: doubtId,
+  });
 };

@@ -47,6 +47,13 @@ interface DashboardSidebarProps {
   pathname: string; // required to detect Knowmato+ routes
 }
 
+interface SidebarRoute {
+  icon: string;
+  label: string;
+  href: string;
+  isNew?: boolean;
+}
+
 export default function DashboardSidebar({ open, onClose, pathname }: DashboardSidebarProps) {
   const { t } = useTranslation();
   const router = useRouter();
@@ -56,8 +63,9 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
   const isKnowmatoPlus = pathname?.startsWith('/student/knowmato-plus');
 
   // ---- Student routes ----
-  const studentRoutes = [
+  const studentRoutes: SidebarRoute[] = [
     { icon: '🏠', label: t('sidebar.home') || 'Home', href: '/student/dashboard' },
+    { icon: '🏠', label: t('sidebar.credits') || 'Credits', href: '/student/credits' },
     { icon: '❓', label: t('sidebar.askDoubt') || 'Ask Doubt', href: '/student/post-doubt' },
     { icon: '📋', label: t('sidebar.myDoubts') || 'My Doubts', href: '/student/my-doubts' },
     { icon: '📰', label: t('currentAffairs.title') || 'Current Affairs', href: '/student/current-affairs' },
@@ -73,7 +81,7 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
   ];
 
   // ---- Knowmato+ routes ----
-  const knowmatoPlusRoutes = [
+  const knowmatoPlusRoutes: SidebarRoute[] = [
     {
       icon: '📚',
       label: t('knowmatoPlus.knowmato') || 'Knowmato',

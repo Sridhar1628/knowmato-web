@@ -4,11 +4,12 @@ import React, { useEffect, useState, useCallback, memo } from "react";
 import { useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { load } from "@cashfreepayments/cashfree-js";
 import { RootState } from "@/redux/store";
 import {
   getMyCreditBalances,
   getPlans,
-  purchasePlan,
+  createCreditOrder,
   getMyCreditTransactions,
   CreditBalance,
   CreditPlan,
@@ -205,7 +206,7 @@ export default function StudentCreditsPage() {
     fetchData();
   }, [fetchData]);
 
-  // ---------- Purchase Flow ----------
+  // ---------- Purchase Flow (Cashfree) ----------
   const handleBuy = useCallback((plan: CreditPlan) => {
     setSelectedPlan(plan);
     setIsModalOpen(true);
@@ -215,16 +216,37 @@ export default function StudentCreditsPage() {
     if (!selectedPlan) return;
     setPurchasing(true);
     try {
-      await purchasePlan(selectedPlan.id);
-      toast.success(t("credits.purchaseSuccess") || "Plan purchased successfully!");
-      setIsModalOpen(false);
-      await fetchData(); // refresh balances & transactions
+      // Create order via backend
+      const response = await createCreditOrder(selectedPlan.id);
+      if (!response.success) {
+        toast.error(response.message || "Unable to create payment.");
+        return;
+      }
+
+      // Store order ID for verification after payment
+      localStorage.setItem("credit_order_id", response.order_id);
+
+      // Initialize Cashfree
+      const cashfree = await load({
+        mode:
+          process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION"
+            ? "production"
+            : "sandbox",
+      });
+
+      // Redirect to Cashfree checkout
+      await cashfree.checkout({
+        paymentSessionId: response.payment_session_id,
+        redirectTarget: "_self",
+      });
+      // After redirect this code won't execute
     } catch (error: any) {
-      toast.error(error?.message || t("credits.purchaseError") || "Purchase failed.");
+      console.error(error);
+      toast.error(error?.message || "Unable to start payment.");
     } finally {
       setPurchasing(false);
     }
-  }, [selectedPlan, fetchData, t]);
+  }, [selectedPlan]);
 
   // ---------- Render ----------
   if (loading && !refreshing) {

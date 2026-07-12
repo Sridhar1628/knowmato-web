@@ -125,6 +125,8 @@ export interface Course {
   is_featured: boolean;
   is_trending: boolean;
 
+  course_credit_cost: number;
+
   category: number;
   category_name?: string;
 

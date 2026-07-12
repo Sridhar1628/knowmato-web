@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
+import { verifyCreditPayment } from "@/services/v1Service";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -168,39 +169,49 @@ const PaymentSuccessPage: React.FC = () => {
   const handlePaymentSuccess = useCallback(async () => {
     try {
       const orderId = searchParams.get("order_id");
+
       if (!orderId) {
         setSuccess(false);
-        setMessage("Invalid payment session. Redirecting...");
-        scheduleRedirect("/payment-failed", FAILURE_REDIRECT_DELAY_MS);
+        setMessage("Order ID not found.");
+        scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
         return;
       }
 
-      // Simulate backend verification (optional)
-      // If you have a verification API, call it here.
-      // For now, assume success.
-      setSuccess(true);
-      setMessage("Your wallet has been topped up!");
+      const res = await verifyCreditPayment(orderId);
 
-      // Trigger confetti on success
-      runConfetti();
+      setSuccess(res.success);
+      setMessage(res.message);
 
-      const fromApp = localStorage.getItem(FROM_APP_STORAGE_KEY) === "true";
-      if (fromApp) {
-        localStorage.removeItem(FROM_APP_STORAGE_KEY);
-        scheduleRedirect(APP_DEEPLINK, REDIRECT_DELAY_MS, true);
+      if (res.success) {
+        runConfetti();
+
+        const fromApp =
+          localStorage.getItem(FROM_APP_STORAGE_KEY) === "true";
+
+        if (fromApp) {
+          localStorage.removeItem(FROM_APP_STORAGE_KEY);
+          scheduleRedirect(APP_DEEPLINK, REDIRECT_DELAY_MS, true);
+        } else {
+          scheduleRedirect("/student/credits", REDIRECT_DELAY_MS);
+        }
       } else {
-        scheduleRedirect("/student/wallet", REDIRECT_DELAY_MS);
+        scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
       }
-    } catch (err) {
-      console.error("Payment success page error:", err);
+    } catch (err: any) {
+      console.error(err);
+
       setSuccess(false);
-      setMessage("Something went wrong. Please contact support.");
-      scheduleRedirect("/payment-failed", FAILURE_REDIRECT_DELAY_MS);
+
+      setMessage(
+        err?.response?.data?.message ||
+          "Unable to verify payment."
+      );
+
+      scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
     } finally {
       setLoading(false);
     }
   }, [searchParams, scheduleRedirect]);
-
   useEffect(() => {
     handlePaymentSuccess();
     return () => clearAllTimers();
@@ -225,7 +236,7 @@ const PaymentSuccessPage: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center gap-4">
             <div className="w-14 h-14 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            <h2 className="text-2xl font-bold text-white">Verifying payment...</h2>
+            <h2 className="text-2xl font-bold text-white">Verifying Credit Purchase...</h2>
             <p className="text-white/50 text-sm">Please do not close this window</p>
           </div>
         ) : success ? (
@@ -248,17 +259,17 @@ const PaymentSuccessPage: React.FC = () => {
               </div>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-cyan-300">
-              Payment Successful
+              Credits Added Successfully
             </h1>
             <p className="mt-3 text-lg text-white/80">{message}</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => router.push("/student/wallet")}
+                onClick={() => router.push("/credits")}
                 className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:to-cyan-600 transition flex items-center justify-center gap-2"
               >
-                Go to Wallet
+                Go to Credits
                 <span>→</span>
               </motion.button>
               <p className="text-white/40 text-sm">or wait for auto‑redirect</p>
@@ -291,7 +302,7 @@ const PaymentSuccessPage: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => router.push("/wallet/add-money")}
+                onClick={() => router.push("/credits")}
                 className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-500/20 border border-rose-400/40 text-rose-300 font-bold hover:bg-rose-500/30 transition"
               >
                 Try Again

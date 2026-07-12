@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { purchaseCourse, getCourseContent, getCourseEnrollmentStatus } from "@/services/v2Service";
+import { purchaseCourse, getCourseContent, getCourseEnrollmentStatus, getQuizQuestions } from "@/services/v2Service";
 import type { CourseContentResponse } from "@/services/v2Service"; // ensure this export exists
 import toast from "react-hot-toast";
 
@@ -85,6 +85,16 @@ interface QuizQuestion {
   correct_option_id?: number;
 }
 
+const normalizeQuizQuestions = (questions: any[]): QuizQuestion[] =>
+  questions.map((question: any) => ({
+    id: question.id,
+    question_text:
+      question.question_text ?? question.question ?? question.text ?? "",
+    options: question.options ?? question.answers ?? question.choices ?? [],
+    correct_option_id:
+      question.correct_option_id ?? question.correct_answer_id ?? question.answer_id,
+  }));
+
 // ---------- Helper: extract YouTube video ID ----------
 function getYouTubeEmbedUrl(url: string): string | null {
   const patterns = [
@@ -141,7 +151,7 @@ export default function CourseDetailPage() {
       if (!response.success) {
         throw new Error(response.message || "Failed to load course");
       }
-      setCourse(response.data);
+      setCourse(response.data as unknown as CourseDetail);
     } catch (err: any) {
       setError(err?.message || "Failed to load course");
       console.error(err);
@@ -178,6 +188,7 @@ export default function CourseDetailPage() {
 
   const handleLectureClick = (lecture: Lecture, sectionId: number) => {
     setActiveItem({ type: "lecture", id: lecture.id, sectionId });
+    // Reset quiz state
     setQuizQuestions([]);
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
@@ -186,14 +197,15 @@ export default function CourseDetailPage() {
 
   const handleQuizClick = async (quiz: Quiz, sectionId: number) => {
     setActiveItem({ type: "quiz", id: quiz.id, sectionId });
-    if (!isEnrolled) return; // don't fetch questions if not enrolled
+    if (!isEnrolled) return;
     setQuizLoading(true);
     try {
-      // Replace with your quiz questions service when available
-      const res = await fetch(`/api/v2/quizzes/${quiz.id}/questions/`);
-      if (!res.ok) throw new Error("Failed to fetch quiz questions");
-      const json = await res.json();
-      setQuizQuestions(json.data || []);
+      // ✅ FIX: use the proper service function
+      const questions = await getQuizQuestions(quiz.id);
+
+      const normalizedQuestions = normalizeQuizQuestions(questions);
+
+      setQuizQuestions(normalizedQuestions);
       setCurrentQuestionIndex(0);
       setSelectedOption(null);
       setAnswers({});

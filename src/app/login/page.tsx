@@ -87,8 +87,6 @@ export default function LoginPage() {
     }
   };
 
-  const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
       {/* Animated background blobs */}
@@ -137,30 +135,6 @@ export default function LoginPage() {
                 {t('common.appName')}
               </h1>
               <p className="mt-2 text-white/70">{t('common.subtitle')}</p>
-            </div>
-
-            {/* Language Switcher */}
-            <div className="mb-6 flex justify-center gap-3">
-              <button
-                onClick={() => changeLanguage('en')}
-                className={`px-4 py-2 rounded-full border text-sm transition ${
-                  i18n.language === 'en'
-                    ? 'border-violet-400 bg-violet-500/20 text-white'
-                    : 'border-white/20 text-white/70 hover:border-violet-300 hover:text-white'
-                }`}
-              >
-                {t('common.languageEn')}
-              </button>
-              <button
-                onClick={() => changeLanguage('ta')}
-                className={`px-4 py-2 rounded-full border text-sm transition ${
-                  i18n.language === 'ta'
-                    ? 'border-violet-400 bg-violet-500/20 text-white'
-                    : 'border-white/20 text-white/70 hover:border-violet-300 hover:text-white'
-                }`}
-              >
-                {t('common.languageTa')}
-              </button>
             </div>
 
             {/* Form */}

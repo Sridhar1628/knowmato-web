@@ -178,7 +178,6 @@
     "moneySafe": "Unfortunately we couldn't find an available tutor.\n\nYour money is completely safe and can be returned instantly.",
     "fullRefund": "FULL REFUND",
     "noFee": "No platform fee",
-    "instantCredit": "Instant wallet credit",
     "waitMore": "Wait 5 More Minutes",
     "returnMoney": "Return Money To Wallet",
     "refundSuccess": "Refund Successful",
@@ -194,7 +193,16 @@
 "preparingSession": "Preparing your session",
 "timeRemaining": "Time Remaining",
 "waitingRound": "Waiting Round",
-"of": "of"
+"of": "of",
+"creditRefund": "Credit Refund",
+  "platformFee": "Platform Fee",
+  "instantCredit": "Credits returned instantly",
+  "returnCredits": "Return Credits",
+  "creditsReturned": "Credits have been refunded successfully.",
+  "cancelConfirmation": "Are you sure you want to stop searching for a tutor?",
+  "cancelled": "Doubt Cancelled",
+  "refundedCredits": "Refunded Credits",
+  "cancelFailed": "Unable to cancel the doubt."
   },
   "myDoubts": {
     "title": "My Doubts",

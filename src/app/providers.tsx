@@ -10,6 +10,7 @@ import {
 import FloatingCallWidget from '@/components/FloatingCallWidget';
 import { useEffect } from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
+import LanguageGate from '@/components/LanguageGate';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -22,10 +23,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <I18nextProvider i18n={i18n}>   {/* ✅ wrap everything */}
       <Provider store={store}>
         <AuthProvider>
-          <CallProvider>
-            <FloatingCallWidget />
-            {children}
-          </CallProvider>
+          <LanguageGate>
+            <CallProvider>
+              <FloatingCallWidget />
+              {children}
+            </CallProvider>
+          </LanguageGate>
         </AuthProvider>
       </Provider>
     </I18nextProvider>

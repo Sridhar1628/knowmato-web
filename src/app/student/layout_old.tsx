@@ -13,12 +13,14 @@ import {
   updateOnlineTutor,
   updateRecentDoubt,
 } from '@/store/dashboardRealtime';
+import { usePathname } from "next/navigation";
 
 import { checkAuthentication } from "@/services/userService";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
+  const pathname = usePathname();
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -284,7 +286,11 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
       {/* MAIN LAYOUT: sidebar + page content */}
       <div className="flex min-h-[calc(100vh-4rem)]">
-        <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <DashboardSidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            pathname={pathname}
+        />
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6 lg:ml-72 relative z-10">
           {children}
         </main>

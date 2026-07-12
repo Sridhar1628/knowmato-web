@@ -11,13 +11,17 @@ import {
   type Enrollment,
 } from '@/services/v2Service'; // adjust path if needed
 
+type CourseWithBanner = Course & {
+  banner?: string;
+};
+
 export default function CourseDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const params = useParams();
   const courseId = Number(params.id); // assumes route is /courses/[id]
 
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<CourseWithBanner | null>(null);
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
