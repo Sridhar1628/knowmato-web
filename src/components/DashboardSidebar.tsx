@@ -89,6 +89,7 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
     },
     { icon: '📚', label: t('knowmatoPlus.courses') || 'Courses', href: '/student/knowmato-plus' },
     { icon: '📖', label: t('knowmatoPlus.myCourses') || 'My Courses', href: '/student/knowmato-plus/my-courses' },
+    { icon: '📖', label: t('knowmatoPlus.Assessments') || 'Assessments', href: '/student/knowmato-plus/assessments' },
     { icon: '🧪', label: t('knowmatoPlus.tests') || 'Tests', href: '/student/knowmato-plus/tests' },
     { icon: '💼', label: t('knowmatoPlus.internships') || 'Internships', href: '/student/knowmato-plus/internships' },
     { icon: '💻', label: t('knowmatoPlus.jobOpenings') || 'Job Openings', href: '/student/knowmato-plus/jobs' },
