@@ -2229,7 +2229,15 @@ export interface CancelDoubtResponse {
 export const cancelDoubt = async (
   doubtId: number
 ): Promise<CancelDoubtResponse> => {
-  return await apiPost("/doubts/cancel/", {
+  return await apiPost("/v1/cancel-doubt/", {
     doubt_id: doubtId,
   });
+};
+
+export const getActiveMatching = async () => {
+
+    return await apiGet(
+        '/v1/student/active-matching/'
+    );
+
 };

@@ -6,8 +6,22 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getTokens } from "@/services/storageService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
-import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund } from "@/services/v1Service";
+import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund, cancelDoubt } from "@/services/v1Service";
 import { useTranslation } from "react-i18next";
+
+import { useSelector, useDispatch } from 'react-redux';
+
+import { RootState } from '@/redux/store';
+
+import {
+    startMatching,
+    resumeMatching,
+} from '@/redux/slices/matchingSlice';
+
+import {
+    startMatchingTimer,
+    isMatchingTimerRunning,
+} from '@/services/matchingTimerService';
 
 type Tutor = {
   id: string;
@@ -27,9 +41,14 @@ export default function MatchingScreen() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tutors, setTutors] = useState<Tutor[]>([]);
-  const [remainingSeconds, setRemainingSeconds] = useState(300);
-  const [waitingRound, setWaitingRound] = useState(1);
   const [loadingTimer, setLoadingTimer] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  const dispatch = useDispatch();
+
+  const matching = useSelector(
+      (state: RootState) => state.matching
+  );
 
   const [matchingInfo, setMatchingInfo] = useState<any>(null);
   const popupShownRef = useRef(false);
@@ -56,23 +75,6 @@ export default function MatchingScreen() {
     };
     loadTutors();
   }, []);
-
-  useEffect(() => {
-    if (loadingTimer) return;
-    if (remainingSeconds <= 0) return;
-
-    const timer = setInterval(() => {
-      setRemainingSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [remainingSeconds, loadingTimer]);
 
   useEffect(() => {
     if (!doubtId) return;
@@ -193,9 +195,41 @@ export default function MatchingScreen() {
       const matching = res?.data?.matching;
       if (!matching) return;
 
-      setRemainingSeconds(matching.remaining_seconds ?? 0);
-      setWaitingRound(matching.waiting_round ?? 1);
       setMatchingInfo(matching);
+
+      const remainingSeconds =
+        matching.remaining_seconds ?? 0;
+
+      const waitingRound =
+        matching.waiting_round ?? 1;
+
+      const currentMatching = matching;
+
+    if (
+        currentMatching.doubtId !== numericDoubtId ||
+        !currentMatching.isMatching
+    ) {
+
+        dispatch(
+            startMatching({
+                doubtId: numericDoubtId,
+
+                waitingRound,
+
+                matchingStartedAt:
+                    matching.started_at,
+
+                matchingExpiresAt:
+                    matching.expires_at,
+
+                remainingSeconds,
+            })
+        );
+
+        startMatchingTimer();
+
+    }
+
       setLoadingTimer(false);
     } catch (e) {
       console.log("Failed to load matching status", e);
@@ -207,12 +241,46 @@ export default function MatchingScreen() {
     loadMatchingStatus();
   }, [doubtId]);
 
-  const handleCancel = () => {
-    const confirmed = window.confirm(t("matching.cancelMessage") || "Are you sure you want to stop searching for a tutor?");
-    if (confirmed) {
-      disconnectSocket();
-      router.back();
+  const handleCancel = async () => {
+
+    const confirmed = window.confirm(
+      'A platform fee of 0.25 credits will be deducted.\n\nThe remaining credits will be refunded.\n\nDo you want to continue?'
+    );
+
+    if (!confirmed) {
+      return;
     }
+
+    try {
+
+      setLoading(true);
+
+      const response = await cancelDoubt(
+        Number(doubtId)
+      );
+
+      // Disconnect websocket
+      disconnectSocket();
+
+      alert(
+        `Doubt Cancelled\n\nRefunded: ${response.refund_amount} Credits\n\nPlatform Fee: ${response.platform_fee} Credits`
+      );
+
+      router.replace('/student/dashboard');
+
+    } catch (error: any) {
+
+      alert(
+        error?.message ||
+        'Unable to cancel doubt.'
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
   };
 
   // Error state
@@ -326,10 +394,12 @@ export default function MatchingScreen() {
             {t("matching.timeRemaining")}
           </p>
           <h2 className="mt-2 text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            {formatTime(remainingSeconds)}
+            {formatTime(
+              matching.remainingSeconds
+            )}
           </h2>
           <p className="mt-2 text-xs text-white/50">
-            {t("matching.waitingRound")} {waitingRound} {t("matching.of")} 2
+            {t("matching.waitingRound")} {matching.waitingRound} {t("matching.of")} 2
           </p>
         </div>
       </div>

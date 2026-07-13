@@ -1,24 +1,37 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useRouter, usePathname } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { getStudentDashboard } from '@/services/v1Service';
+import { getStudentDashboard, getActiveMatching } from '@/services/v1Service';
 import { connectSocket, disconnectSocket } from '@/services/versionSocketService';
 import { getTokens } from '@/services/storageService';
+import MatchingBanner from '@/components/matching/MatchingBanner';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import {
   updateOnlineTutor,
   updateRecentDoubt,
 } from '@/store/dashboardRealtime';
 import { useTranslation } from 'react-i18next';
+import { store } from '@/redux/store';
+
+import {
+  startMatching,
+  setDecisionState,
+} from '@/redux/slices/matchingSlice';
+
+import {
+  startMatchingTimer,
+  isMatchingTimerRunning,
+} from '@/services/matchingTimerService';
 
 export default function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const user = useSelector((state: RootState) => (state as RootState).auth.user);
   const router = useRouter();
   const pathname = usePathname(); // ✅ get current path for sidebar mode
+  const dispatch = useDispatch();
 
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -32,6 +45,72 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
     bonus: number;
   } | null>(null);
   const [cachedName, setCachedName] = useState('');
+
+  console.log("🏠 StudentLayoutContent rendered");
+
+  useEffect(() => {
+
+    console.log("🚀 Restore effect started");
+
+    const restoreMatching = async () => {
+
+      try {
+
+        console.log("① Calling API");
+
+        const res = await getActiveMatching();
+
+        console.log("② API Response:", res);
+
+        if (!res.has_matching) {
+          console.log("❌ No active matching");
+          return;
+        }
+
+        console.log("③ Dispatch startMatching");
+
+        dispatch(
+          startMatching({
+            doubtId: res.doubt_id,
+            waitingRound: res.waiting_round,
+            matchingStartedAt: res.started_at,
+            matchingExpiresAt: res.expires_at,
+            remainingSeconds: res.remaining_seconds,
+          })
+        );
+
+        console.log("④ Redux after dispatch:", store.getState().matching);
+
+        if (res.status === "decision") {
+
+          console.log("⑤ Setting decision state");
+
+          dispatch(setDecisionState());
+
+          console.log("⑥ Redux after decision:", store.getState().matching);
+        }
+
+        if (!isMatchingTimerRunning()) {
+
+          console.log("⑦ Starting timer");
+
+          startMatchingTimer();
+        }
+
+        console.log("✅ Restore complete");
+
+      } catch (err) {
+
+        console.error("❌ Restore failed:", err);
+
+      }
+
+    };
+
+    restoreMatching();
+
+  }, []);
+
 
   // --- Search and debounce ---
   useEffect(() => {
@@ -216,12 +295,6 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
 
         {/* Right: wallet + profile */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/student/wallet')}
-            className="hidden sm:flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 backdrop-blur-md px-4 py-2.5 text-sm font-semibold text-emerald-300 shadow-lg shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:border-emerald-400/50"
-          >
-            💰 ₹{wallet ? wallet.real : '...'}
-          </button>
 
           <button
             onClick={() => router.push('/student/profile')}
@@ -242,6 +315,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
         {/* ✅ Pass pathname to sidebar */}
         <DashboardSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} pathname={pathname} />
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6 lg:ml-72 relative z-10">
+          <MatchingBanner />
           {children}
         </main>
       </div>
