@@ -93,8 +93,8 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
     { icon: '🧪', label: t('knowmatoPlus.tests') || 'Tests', href: '/student/knowmato-plus/tests' },
     { icon: '💼', label: t('knowmatoPlus.internships') || 'Internships', href: '/student/knowmato-plus/internships' },
     { icon: '💻', label: t('knowmatoPlus.jobOpenings') || 'Job Openings', href: '/student/knowmato-plus/jobs' },
-    { icon: '🏆', label: t('leaderboard.title') || 'Leaderboard', href: '/student/leaderboard' },
-    { icon: '⚙️', label: t('settings.title') || 'Settings', href: '/student/settings' },
+    { icon: '🏆', label: t('leaderboard.title') || 'Leaderboard', href: '/student/knowmato-plus/leaderboard' },
+    { icon: '⚙️', label: t('settings.title') || 'Settings', href: '/student/knowmato-plus/settings' },
   ];
 
   const routes = isKnowmatoPlus ? knowmatoPlusRoutes : studentRoutes;

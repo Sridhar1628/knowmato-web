@@ -188,6 +188,10 @@ export const createQuestion = async (
   );
 };
 
+export const updateQuestion = async (id: number, data: Partial<CreateQuestionPayload>) => {
+  return await apiPut(`/assessment/question/${id}/update/`, data);
+};
+
 /* ==========================================================
    TEST CASES
 ========================================================== */
@@ -346,6 +350,18 @@ export const createSample = async (
     "/assessment/create-sample/",
     data
   );
+};
+
+export const getAllSamples = async (): Promise<SampleQuestion[]> => {
+  return await apiGet("/assessment/samples/");
+};
+
+export const getSampleById = async (id: number): Promise<SampleQuestion> => {
+  return await apiGet(`/assessment/sample/${id}/`);
+};
+
+export const updateSample = async (id: number, data: Partial<CreateSamplePayload>) => {
+  return await apiPut(`/assessment/sample/${id}/update/`, data);
 };
 
 /* ==========================================================
@@ -530,3 +546,45 @@ export const getContent =
       "/assessment/content/"
     );
   };
+
+/* ==========================================================
+   ADMIN MARKS
+========================================================== */
+// ---------- Admin Results Interfaces ----------
+
+export interface AdminProgrammingMark {
+  id: number;
+  user: number;
+  user_name: string;          // email or display name
+  question: number;
+  question_text: string;      // truncated question text
+  marks: string;
+  status: string;
+  created_at: string;
+  assignment_id?: number;
+}
+
+export interface AdminMCQMark {
+  id: number;
+  user: number;
+  user_name: string;
+  type: string;
+  subtype: string;
+  marks: string;
+  status: string;
+  created_at: string;
+}
+
+// ---------- Admin Service Functions ----------
+
+export const getAdminProgrammingMarks = async (
+  params?: { assignment_id?: number; user_search?: string }
+): Promise<AdminProgrammingMark[]> => {
+  return await apiGetWithParams("/assessment/admin/programming-marks/", params);
+};
+
+export const getAdminMCQMarks = async (
+  params?: { assignment_id?: number; user_search?: string }
+): Promise<AdminMCQMark[]> => {
+  return await apiGetWithParams("/assessment/admin/mcq-marks/", params);
+};

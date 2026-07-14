@@ -45,6 +45,11 @@ const menuItems = [
     href: "/tutor/profile",
     icon: "👤",
   },
+  {
+    label: "Settings",
+    href: "/tutor/settings",
+    icon: "⚙️",
+  },
 ];
 
 export default function TutorSidebar({ open, onClose }: TutorSidebarProps) {

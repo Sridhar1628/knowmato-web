@@ -2513,3 +2513,235 @@ export const getInternshipDetails = async (
 
     return response.data;
 };
+
+
+// ----------------------------------------------------------
+// COMPANY APPLICATION (Public)
+// ----------------------------------------------------------
+
+export interface CompanyApplication {
+  id: number;
+  company_name: string;
+  industry: string | null;
+  website: string | null;
+  email: string;
+  phone: string;
+  hr_name: string | null;
+  hr_email: string | null;
+  hr_phone: string | null;
+  address: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postal_code: string | null;
+  company_description: string | null;
+  logo: string | null;               // URL to uploaded logo
+  registration_number: string | null;
+  gst_number: string | null;
+  pan_number: string | null;
+  linkedin_url: string | null;
+  employee_count: number | null;
+  founded_year: number | null;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
+  approved_at: string | null;
+  reviewed_by: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ApplyCompanyResponse {
+  success: boolean;
+  message: string;
+  data: CompanyApplication;
+}
+
+export interface CompanyApplicationDetailResponse {
+  success: boolean;
+  data: CompanyApplication;
+}
+
+/**
+ * Submit a new company application (public).
+ * The request includes a logo image, so use FormData.
+ */
+export const applyForCompany = async (
+  formData: FormData
+): Promise<ApplyCompanyResponse> => {
+  const response = await axiosInstance.post<ApplyCompanyResponse>(
+    '/accounts/company/apply/',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
+ * Get a company application by its ID (public).
+ */
+export const getCompanyApplication = async (
+  applicationId: number
+): Promise<CompanyApplicationDetailResponse> => {
+  const response = await axiosInstance.get<CompanyApplicationDetailResponse>(
+    `/accounts/company/apply/${applicationId}/`
+  );
+  return response.data;
+};
+
+// ----------------------------------------------------------
+// ADMIN – COMPANY APPLICATIONS
+// ----------------------------------------------------------
+
+export interface AdminCompanyApplication extends CompanyApplication {
+  reviewed_by_name: string | null;   // added by serializer
+}
+
+export interface AdminCompanyApplicationsListResponse {
+  success: boolean;
+  count: number;
+  results: AdminCompanyApplication[];
+}
+
+export interface AdminCompanyApplicationDetailResponse {
+  success: boolean;
+  data: AdminCompanyApplication;
+}
+
+export interface ApproveCompanyResponse {
+  success: boolean;
+  message: string;
+  user_id: number;
+  company_id: number;
+  temporary_password: string;
+}
+
+export interface RejectCompanyResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * List all company applications (admin only).
+ * Optional status filter: ?status=pending
+ */
+export const getAdminCompanyApplications = async (
+  status?: 'pending' | 'approved' | 'rejected'
+): Promise<AdminCompanyApplicationsListResponse> => {
+  const params = status ? { status } : {};
+  const response = await axiosInstance.get<AdminCompanyApplicationsListResponse>(
+    '/accounts/admin/company-applications/',
+    { params }
+  );
+  return response.data;
+};
+
+/**
+ * Get a single application detail (admin only).
+ */
+export const getAdminCompanyApplication = async (
+  applicationId: number
+): Promise<AdminCompanyApplicationDetailResponse> => {
+  const response = await axiosInstance.get<AdminCompanyApplicationDetailResponse>(
+    `/accounts/admin/company-applications/${applicationId}/`
+  );
+  return response.data;
+};
+
+/**
+ * Approve a pending application (admin only).
+ */
+export const approveCompanyApplication = async (
+  applicationId: number
+): Promise<ApproveCompanyResponse> => {
+  const response = await axiosInstance.post<ApproveCompanyResponse>(
+    `/accounts/admin/company-applications/${applicationId}/approve/`
+  );
+  return response.data;
+};
+
+/**
+ * Reject a pending application with a reason (admin only).
+ */
+export const rejectCompanyApplication = async (
+  applicationId: number,
+  rejectionReason: string
+): Promise<RejectCompanyResponse> => {
+  const response = await axiosInstance.post<RejectCompanyResponse>(
+    `/accounts/admin/company-applications/${applicationId}/reject/`,
+    { rejection_reason: rejectionReason }
+  );
+  return response.data;
+};
+
+// ----------------------------------------------------------
+// COMPANY PROFILE (Authenticated company user)
+// ----------------------------------------------------------
+
+export interface CompanyProfile {
+  id: number;
+  company_name: string;
+  company_code: string;       // read-only
+  logo: string | null;
+  banner: string;
+  description: string;
+  website: string;
+  email: string;
+  phone: string;
+  industry: string;
+  founded_year: number | null;
+  employee_count: number;
+  headquarters: string;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  pincode: string;
+  linkedin_url: string;
+  twitter_url: string;
+  facebook_url: string;
+  instagram_url: string;
+  registration_number: string;
+  gst_number: string;
+  pan_number: string;
+  status: 'pending' | 'approved' | 'rejected' | 'blocked';
+  is_verified: boolean;
+  is_active: boolean;
+}
+
+export interface CompanyProfileResponse {
+  success: boolean;
+  data: CompanyProfile;
+}
+
+export interface CompanyProfileUpdateResponse {
+  success: boolean;
+  message: string;
+  data: CompanyProfile;
+}
+
+/**
+ * Get the authenticated company user's own profile.
+ */
+export const getCompanyProfile = async (): Promise<CompanyProfileResponse> => {
+  const response = await axiosInstance.get<CompanyProfileResponse>(
+    '/accounts/company/profile/'
+  );
+  return response.data;
+};
+
+/**
+ * Update the authenticated company user's profile (partial update).
+ */
+export const updateCompanyProfile = async (
+  data: Partial<CompanyProfile>
+): Promise<CompanyProfileUpdateResponse> => {
+  const response = await axiosInstance.put<CompanyProfileUpdateResponse>(
+    '/accounts/company/profile/',
+    data
+  );
+  return response.data;
+};

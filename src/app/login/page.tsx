@@ -10,7 +10,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { loginWithOtp } from '@/services/authService';
 import { saveTokens } from '@/services/storageService';
 import { loginSuccess } from '@/redux/slices/authSlice';
-import { getProfile } from '@/services/userService';
+import { getProfileByRole } from '@/services/profileService';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 
@@ -48,7 +48,8 @@ export default function LoginPage() {
 
       if (res?.access) {
         saveTokens(res.access, res.refresh);
-        const profile = await getProfile();
+        const profile = await getProfileByRole(res.role);
+        console.log("PROFILE:", profile);
         console.log("PROFILE RESPONSE:", profile);
 
         localStorage.setItem('user_id', res.user_id);
@@ -73,6 +74,7 @@ export default function LoginPage() {
           student: '/student/dashboard',
           tutor: '/tutor/dashboard',
           admin: '/admin/dashboard',
+          company: "/company/dashboard",
         };
         router.push(roleRoutes[res.role] || '/');
         return;

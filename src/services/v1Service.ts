@@ -2241,3 +2241,122 @@ export const getActiveMatching = async () => {
     );
 
 };
+
+export interface AdminUserDetail {
+  id: number;
+  email: string;
+  display_name: string;
+  role: 'student' | 'tutor' | 'company' | 'admin';
+  phone?: string;
+  is_active: boolean;
+  is_email_verified: boolean;
+  is_phone_verified: boolean;
+  is_knowmato_plus: boolean;
+  is_tamil_enabled: boolean;
+  auto_debit_enabled: boolean;
+  date_joined: string;
+  last_login?: string;
+  student_profile?: {
+    full_name: string;
+    mobile_number: string;
+    education_level: string;
+    grade_year: string;
+    stream_category: string;
+    stream: string;
+    preferred_languages: string[];
+    subjects: string[];
+    learning_goals: string[];
+    session_types: string[];
+    preferred_time: string[];
+    skill_level: string;
+    about_learning: string;
+    profile_completed: boolean;
+    profile_photo?: string;
+  } | null;
+  tutor_profile?: {
+    bio: string;
+    skills: string;
+    experience: number;
+    is_verified: boolean;
+    average_rating: number;
+    total_reviews: number;
+    is_top_tutor: boolean;
+    is_online: boolean;
+    last_seen: string | null;
+    phone_number: string;
+    city_state: string;
+    linkedin_profile: string;
+    highest_qualification: string;
+    degree: string;
+    college_name: string;
+    year_of_completion: number | null;
+    expertise_level: string;
+    current_status: string;
+    organization: string;
+    professional_summary: string;
+    mentor_subjects: string[];
+    mentor_languages: string[];
+    resume?: string;
+    application_submitted: boolean;
+  } | null;
+  company_account?: {
+    designation: string;
+    role: string;
+    is_primary: boolean;
+    is_active: boolean;
+    joined_at: string;
+    company: {
+      id: number;
+      company_name: string;
+      company_code: string;
+      industry: string;
+      website: string;
+      email: string;
+      phone: string;
+      status: string;
+      is_verified: boolean;
+      is_active: boolean;
+    };
+  } | null;
+}
+
+export const getAdminUserDetail = async (userId: number): Promise<AdminUserDetail> => {
+  const response = await apiGet(`/accounts/admin/users/${userId}/`);
+  return response.data; // or response.data if nested
+};
+
+// ======================================================
+// 👨‍💼 ADMIN - USER CRUD OPERATIONS
+// ======================================================
+
+export interface UpdateUserPayload {
+  email?: string;
+  display_name?: string;
+  role?: string;
+  phone?: string;
+  is_active?: boolean;
+}
+
+/**
+ * Update user details (email, display_name, role, phone, etc.)
+ */
+export const adminUpdateUser = async (
+  userId: number,
+  data: UpdateUserPayload
+) => {
+  return await apiPut(`/accounts/admin/users/${userId}/update/`, data);
+};
+
+/**
+ * Delete (permanently remove) a user account.
+ */
+export const adminDeleteUser = async (userId: number) => {
+  return await apiDelete(`/accounts/admin/users/${userId}/delete/`);
+};
+
+/**
+ * Toggle user active/suspended status.
+ */
+export const adminToggleUserActive = async (userId: number) => {
+  return await apiPost(`/accounts/admin/users/${userId}/toggle-active/`, {});
+};
