@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { purchaseCourse, getCourseContent, getCourseEnrollmentStatus, getQuizQuestions } from "@/services/v2Service";
-import type { CourseContentResponse } from "@/services/v2Service"; // ensure this export exists
+import type { CourseContentResponse } from "@/services/v2Service";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 // ---------- Type definitions (matching the course content structure) ----------
 interface Lecture {
@@ -111,6 +112,7 @@ function getYouTubeEmbedUrl(url: string): string | null {
 
 // ---------- Main Component ----------
 export default function CourseDetailPage() {
+  const { t } = useTranslation(); // ✅ added
   const params = useParams();
   const router = useRouter();
   const courseId = Number(params.id);
@@ -149,16 +151,16 @@ export default function CourseDetailPage() {
       setError(null);
       const response: CourseContentResponse = await getCourseContent(courseId);
       if (!response.success) {
-        throw new Error(response.message || "Failed to load course");
+        throw new Error(response.message || t("courseDetail.loadError"));
       }
       setCourse(response.data as unknown as CourseDetail);
     } catch (err: any) {
-      setError(err?.message || "Failed to load course");
+      setError(err?.message || t("courseDetail.loadError"));
       console.error(err);
     } finally {
       setLoading(false);
     }
-  }, [courseId]);
+  }, [courseId, t]);
 
   // ---------- Check enrollment ----------
   const checkEnrollment = useCallback(async () => {
@@ -188,7 +190,6 @@ export default function CourseDetailPage() {
 
   const handleLectureClick = (lecture: Lecture, sectionId: number) => {
     setActiveItem({ type: "lecture", id: lecture.id, sectionId });
-    // Reset quiz state
     setQuizQuestions([]);
     setCurrentQuestionIndex(0);
     setSelectedOption(null);
@@ -200,11 +201,8 @@ export default function CourseDetailPage() {
     if (!isEnrolled) return;
     setQuizLoading(true);
     try {
-      // ✅ FIX: use the proper service function
       const questions = await getQuizQuestions(quiz.id);
-
       const normalizedQuestions = normalizeQuizQuestions(questions);
-
       setQuizQuestions(normalizedQuestions);
       setCurrentQuestionIndex(0);
       setSelectedOption(null);
@@ -212,7 +210,7 @@ export default function CourseDetailPage() {
       setQuizFinished(false);
       setQuizScore(0);
     } catch (err: any) {
-      toast.error(err.message || "Could not load quiz");
+      toast.error(t("courseDetail.quizLoadError"));
       setQuizQuestions([]);
     } finally {
       setQuizLoading(false);
@@ -224,10 +222,10 @@ export default function CourseDetailPage() {
     setEnrollLoading(true);
     try {
       await purchaseCourse(course.id);
-      toast.success("Enrolled successfully!");
+      toast.success(t("courseDetail.enrollSuccess"));
       setIsEnrolled(true);
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || err.message || "Enrollment failed";
+      const msg = err?.response?.data?.detail || err.message || t("courseDetail.enrollFailed");
       toast.error(msg);
     } finally {
       setEnrollLoading(false);
@@ -244,7 +242,7 @@ export default function CourseDetailPage() {
 
   const handleNextQuestion = () => {
     if (selectedOption === null) {
-      toast.error("Please select an option");
+      toast.error(t("courseDetail.pleaseSelectOption"));
       return;
     }
     const question = quizQuestions[currentQuestionIndex];
@@ -287,7 +285,7 @@ export default function CourseDetailPage() {
           onClick={() => router.back()}
           className="mt-4 px-4 py-2 rounded bg-white/10 hover:bg-white/20"
         >
-          Go Back
+          {t("common.goBack")}
         </button>
       </div>
     );
@@ -303,7 +301,7 @@ export default function CourseDetailPage() {
           onClick={() => router.back()}
           className="mb-4 text-sm text-white/60 hover:text-white flex items-center gap-1"
         >
-          ← Back to courses
+          ← {t("courseDetail.backToCourses")}
         </button>
         <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
           {course.title}
@@ -388,32 +386,32 @@ export default function CourseDetailPage() {
                 <p className="mt-2 text-xl text-white/80">{course.subtitle}</p>
                 <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/60">
                   <span className="flex items-center gap-1">
-                    📚 {course.total_sections} sections
+                    {t("courseDetail.sectionsCount", { count: course.total_sections })}
                   </span>
                   <span className="flex items-center gap-1">
-                    🎬 {course.total_lectures} lectures
+                    {t("courseDetail.lecturesCount", { count: course.total_lectures })}
                   </span>
                   <span className="flex items-center gap-1">
-                    📝 {course.total_quizzes} quizzes
+                    {t("courseDetail.quizzesCount", { count: course.total_quizzes })}
                   </span>
                   <span className="flex items-center gap-1">
-                    ⏱ {course.duration_hours}h
+                    {t("courseDetail.duration", { duration: course.duration_hours })}
                   </span>
                   <span className="capitalize">{course.difficulty}</span>
                   <span>{course.language}</span>
                 </div>
                 <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <h3 className="font-semibold mb-2">About this course</h3>
+                  <h3 className="font-semibold mb-2">{t("courseDetail.aboutCourse")}</h3>
                   <p className="text-white/70 whitespace-pre-line">
                     {course.description}
                   </p>
                 </div>
                 <div className="mt-4 flex items-center gap-3 text-sm text-white/50">
-                  <span>Instructor: {course.instructor_name}</span>
+                  <span>{t("courseDetail.instructor", { name: course.instructor_name })}</span>
                   <span>•</span>
-                  <span>{course.total_students} students enrolled</span>
+                  <span>{t("courseDetail.studentsEnrolled", { count: course.total_students })}</span>
                   <span>•</span>
-                  <span>⭐ {course.average_rating} ({course.total_reviews} reviews)</span>
+                  <span>{t("courseDetail.ratingAndReviews", { rating: course.average_rating, reviews: course.total_reviews })}</span>
                 </div>
               </div>
               {/* Price / Enroll Button */}
@@ -435,7 +433,7 @@ export default function CourseDetailPage() {
                         </span>
                       </>
                     ) : (
-                      <>{Number(course.price) === 0 ? "Free" : `₹${course.price}`}</>
+                      <>{Number(course.price) === 0 ? t("courseDetail.free") : `₹${course.price}`}</>
                     )}
                   </div>
                   {!isEnrolled ? (
@@ -444,11 +442,11 @@ export default function CourseDetailPage() {
                       disabled={enrollLoading}
                       className="w-full mt-3 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold text-white disabled:opacity-50"
                     >
-                      {enrollLoading ? "Enrolling..." : "Enroll Now"}
+                      {enrollLoading ? t("courseDetail.enrolling") : t("courseDetail.enrollNow")}
                     </button>
                   ) : (
                     <div className="text-center p-2 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold">
-                      ✅ Enrolled
+                      {t("courseDetail.enrolled")}
                     </div>
                   )}
                 </div>
@@ -460,9 +458,9 @@ export default function CourseDetailPage() {
         {/* ---------- If not enrolled and an item is selected: show lock ---------- */}
         {activeItem && !isEnrolled && (
           <div className="max-w-md mx-auto mt-20 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center backdrop-blur-xl">
-            <h2 className="text-2xl font-bold text-yellow-200">🔒 Enroll to Access</h2>
+            <h2 className="text-2xl font-bold text-yellow-200">{t("courseDetail.enrollToAccessTitle")}</h2>
             <p className="mt-4 text-white/70">
-              You need to enroll in this course to view the full content.
+              {t("courseDetail.enrollToAccessMessage")}
             </p>
             {course && (
               <div className="mt-4 text-lg font-semibold">
@@ -474,7 +472,7 @@ export default function CourseDetailPage() {
                     </span>
                   </>
                 ) : (
-                  <span>{Number(course.price) === 0 ? "Free" : `₹${course.price}`}</span>
+                  <span>{Number(course.price) === 0 ? t("courseDetail.free") : `₹${course.price}`}</span>
                 )}
               </div>
             )}
@@ -483,7 +481,7 @@ export default function CourseDetailPage() {
               disabled={enrollLoading}
               className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold text-white disabled:opacity-50"
             >
-              {enrollLoading ? "Enrolling..." : "Enroll Now"}
+              {enrollLoading ? t("courseDetail.enrolling") : t("courseDetail.enrollNow")}
             </button>
           </div>
         )}
@@ -513,11 +511,11 @@ export default function CourseDetailPage() {
                       handleVideoTimeUpdate(activeLecture.id, e.currentTarget.currentTime)
                     }
                   >
-                    Your browser does not support the video tag.
+                    {t("courseDetail.videoNotSupported")}
                   </video>
                 ) : (
                   <div className="aspect-video bg-gray-800 flex items-center justify-center text-white/50">
-                    No video source available
+                    {t("courseDetail.noVideoSource")}
                   </div>
                 )}
               </div>
@@ -528,20 +526,20 @@ export default function CourseDetailPage() {
               />
             ) : (
               <div className="text-center py-12 text-white/50">
-                This content type is not supported yet.
+                {t("courseDetail.contentTypeNotSupported")}
               </div>
             )}
 
             {activeLecture.resource_url && (
               <div className="mt-6 p-4 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-sm font-semibold">Resource:</p>
+                <p className="text-sm font-semibold">{t("courseDetail.resource")}</p>
                 <a
                   href={activeLecture.resource_url}
                   target="_blank"
                   rel="noreferrer"
                   className="text-violet-400 underline text-sm"
                 >
-                  {activeLecture.resource_name || "Download"}
+                  {activeLecture.resource_name || t("courseDetail.download")}
                 </a>
               </div>
             )}
@@ -561,22 +559,22 @@ export default function CourseDetailPage() {
             ) : quizFinished ? (
               <div className="rounded-2xl bg-white/5 border border-white/10 p-6 text-center">
                 <h2 className="text-3xl font-bold text-emerald-400">
-                  Quiz Completed!
+                  {t("courseDetail.quizCompleted")}
                 </h2>
                 <p className="mt-2 text-lg">
-                  Your score: {quizScore} / {quizQuestions.length}
+                  {t("courseDetail.quizScore", { score: quizScore, total: quizQuestions.length })}
                 </p>
                 <button
                   onClick={() => setActiveItem(null)}
                   className="mt-4 px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30"
                 >
-                  Back to Course
+                  {t("courseDetail.backToCourse")}
                 </button>
               </div>
             ) : quizQuestions.length > 0 ? (
               <>
                 <div className="mb-4 text-sm text-white/40">
-                  Question {currentQuestionIndex + 1} of {quizQuestions.length}
+                  {t("courseDetail.questionProgress", { current: currentQuestionIndex + 1, total: quizQuestions.length })}
                 </div>
                 <div className="rounded-xl bg-white/5 border border-white/10 p-6">
                   <p className="text-lg font-medium mb-4">
@@ -609,13 +607,13 @@ export default function CourseDetailPage() {
                     className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold disabled:opacity-50"
                     disabled={selectedOption === null}
                   >
-                    {currentQuestionIndex < quizQuestions.length - 1 ? "Next" : "Finish"}
+                    {currentQuestionIndex < quizQuestions.length - 1 ? t("courseDetail.next") : t("courseDetail.finish")}
                   </button>
                 </div>
               </>
             ) : (
               <p className="text-center text-white/50">
-                No questions available for this quiz.
+                {t("courseDetail.noQuizQuestions")}
               </p>
             )}
           </div>

@@ -9,8 +9,11 @@ import {
   type Job,
   type JobApplication,
 } from '@/services/v2Service';
+import { useTranslation } from 'react-i18next';
 
 export default function JobsPage() {
+  const { t } = useTranslation();
+
   // --- Data & loading states ---
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -51,14 +54,14 @@ export default function JobsPage() {
         setJobs(jobsData);
         setApplications(appsData);
       } catch (err: any) {
-        setError(err?.response?.data?.detail || err?.message || 'Failed to load data');
+        setError(err?.response?.data?.detail || err?.message || t('jobs.loadError'));
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [t]);
 
   // --- Client‑side filtering ---
   const filteredJobs = useMemo(() => {
@@ -98,21 +101,18 @@ export default function JobsPage() {
         cover_letter: coverLetter || undefined,
         resume_url: resumeUrl || undefined,
       });
-      // The response may contain the new application object; we'll add it to state
       if (result && result.data) {
         setApplications((prev) => [...prev, result.data]);
       } else {
-        // If the API doesn't return the application, re‑fetch
         const updatedApps = await getMyJobApplications();
         setApplications(updatedApps);
       }
       setApplyMessage({
         type: 'success',
-        text: 'Application submitted successfully!',
+        text: t('jobs.applicationSuccess'),
       });
-      // Keep modal open to show success; user can close manually
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || 'Something went wrong';
+      const detail = err?.response?.data?.detail || err?.message || t('jobs.somethingWentWrong');
       setApplyMessage({ type: 'error', text: detail });
     } finally {
       setApplying(false);
@@ -125,12 +125,10 @@ export default function JobsPage() {
     setWithdrawing(true);
     try {
       await withdrawJobApplication(selectedApplication.id);
-      // Remove the withdrawn application from local state
       setApplications((prev) => prev.filter((app) => app.id !== selectedApplication.id));
-      // Optionally show a success toast
-      setDetailModalOpen(false); // or keep open and show apply again
+      setDetailModalOpen(false);
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || 'Withdraw failed';
+      const detail = err?.response?.data?.detail || err?.message || t('jobs.withdrawFailed');
       setApplyMessage({ type: 'error', text: detail });
     } finally {
       setWithdrawing(false);
@@ -154,6 +152,52 @@ export default function JobsPage() {
     });
   };
 
+  // --- Translation helpers ---
+  const translateJobType = (type: string) => {
+    const keyMap: Record<string, string> = {
+      full_time: 'jobs.types.full_time',
+      part_time: 'jobs.types.part_time',
+      contract: 'jobs.types.contract',
+      remote: 'jobs.types.remote',
+    };
+    return t(keyMap[type] || type);
+  };
+
+  const translateExperienceLevel = (level: string) => {
+    // Map any experience levels that might appear (adjust as needed)
+    const keyMap: Record<string, string> = {
+      entry: 'jobs.experience.entry',
+      mid: 'jobs.experience.mid',
+      senior: 'jobs.experience.senior',
+      lead: 'jobs.experience.lead',
+    };
+    return t(keyMap[level] || level);
+  };
+
+  const translateApplicationStatus = (status: string) => {
+    const keyMap: Record<string, string> = {
+      applied: 'jobs.status.applied',
+      shortlisted: 'jobs.status.shortlisted',
+      interview: 'jobs.status.interview',
+      offered: 'jobs.status.offered',
+      rejected: 'jobs.status.rejected',
+      withdrawn: 'jobs.status.withdrawn',
+    };
+    return t(keyMap[status] || status);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'applied': return 'bg-blue-500/20 text-blue-300';
+      case 'shortlisted': return 'bg-yellow-500/20 text-yellow-300';
+      case 'interview': return 'bg-purple-500/20 text-purple-300';
+      case 'offered': return 'bg-green-500/20 text-green-300';
+      case 'rejected': return 'bg-red-500/20 text-red-300';
+      case 'withdrawn': return 'bg-gray-500/20 text-gray-400';
+      default: return 'bg-white/10 text-white/60';
+    }
+  };
+
   // --- Render ---
   return (
     <div className="min-h-screen bg-[#0B0C10] p-6 text-white">
@@ -161,10 +205,10 @@ export default function JobsPage() {
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            Job Openings
+            {t('jobs.title')}
           </h1>
           <p className="mt-2 text-white/70">
-            Explore the latest job opportunities tailored for you.
+            {t('jobs.subtitle')}
           </p>
         </div>
 
@@ -172,35 +216,35 @@ export default function JobsPage() {
         <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="search-title" className="mb-1.5 block text-sm font-medium text-white/60">
-              Search
+              {t('jobs.search')}
             </label>
             <input
               id="search-title"
               type="text"
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
-              placeholder="Job title..."
+              placeholder={t('jobs.searchPlaceholder')}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="filter-location" className="mb-1.5 block text-sm font-medium text-white/60">
-              Location
+              {t('jobs.location')}
             </label>
             <input
               id="filter-location"
               type="text"
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
-              placeholder="City or remote..."
+              placeholder={t('jobs.locationPlaceholder')}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="filter-type" className="mb-1.5 block text-sm font-medium text-white/60">
-              Type
+              {t('jobs.type')}
             </label>
             <select
               id="filter-type"
@@ -208,11 +252,11 @@ export default function JobsPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             >
-              <option value="">All</option>
-              <option value="full_time">Full-time</option>
-              <option value="part_time">Part-time</option>
-              <option value="contract">Contract</option>
-              <option value="remote">Remote</option>
+              <option value="">{t('jobs.typeAll')}</option>
+              <option value="full_time">{t('jobs.types.full_time')}</option>
+              <option value="part_time">{t('jobs.types.part_time')}</option>
+              <option value="contract">{t('jobs.types.contract')}</option>
+              <option value="remote">{t('jobs.types.remote')}</option>
             </select>
           </div>
         </div>
@@ -245,7 +289,7 @@ export default function JobsPage() {
               onClick={() => window.location.reload()}
               className="mt-3 text-sm underline hover:text-white"
             >
-              Retry
+              {t('jobs.retry')}
             </button>
           </div>
         )}
@@ -253,14 +297,14 @@ export default function JobsPage() {
         {/* Empty API data */}
         {!loading && !error && jobs.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-12 text-center text-white/50">
-            <p className="text-lg">No job openings available at the moment.</p>
+            <p className="text-lg">{t('jobs.noJobs')}</p>
           </div>
         )}
 
         {/* Filtered empty */}
         {!loading && !error && jobs.length > 0 && filteredJobs.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-12 text-center text-white/50">
-            <p>No jobs match your filters.</p>
+            <p>{t('jobs.noMatchingJobs')}</p>
             <button
               onClick={() => {
                 setSearchTitle('');
@@ -269,7 +313,7 @@ export default function JobsPage() {
               }}
               className="mt-2 text-sm text-violet-400 underline hover:text-violet-300"
             >
-              Clear filters
+              {t('jobs.clearFilters')}
             </button>
           </div>
         )}
@@ -293,15 +337,15 @@ export default function JobsPage() {
 
                   {/* Tags */}
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-violet-200 capitalize">
-                      {job.job_type.replace('_', ' ')}
+                    <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-violet-200">
+                      {translateJobType(job.job_type)}
                     </span>
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/60">
                       {job.location}
                     </span>
                     {job.experience_level && (
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/60 capitalize">
-                        {job.experience_level.replace('_', ' ')}
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/60">
+                        {translateExperienceLevel(job.experience_level)}
                       </span>
                     )}
                   </div>
@@ -331,23 +375,23 @@ export default function JobsPage() {
                   {/* Salary & Deadline */}
                   <div className="mt-auto pt-4 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-400">
-                      {formatSalary(job.salary_min, job.salary_max) || 'Negotiable'}
+                      {formatSalary(job.salary_min, job.salary_max) || t('jobs.negotiable')}
                     </span>
                     {job.application_deadline && (
                       <span className="text-xs text-white/40">
-                        Deadline: {formatDeadline(job.application_deadline)}
+                        {t('jobs.deadline')}: {formatDeadline(job.application_deadline)}
                       </span>
                     )}
                   </div>
 
-                  {/* Application status badge (instead of Apply button) */}
+                  {/* Application status badge */}
                   {application ? (
-                    <div className="mt-4 w-full rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 text-center text-sm font-medium text-emerald-300">
-                      {application.status.replace('_', ' ').toUpperCase()}
+                    <div className={`mt-4 w-full rounded-lg px-4 py-2 text-center text-sm font-medium ${getStatusColor(application.status)}`}>
+                      {translateApplicationStatus(application.status).toUpperCase()}
                     </div>
                   ) : (
                     <div className="mt-4 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-center text-sm font-bold text-white">
-                      View & Apply
+                      {t('jobs.viewAndApply')}
                     </div>
                   )}
                 </div>
@@ -360,7 +404,7 @@ export default function JobsPage() {
       {/* Detail / Apply / Status Modal */}
       {detailModalOpen && selectedJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl relative">
             {/* Close button */}
             <button
               onClick={() => setDetailModalOpen(false)}
@@ -376,51 +420,51 @@ export default function JobsPage() {
             )}
 
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-200 capitalize">
-                {selectedJob.job_type.replace('_', ' ')}
+              <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-200">
+                {translateJobType(selectedJob.job_type)}
               </span>
               <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
                 {selectedJob.location}
               </span>
               {selectedJob.experience_level && (
-                <span className="rounded-full bg-white/10 px-3 py-1 text-white/60 capitalize">
-                  {selectedJob.experience_level.replace('_', ' ')}
+                <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
+                  {translateExperienceLevel(selectedJob.experience_level)}
                 </span>
               )}
               {selectedJob.vacancies && (
                 <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
-                  {selectedJob.vacancies} open position{selectedJob.vacancies > 1 ? 's' : ''}
+                  {t('jobs.openPositions', { count: selectedJob.vacancies })}
                 </span>
               )}
             </div>
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <div>
-                <h3 className="font-semibold text-white/80">Salary</h3>
+                <h3 className="font-semibold text-white/80">{t('jobs.salary')}</h3>
                 <p className="mt-1 text-emerald-400 text-lg font-bold">
-                  {formatSalary(selectedJob.salary_min, selectedJob.salary_max) || 'Not disclosed'}
+                  {formatSalary(selectedJob.salary_min, selectedJob.salary_max) || t('jobs.notDisclosed')}
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold text-white/80">Deadline</h3>
+                <h3 className="font-semibold text-white/80">{t('jobs.deadline')}</h3>
                 <p className="mt-1 text-white/80">
                   {selectedJob.application_deadline
                     ? formatDeadline(selectedJob.application_deadline)
-                    : 'Ongoing'}
+                    : t('jobs.ongoing')}
                 </p>
               </div>
             </div>
 
             {/* Description */}
             <div className="mt-6">
-              <h3 className="font-semibold text-white/80">Description</h3>
+              <h3 className="font-semibold text-white/80">{t('jobs.description')}</h3>
               <p className="mt-2 text-white/70 whitespace-pre-line">{selectedJob.description}</p>
             </div>
 
             {/* Skills */}
             {selectedJob.skills && selectedJob.skills.length > 0 && (
               <div className="mt-6">
-                <h3 className="font-semibold text-white/80">Required Skills</h3>
+                <h3 className="font-semibold text-white/80">{t('jobs.requiredSkills')}</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedJob.skills.map((skill, idx) => (
                     <span
@@ -440,29 +484,17 @@ export default function JobsPage() {
                 // Already applied
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Your Application</h3>
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${
-                        selectedApplication.status === 'applied'
-                          ? 'bg-blue-500/20 text-blue-300'
-                          : selectedApplication.status === 'shortlisted'
-                          ? 'bg-yellow-500/20 text-yellow-300'
-                          : selectedApplication.status === 'interview'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : selectedApplication.status === 'offered'
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-red-500/20 text-red-300'
-                      }`}
-                    >
-                      {selectedApplication.status.replace('_', ' ').toUpperCase()}
+                    <h3 className="text-lg font-semibold text-white">{t('jobs.yourApplication')}</h3>
+                    <span className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(selectedApplication.status)}`}>
+                      {translateApplicationStatus(selectedApplication.status).toUpperCase()}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-white/50">
-                    Applied on {new Date(selectedApplication.applied_at).toLocaleDateString()}
+                    {t('jobs.appliedOn', { date: new Date(selectedApplication.applied_at).toLocaleDateString() })}
                   </p>
                   {selectedApplication.cover_letter && (
                     <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
-                      <h4 className="text-sm font-medium text-white/70">Cover Letter</h4>
+                      <h4 className="text-sm font-medium text-white/70">{t('jobs.coverLetter')}</h4>
                       <p className="mt-1 text-white/60 text-sm">{selectedApplication.cover_letter}</p>
                     </div>
                   )}
@@ -471,39 +503,39 @@ export default function JobsPage() {
                     disabled={withdrawing}
                     className="mt-6 w-full rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-50"
                   >
-                    {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                    {withdrawing ? t('jobs.withdrawing') : t('jobs.withdrawApplication')}
                   </button>
                 </div>
               ) : (
                 // Apply form
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Apply for this position</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('jobs.applyForThisPosition')}</h3>
 
                   <div className="mt-4 space-y-4">
                     <div>
                       <label htmlFor="cover-letter" className="block text-sm text-white/70">
-                        Cover Letter <span className="text-xs text-white/40">(optional)</span>
+                        {t('jobs.coverLetter')} <span className="text-xs text-white/40">{t('jobs.optional')}</span>
                       </label>
                       <textarea
                         id="cover-letter"
                         rows={4}
                         value={coverLetter}
                         onChange={(e) => setCoverLetter(e.target.value)}
-                        placeholder="Tell us why you are a great fit..."
+                        placeholder={t('jobs.coverLetterPlaceholder')}
                         className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none resize-none"
                       />
                     </div>
 
                     <div>
                       <label htmlFor="resume-url" className="block text-sm text-white/70">
-                        Resume URL <span className="text-xs text-white/40">(optional)</span>
+                        {t('jobs.resumeUrl')} <span className="text-xs text-white/40">{t('jobs.optional')}</span>
                       </label>
                       <input
                         id="resume-url"
                         type="url"
                         value={resumeUrl}
                         onChange={(e) => setResumeUrl(e.target.value)}
-                        placeholder="https://drive.google.com/..."
+                        placeholder={t('jobs.resumeUrlPlaceholder')}
                         className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none"
                       />
                     </div>
@@ -524,7 +556,7 @@ export default function JobsPage() {
                     disabled={applying}
                     className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                   >
-                    {applying ? 'Submitting...' : 'Submit Application'}
+                    {applying ? t('jobs.submitting') : t('jobs.submitApplication')}
                   </button>
                 </div>
               )}

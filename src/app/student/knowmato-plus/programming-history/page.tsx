@@ -7,8 +7,10 @@ import {
   getProgrammingMarks,
   ProgrammingMark,
 } from '@/services/assessmentService';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 export default function ProgrammingHistoryPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
 
   // ─── State ──────────────────────────────────────────────
@@ -27,14 +29,25 @@ export default function ProgrammingHistoryPage() {
         );
         setMarks(sorted);
       } catch (error) {
-        toast.error('Could not load programming history.');
+        toast.error(t('programmingHistory.fetchError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchHistory();
-  }, []);
+  }, [t]);
+
+  // ─── Translate status ──────────────────────────────────
+  const translateStatus = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return t('programmingHistory.statusCompleted');
+      // Add more statuses if needed
+      default:
+        return status; // fallback to raw status
+    }
+  };
 
   // ─── Loading skeleton ──────────────────────────────────
   if (loading) {
@@ -42,7 +55,7 @@ export default function ProgrammingHistoryPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading history…</p>
+          <p className="mt-2 text-sm text-white/70">{t('programmingHistory.loading')}</p>
         </div>
       </div>
     );
@@ -62,13 +75,13 @@ export default function ProgrammingHistoryPage() {
             onClick={() => router.push('/student/knowmato-plus/assessments')}
             className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
           >
-            ← Back to Dashboard
+            {t('programmingHistory.backToDashboard')}
           </button>
           <h1 className="text-2xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 md:text-3xl">
-            💻 Programming History
+            {t('programmingHistory.title')}
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            Your past coding challenge submissions
+            {t('programmingHistory.subtitle')}
           </p>
         </div>
 
@@ -76,7 +89,7 @@ export default function ProgrammingHistoryPage() {
         {marks.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
             <div className="text-4xl mb-4">📭</div>
-            <p className="text-sm text-white/50">No programming attempts yet.</p>
+            <p className="text-sm text-white/50">{t('programmingHistory.noAttempts')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -88,7 +101,7 @@ export default function ProgrammingHistoryPage() {
                 <div className="mb-3 sm:mb-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-white">
-                      Question #{mark.question}
+                      {t('programmingHistory.questionLabel', { id: mark.question })}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -97,7 +110,7 @@ export default function ProgrammingHistoryPage() {
                           : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                       }`}
                     >
-                      {mark.status}
+                      {translateStatus(mark.status)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-white/50">

@@ -7,9 +7,11 @@ import {
   getMCQMarks,
   MCQMark,
 } from '@/services/assessmentService';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 export default function MCQHistoryPage() {
   const router = useRouter();
+  const { t } = useTranslation(); // ✅ added
 
   // ─── State ──────────────────────────────────────────────
   const [marks, setMarks] = useState<MCQMark[]>([]);
@@ -26,14 +28,14 @@ export default function MCQHistoryPage() {
         );
         setMarks(sorted);
       } catch (error) {
-        toast.error('Could not load MCQ history.');
+        toast.error(t('mcqHistory.error')); // ✅ translated
       } finally {
         setLoading(false);
       }
     };
 
     fetchHistory();
-  }, []);
+  }, [t]);
 
   // ─── Loading skeleton ──────────────────────────────────
   if (loading) {
@@ -41,7 +43,7 @@ export default function MCQHistoryPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading history…</p>
+          <p className="mt-2 text-sm text-white/70">{t('mcqHistory.loading')}</p>
         </div>
       </div>
     );
@@ -61,13 +63,13 @@ export default function MCQHistoryPage() {
             onClick={() => router.push('/student/knowmato-plus/assessments')}
             className="mb-4 flex items-center gap-1 text-sm font-semibold text-fuchsia-300 hover:text-fuchsia-200 transition-colors"
           >
-            ← Back to Dashboard
+            ← {t('mcqHistory.backToDashboard')}
           </button>
           <h1 className="text-2xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 md:text-3xl">
-            📝 MCQ History
+            📝 {t('mcqHistory.title')}
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            Your previous multiple‑choice test results
+            {t('mcqHistory.subtitle')}
           </p>
         </div>
 
@@ -75,7 +77,7 @@ export default function MCQHistoryPage() {
         {marks.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
             <div className="text-4xl mb-4">📭</div>
-            <p className="text-sm text-white/50">No MCQ attempts yet.</p>
+            <p className="text-sm text-white/50">{t('mcqHistory.noAttempts')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -110,7 +112,9 @@ export default function MCQHistoryPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-white">{mark.marks} pts</p>
+                  <p className="text-xl font-bold text-white">
+                    {mark.marks} {t('mcqHistory.points')}
+                  </p>
                 </div>
               </div>
             ))}

@@ -6,6 +6,7 @@ import { apiGet } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +26,7 @@ type Message = {
 // StudentChatHistoryScreen
 // ---------------------------------------------------------------------------
 const StudentChatHistoryScreen = () => {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -53,11 +55,11 @@ const StudentChatHistoryScreen = () => {
       setMessages(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error("Chat history error:", err);
-      setError("Failed to load chat history.");
+      setError(t("chatHistory.loadError")); // ✅ added key (see JSON updates)
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, t]);
 
   useEffect(() => {
     fetchMessages();
@@ -116,7 +118,7 @@ const StudentChatHistoryScreen = () => {
               onClick={() => window.open(item.file || item.link, "_blank")}
               className="flex items-center gap-2 text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition"
             >
-              <span>🎧</span> Play Audio
+              <span>🎧</span> {t("chatHistory.playAudio")}
             </button>
           )}
 
@@ -126,7 +128,7 @@ const StudentChatHistoryScreen = () => {
               onClick={() => window.open(item.file || item.link, "_blank")}
               className="flex items-center gap-2 text-sm bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition"
             >
-              <span>🎥</span> Watch Video
+              <span>🎥</span> {t("chatHistory.watchVideo")}
             </button>
           )}
 
@@ -151,7 +153,7 @@ const StudentChatHistoryScreen = () => {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
         <div className="text-center text-white">
           <div className="w-10 h-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent mx-auto" />
-          <p className="mt-3 text-sm text-white/70">Loading chat…</p>
+          <p className="mt-3 text-sm text-white/70">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -169,7 +171,7 @@ const StudentChatHistoryScreen = () => {
             onClick={fetchMessages}
             className="px-5 py-2.5 bg-rose-500/20 border border-rose-400/40 text-rose-300 rounded-xl hover:bg-rose-500/30 transition"
           >
-            Retry
+            {t("common.retry")}
           </button>
         </div>
       </div>
@@ -201,7 +203,7 @@ const StudentChatHistoryScreen = () => {
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">{tutorName}</h2>
-              <p className="text-xs text-white/50">Chat History</p>
+              <p className="text-xs text-white/50">{t("chatHistory.title")}</p>
             </div>
           </div>
         </header>
@@ -215,7 +217,7 @@ const StudentChatHistoryScreen = () => {
           }
           className="w-full mb-6 py-3 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition"
         >
-          🚀 Ask Again with {tutorName}
+          🚀 {t("chatHistory.askAgain", { name: tutorName })}
         </button>
 
         {/* Messages container */}
@@ -223,8 +225,8 @@ const StudentChatHistoryScreen = () => {
           {messages.length === 0 ? (
             <div className="text-center py-16 text-white/50">
               <span className="text-5xl block mb-4">💬</span>
-              <h3 className="text-xl font-bold">No messages found</h3>
-              <p className="text-sm mt-1">Chat history will appear here</p>
+              <h3 className="text-xl font-bold">{t("chatHistory.noMessages")}</h3>
+              <p className="text-sm mt-1">{t("chatHistory.chatWillAppear")}</p>
             </div>
           ) : (
             messages.map(renderMessage)

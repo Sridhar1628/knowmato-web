@@ -10,14 +10,11 @@ import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRef
 import { useTranslation } from "react-i18next";
 
 import { useSelector, useDispatch } from 'react-redux';
-
 import { RootState } from '@/redux/store';
-
 import {
     startMatching,
     resumeMatching,
 } from '@/redux/slices/matchingSlice';
-
 import {
     startMatchingTimer,
     isMatchingTimerRunning,
@@ -45,10 +42,7 @@ export default function MatchingScreen() {
   const [loading, setLoading] = useState(true);
 
   const dispatch = useDispatch();
-
-  const matching = useSelector(
-      (state: RootState) => state.matching
-  );
+  const matching = useSelector((state: RootState) => state.matching);
 
   const [matchingInfo, setMatchingInfo] = useState<any>(null);
   const popupShownRef = useRef(false);
@@ -126,10 +120,10 @@ export default function MatchingScreen() {
               break;
             }
             case "DIRECT_REJECTED":
-              alert(t("matching.tutorUnavailable") || "The selected tutor is not available. Finding another tutor...");
+              alert(t("matching.tutorUnavailable"));
               break;
             case "MATCHING_TIMEOUT":
-              setError(t("matching.noTutorsFound") || "No tutors found at the moment. Please try again later.");
+              setError(t("matching.noTutorsFound"));
               break;
             default:
               break;
@@ -141,7 +135,7 @@ export default function MatchingScreen() {
       } catch (err: any) {
         console.error("Socket init error:", err);
         if (isMounted) {
-          setError(err.message || t("matching.connectionFailed") || "Failed to connect to matching service");
+          setError(err.message || t("matching.connectionFailed"));
           setIsConnecting(false);
         }
       }
@@ -197,38 +191,25 @@ export default function MatchingScreen() {
 
       setMatchingInfo(matching);
 
-      const remainingSeconds =
-        matching.remaining_seconds ?? 0;
-
-      const waitingRound =
-        matching.waiting_round ?? 1;
-
+      const remainingSeconds = matching.remaining_seconds ?? 0;
+      const waitingRound = matching.waiting_round ?? 1;
       const currentMatching = matching;
 
-    if (
+      if (
         currentMatching.doubtId !== numericDoubtId ||
         !currentMatching.isMatching
-    ) {
-
+      ) {
         dispatch(
-            startMatching({
-                doubtId: numericDoubtId,
-
-                waitingRound,
-
-                matchingStartedAt:
-                    matching.started_at,
-
-                matchingExpiresAt:
-                    matching.expires_at,
-
-                remainingSeconds,
-            })
+          startMatching({
+            doubtId: numericDoubtId,
+            waitingRound,
+            matchingStartedAt: matching.started_at,
+            matchingExpiresAt: matching.expires_at,
+            remainingSeconds,
+          })
         );
-
         startMatchingTimer();
-
-    }
+      }
 
       setLoadingTimer(false);
     } catch (e) {
@@ -242,48 +223,33 @@ export default function MatchingScreen() {
   }, [doubtId]);
 
   const handleCancel = async () => {
-
-    const confirmed = window.confirm(
-      'A platform fee of 0.25 credits will be deducted.\n\nThe remaining credits will be refunded.\n\nDo you want to continue?'
-    );
+    const confirmed = window.confirm(t("matching.cancelConfirmationMessage"));
 
     if (!confirmed) {
       return;
     }
 
     try {
-
       setLoading(true);
+      const response = await cancelDoubt(Number(doubtId));
 
-      const response = await cancelDoubt(
-        Number(doubtId)
-      );
-
-      // Disconnect websocket
       disconnectSocket();
 
       alert(
-        `Doubt Cancelled\n\nRefunded: ${response.refund_amount} Credits\n\nPlatform Fee: ${response.platform_fee} Credits`
+        t("matching.doubtCancelled", {
+          refund: response.refund_amount,
+          fee: response.platform_fee,
+        })
       );
 
       router.replace('/student/dashboard');
-
     } catch (error: any) {
-
-      alert(
-        error?.message ||
-        'Unable to cancel doubt.'
-      );
-
+      alert(error?.message || t("matching.cancelFailed"));
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center p-4">
@@ -292,7 +258,7 @@ export default function MatchingScreen() {
           <h2 className="text-2xl font-bold text-white mb-2">{t("matching.failed")}</h2>
           <p className="text-white/70 mb-6">{error}</p>
           <button onClick={() => router.back()} className="px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl hover:shadow-lg">
-            {t("common.goBack") || "Go Back"}
+            {t("common.goBack")}
           </button>
         </div>
       </div>
@@ -394,9 +360,7 @@ export default function MatchingScreen() {
             {t("matching.timeRemaining")}
           </p>
           <h2 className="mt-2 text-4xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            {formatTime(
-              matching.remainingSeconds
-            )}
+            {formatTime(matching.remainingSeconds)}
           </h2>
           <p className="mt-2 text-xs text-white/50">
             {t("matching.waitingRound")} {matching.waitingRound} {t("matching.of")} 2
@@ -407,12 +371,7 @@ export default function MatchingScreen() {
       {/* Current Affairs button */}
       <button
         className="mb-4 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white/70 hover:bg-white/10 transition-colors z-10"
-        onClick={() =>
-          alert(
-            t("matching.affairsMessage") ||
-            "India launched a new AI education initiative for students in 2026.\n\nPython and AI remain top in-demand skills globally."
-          )
-        }
+        onClick={() => alert(t("matching.affairsMessage"))}
       >
         📰 {t("matching.readWhileWaiting")}
       </button>
@@ -425,10 +384,7 @@ export default function MatchingScreen() {
         {t("matching.cancelSearch")}
       </button>
 
-      {/* ==========================================
-            MATCHING TIMEOUT MODAL
-        ========================================== */}
-
+      {/* MATCHING TIMEOUT MODAL */}
       {modalType !== "none" && (
         <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center px-4">
           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#17152d] shadow-2xl overflow-hidden">
@@ -446,19 +402,13 @@ export default function MatchingScreen() {
               </h2>
 
               {modalType === "first_timeout" ? (
-                <>
-                  <p className="mt-4 text-sm leading-6 text-white/70">
-                    {t("matching.waitOptions").split('\n').map((line, i) => (
-                      <span key={i}>{line}<br /></span>
-                    ))}
-                  </p>
-                </>
+                <p className="mt-4 text-sm leading-6 text-white/70 whitespace-pre-line">
+                  {t("matching.waitOptions")}
+                </p>
               ) : (
-                <>
-                  <p className="mt-4 text-sm leading-6 text-white/70">
-                    {t("matching.moneySafe")}
-                  </p>
-                </>
+                <p className="mt-4 text-sm leading-6 text-white/70 whitespace-pre-line">
+                  {t("matching.moneySafe")}
+                </p>
               )}
 
               <div className="mt-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-5">

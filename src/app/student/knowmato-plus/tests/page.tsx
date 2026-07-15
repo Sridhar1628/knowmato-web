@@ -10,10 +10,10 @@ export default function TestsPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-6 text-white">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-bold mb-6">
-          {t('knowmatoPlus.tests') || 'Tests'}
+          {t('knowmatoPlus.tests')}
         </h1>
         <p className="text-white/70 mb-8">
-          Practice coding problems and run your solutions below.
+          {t('tests.description')}
         </p>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-lg">

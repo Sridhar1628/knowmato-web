@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 import {
   getQuestionById,
@@ -62,6 +63,7 @@ const storageKey = (questionId: number, language: string) =>
   `code_${questionId}_${language}`;
 
 export default function ProgrammingQuestionPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
   const params = useParams();
   const assignmentId = Number(params.id);
@@ -71,7 +73,7 @@ export default function ProgrammingQuestionPage() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [testCases, setTestCases] = useState<TestCaseResponse | null>(null);
   const [assignmentDetails, setAssignmentDetails] = useState<AssignmentDetails | null>(null);
-  const [assignmentMeta, setAssignmentMeta] = useState<Assignment | null>(null); // for expiry timer
+  const [assignmentMeta, setAssignmentMeta] = useState<Assignment | null>(null);
 
   // ─── Loading states ───────────────────────────────────
   const [loadingQuestion, setLoadingQuestion] = useState(true);
@@ -106,7 +108,6 @@ export default function ProgrammingQuestionPage() {
 
     const loadData = async () => {
       try {
-        // Question + test cases + assignment details + metadata
         const [qRes, tcRes, assignRes, allAssignments] = await Promise.all([
           getQuestionById(questionId),
           getTestCases(questionId),
@@ -117,16 +118,13 @@ export default function ProgrammingQuestionPage() {
         setQuestion(qRes);
         setTestCases(tcRes);
 
-        // Assignment details (questions + mcqs) – needed for progress & next
         setAssignmentDetails(assignRes);
         const idx = assignRes.questions.findIndex((q) => q.id === questionId);
         setCurrentQuestionIndex(idx >= 0 ? idx : 0);
 
-        // Find the assignment metadata for expiry timer
         const meta = allAssignments.find((a) => a.id === assignmentId);
         setAssignmentMeta(meta || null);
 
-        // Load saved code from localStorage (respects questionId + language)
         const savedCode = localStorage.getItem(storageKey(questionId, language));
         if (savedCode) {
           setCode(savedCode);
@@ -134,7 +132,7 @@ export default function ProgrammingQuestionPage() {
           setCode(STARTER_CODES[language]);
         }
       } catch (error) {
-        toast.error('Failed to load question data.');
+        toast.error(t('codeEditor.loadFailed'));
         router.push(`/student/knowmato-plus/assignments/${assignmentId}`);
       } finally {
         setLoadingQuestion(false);
@@ -144,10 +142,10 @@ export default function ProgrammingQuestionPage() {
     };
 
     loadData();
-  }, [questionId, assignmentId]);
+  }, [questionId, assignmentId, t]);
 
   // ──────────────────────────────────────────────────────
-  // Timer logic (if assignment has expiry)
+  // Timer logic
   // ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!assignmentMeta || !assignmentMeta.date_of_expiry) return;
@@ -161,21 +159,20 @@ export default function ProgrammingQuestionPage() {
       const now = new Date();
       const diff = expiryDate.getTime() - now.getTime();
       if (diff <= 0) {
-        setTimeRemaining('Expired');
+        setTimeRemaining(t('codeEditor.timeExpired'));
         return;
       }
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeRemaining(
-        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-      );
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      setTimeRemaining(timeStr);
     };
 
     calcRemaining();
     const timer = setInterval(calcRemaining, 1000);
     return () => clearInterval(timer);
-  }, [assignmentMeta]);
+  }, [assignmentMeta, t]);
 
   // ──────────────────────────────────────────────────────
   // Persist code to localStorage (debounced)
@@ -189,12 +186,11 @@ export default function ProgrammingQuestionPage() {
   }, [code, language, questionId, editorMounted]);
 
   // ──────────────────────────────────────────────────────
-  // Handle language change -> starter code if empty
+  // Handle language change
   // ──────────────────────────────────────────────────────
   const handleLanguageChange = (newLang: Language) => {
     if (newLang === language) return;
 
-    // If current code is the same as the starter for the current language (or empty), replace with new starter
     const currentStarter = STARTER_CODES[language];
     const newStarter = STARTER_CODES[newLang];
     if (code.trim() === '' || code === currentStarter) {
@@ -205,11 +201,11 @@ export default function ProgrammingQuestionPage() {
   };
 
   // ──────────────────────────────────────────────────────
-  // Compile & Run (single input)
+  // Compile & Run
   // ──────────────────────────────────────────────────────
   const handleCompile = async () => {
     if (!code.trim()) {
-      toast.error('Please write some code first.');
+      toast.error(t('codeEditor.pleaseWriteCode'));
       return;
     }
     setIsCompiling(true);
@@ -224,21 +220,21 @@ export default function ProgrammingQuestionPage() {
       if (result.error) {
         setCompileError(result.error);
       } else {
-        setCompileOutput(result.output || 'No output');
+        setCompileOutput(result.output || t('codeEditor.noOutput'));
       }
     } catch (err: any) {
-      setCompileError(err.message || 'Compilation failed.');
+      setCompileError(err.message || t('codeEditor.compilationFailed'));
     } finally {
       setIsCompiling(false);
     }
   };
 
   // ──────────────────────────────────────────────────────
-  // Submit & Run all test cases
+  // Run all test cases
   // ──────────────────────────────────────────────────────
   const handleRunTests = async () => {
     if (!code.trim()) {
-      toast.error('Please write some code first.');
+      toast.error(t('codeEditor.pleaseWriteCode'));
       return;
     }
     setIsRunningTests(true);
@@ -251,9 +247,14 @@ export default function ProgrammingQuestionPage() {
         input_data: customInput || undefined,
       });
       setTestResults(result);
-      toast.success(`Tests completed: ${result.passed_cases}/${result.total_cases}`);
+      toast.success(
+        t('codeEditor.testsCompleted', {
+          passed: result.passed_cases,
+          total: result.total_cases,
+        })
+      );
     } catch (err: any) {
-      toast.error(err.message || 'Failed to run tests.');
+      toast.error(err.message || t('codeEditor.testsRunFailed'));
     } finally {
       setIsRunningTests(false);
     }
@@ -281,13 +282,13 @@ export default function ProgrammingQuestionPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading workspace…</p>
+          <p className="mt-2 text-sm text-white/70">{t('codeEditor.loadingWorkspace')}</p>
         </div>
       </div>
     );
   }
 
-  if (!question) return null; // already redirected
+  if (!question) return null;
 
   const sampleTestCases = testCases?.test_cases ?? [];
 
@@ -310,12 +311,15 @@ export default function ProgrammingQuestionPage() {
               onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}`)}
               className="text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
             >
-              ← Back
+              ← {t('codeEditor.backToAssignment')}
             </button>
             {totalQuestions > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-white/70">
-                  Question {currentQuestionIndex + 1} / {totalQuestions}
+                  {t('codeEditor.questionProgress', {
+                    current: currentQuestionIndex + 1,
+                    total: totalQuestions,
+                  })}
                 </span>
                 <div className="h-2 w-28 rounded-full bg-white/10">
                   <div
@@ -332,12 +336,14 @@ export default function ProgrammingQuestionPage() {
           {timeRemaining && (
             <div
               className={`rounded-full px-4 py-1 text-xs font-bold ${
-                timeRemaining === 'Expired'
+                timeRemaining === t('codeEditor.timeExpired')
                   ? 'bg-red-400/20 text-red-300 border border-red-400/30'
                   : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
               }`}
             >
-              {timeRemaining === 'Expired' ? '⏰ Time expired' : `⏳ ${timeRemaining} remaining`}
+              {timeRemaining === t('codeEditor.timeExpired')
+                ? `⏰ ${t('codeEditor.timeExpired')}`
+                : `⏳ ${t('codeEditor.timeRemaining', { time: timeRemaining })}`}
             </div>
           )}
         </div>
@@ -348,7 +354,9 @@ export default function ProgrammingQuestionPage() {
             <span className="rounded-full bg-violet-400/20 px-3 py-1 text-[10px] font-bold uppercase text-violet-300 border border-violet-400/30">
               {question.level}
             </span>
-            <span className="text-xs text-white/50">Question #{question.id}</span>
+            <span className="text-xs text-white/50">
+              {t('codeEditor.questionNumber', { id: question.id })}
+            </span>
           </div>
           <h1 className="text-xl font-bold text-white">{question.question}</h1>
           {question.description && (
@@ -361,16 +369,18 @@ export default function ProgrammingQuestionPage() {
         {/* Test Cases (sample) */}
         {(testCases?.test_cases?.length ?? 0) > 0 && (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
-            <h3 className="mb-3 text-sm font-bold text-white/80">📋 Sample Test Cases</h3>
+            <h3 className="mb-3 text-sm font-bold text-white/80">
+              📋 {t('codeEditor.sampleTestCases')}
+            </h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {testCases?.test_cases?.map((tc) => (
                 <div
                   key={tc.id}
                   className="rounded-xl border border-white/10 bg-black/20 p-3"
                 >
-                  <p className="text-xs text-violet-300 mb-1">Input:</p>
+                  <p className="text-xs text-violet-300 mb-1">{t('codeEditor.input')}:</p>
                   <pre className="text-xs text-white/80 whitespace-pre-wrap">{tc.input_data || '—'}</pre>
-                  <p className="text-xs text-emerald-300 mt-2 mb-1">Expected Output:</p>
+                  <p className="text-xs text-emerald-300 mt-2 mb-1">{t('codeEditor.expectedOutput')}:</p>
                   <pre className="text-xs text-white/80 whitespace-pre-wrap">{tc.expected_output || '—'}</pre>
                 </div>
               ))}
@@ -380,7 +390,7 @@ export default function ProgrammingQuestionPage() {
 
         {/* Language selector */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-white/70">Language:</span>
+          <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
           <div className="flex gap-2">
             {LANGUAGE_OPTIONS.map((lang) => (
               <button
@@ -404,7 +414,7 @@ export default function ProgrammingQuestionPage() {
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
               <div className="text-center">
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-                <p className="mt-2 text-sm text-white/70">Compiling…</p>
+                <p className="mt-2 text-sm text-white/70">{t('codeEditor.compiling')}</p>
               </div>
             </div>
           )}
@@ -417,7 +427,7 @@ export default function ProgrammingQuestionPage() {
             onMount={() => setEditorMounted(true)}
             loading={
               <div className="flex h-full items-center justify-center text-white/50">
-                Loading editor…
+                {t('codeEditor.loadingEditor')}
               </div>
             }
             options={{
@@ -435,12 +445,12 @@ export default function ProgrammingQuestionPage() {
         <div className="mb-6">
           <details className="group">
             <summary className="cursor-pointer text-sm font-semibold text-white/70 hover:text-white">
-              ⚙️ Custom Input (stdin)
+              ⚙️ {t('codeEditor.customInput')}
             </summary>
             <textarea
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="Enter custom input for testing…"
+              placeholder={t('codeEditor.customInputPlaceholder')}
               className="mt-2 min-h-[80px] w-full rounded-xl border-2 border-white/20 bg-gray-900/60 p-4 text-sm font-mono text-white placeholder-white/30 outline-none focus:border-violet-400"
             />
           </details>
@@ -456,10 +466,10 @@ export default function ProgrammingQuestionPage() {
             {isCompiling ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Compiling…
+                {t('codeEditor.compiling')}
               </>
             ) : (
-              '▶️ Compile & Run'
+              '▶️ ' + t('codeEditor.compileRun')
             )}
           </button>
 
@@ -471,10 +481,10 @@ export default function ProgrammingQuestionPage() {
             {isRunningTests ? (
               <>
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Running Tests…
+                {t('codeEditor.runningTests')}
               </>
             ) : (
-              '🚀 Submit & Run Tests'
+              '🚀 ' + t('codeEditor.submitRunTests')
             )}
           </button>
         </div>
@@ -483,7 +493,7 @@ export default function ProgrammingQuestionPage() {
         {(compileOutput !== null || compileError) && (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-2 text-sm font-bold text-white">
-              {compileError ? '❌ Compilation Error' : '✅ Output'}
+              {compileError ? '❌ ' + t('codeEditor.compilationError') : '✅ ' + t('codeEditor.output')}
             </h3>
             <pre className="max-h-60 overflow-auto rounded-xl bg-black/30 p-4 text-sm text-white/80 font-mono whitespace-pre-wrap">
               {compileError || compileOutput}
@@ -494,7 +504,7 @@ export default function ProgrammingQuestionPage() {
         {/* Detailed Test Results */}
         {testResults && (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
-            <h3 className="mb-4 text-lg font-bold text-white">📊 Test Results</h3>
+            <h3 className="mb-4 text-lg font-bold text-white">📊 {t('codeEditor.testResults')}</h3>
 
             {/* Individual test case results (if backend provides them) */}
             {testResults.test_case_results ? (
@@ -511,23 +521,23 @@ export default function ProgrammingQuestionPage() {
                     <div className="flex items-center gap-2">
                       <span>{tcRes.passed ? '✅' : '❌'}</span>
                       <span className="text-sm font-semibold text-white">
-                        Test Case {tcRes.test_case_id}
+                        {t('codeEditor.testCase')} {tcRes.test_case_id}
                       </span>
                       <span className="text-xs text-white/50">
-                        ({tcRes.passed ? 'Passed' : 'Wrong Answer'})
+                        ({tcRes.passed ? t('codeEditor.passed') : t('codeEditor.wrongAnswer')})
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                       <div>
-                        <p className="text-white/50">Input:</p>
+                        <p className="text-white/50">{t('codeEditor.input')}:</p>
                         <pre className="text-white/80 whitespace-pre-wrap">{tcRes.input || '—'}</pre>
                       </div>
                       <div>
-                        <p className="text-white/50">Expected:</p>
+                        <p className="text-white/50">{t('codeEditor.expected')}:</p>
                         <pre className="text-white/80 whitespace-pre-wrap">{tcRes.expected || '—'}</pre>
                       </div>
                       <div>
-                        <p className="text-white/50">Your Output:</p>
+                        <p className="text-white/50">{t('codeEditor.yourOutput')}:</p>
                         <pre className="text-white/80 whitespace-pre-wrap">{tcRes.output || '—'}</pre>
                       </div>
                     </div>
@@ -539,19 +549,19 @@ export default function ProgrammingQuestionPage() {
             {/* Aggregate summary */}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Passed</p>
+                <p className="text-xs text-white/50">{t('codeEditor.passed')}</p>
                 <p className="text-2xl font-bold text-emerald-300">{testResults.passed_cases}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Total</p>
+                <p className="text-xs text-white/50">{t('codeEditor.total')}</p>
                 <p className="text-2xl font-bold text-white">{testResults.total_cases}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Score</p>
+                <p className="text-xs text-white/50">{t('codeEditor.score')}</p>
                 <p className="text-2xl font-bold text-cyan-300">{testResults.marks}%</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Status</p>
+                <p className="text-xs text-white/50">{t('codeEditor.status')}</p>
                 <span
                   className={`inline-block mt-1 rounded-full px-3 py-1 text-xs font-bold ${
                     testResults.status === 'completed'
@@ -559,7 +569,9 @@ export default function ProgrammingQuestionPage() {
                       : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                   }`}
                 >
-                  {testResults.status}
+                  {testResults.status === 'completed'
+                    ? t('codeEditor.completed')
+                    : t('codeEditor.inProgress')}
                 </span>
               </div>
             </div>
@@ -571,7 +583,7 @@ export default function ProgrammingQuestionPage() {
                   onClick={goToNextQuestion}
                   className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
                 >
-                  Next Question →
+                  {t('codeEditor.nextQuestion')} →
                 </button>
               </div>
             )}

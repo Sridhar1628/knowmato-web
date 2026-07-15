@@ -47,7 +47,7 @@ function LoadingFallback() {
   const { t } = useTranslation();
   return (
     <div className="p-4 text-center text-white">
-      {t('common.loading') || 'Loading...'}
+      {t('common.loading')}
     </div>
   );
 }
@@ -165,7 +165,6 @@ function PostDoubtContent() {
       }
     } catch (error) {
       console.error('Failed to load credit information:', error);
-      // Fallback to default 1 credit cost if fetch fails
     } finally {
       setLoadingCredits(false);
     }
@@ -207,7 +206,7 @@ function PostDoubtContent() {
       setTutors(withPresence);
     } catch (error) {
       console.error('Failed to fetch tutors:', error);
-      toast.error(t('postDoubt.loadTutorsError') || 'Could not load tutors. Please check your connection.');
+      toast.error(t('postDoubt.loadTutorsError'));
     } finally {
       setLoadingTutors(false);
     }
@@ -226,37 +225,38 @@ function PostDoubtContent() {
     return false;
   }, [mode, selectedTutor]);
 
-  // Submit flow – now credit‑based
+  // Submit flow – credit‑based
   const handleSubmit = async () => {
     if (mode === 'specific' && selectedTutor && !selectedTutor.is_online) {
-      toast.error(t('postDoubt.offlineError') || '⚠️ The selected tutor is offline. Please select an online tutor or post in the Doubt Pool.');
+      toast.error(t('postDoubt.offlineError'));
       return;
     }
 
     if (!title.trim()) {
-      toast.error(t('postDoubt.enterTitle') || 'Please enter a title.');
+      toast.error(t('postDoubt.enterTitle'));
       return;
     }
     if (!description.trim()) {
-      toast.error(t('postDoubt.enterDescription') || 'Please describe your doubt.');
+      toast.error(t('postDoubt.enterDescription'));
       return;
     }
     if (!category) {
-      toast.error(t('postDoubt.selectCategory') || 'Please select a category.');
+      toast.error(t('postDoubt.selectCategory'));
       return;
     }
     if (mode === 'specific' && !selectedTutor) {
-      toast.error(t('postDoubt.selectTutor') || 'Please select a tutor.');
+      toast.error(t('postDoubt.selectTutor'));
       return;
     }
     if (submitting) return;
 
-    // Show confirmation with credit cost
+    // Confirmation with credit cost
+    const creditUnit = t('postDoubt.doubtCredit', { count: doubtCreditCost });
     const confirmed = window.confirm(
-      `💳 ${t('postDoubt.confirmPayment') || 'Use Credits'}\n\n` +
-      `${t('postDoubt.costPerDoubt') || 'Cost'}: ${doubtCreditCost} ${t('postDoubt.doubtCredit') || 'Doubt Credit'}${doubtCreditCost > 1 ? 's' : ''}\n` +
-      `${t('postDoubt.availableCredits') || 'Available'}: ${doubtCredits}\n\n` +
-      `${t('postDoubt.continuePrompt') || 'Do you want to continue?'}`
+      `💳 ${t('postDoubt.confirmPayment')}\n\n` +
+      `${t('postDoubt.costPerDoubt')}: ${doubtCreditCost} ${creditUnit}\n` +
+      `${t('postDoubt.availableCredits')}: ${doubtCredits}\n\n` +
+      t('postDoubt.continuePrompt')
     );
     if (!confirmed) return;
 
@@ -286,7 +286,7 @@ function PostDoubtContent() {
       const errorMessage =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
-        t('postDoubt.tryAgain') || 'Please try again.';
+        t('postDoubt.tryAgain');
 
       if (
         errorMessage.toLowerCase().includes('insufficient') &&
@@ -294,16 +294,16 @@ function PostDoubtContent() {
       ) {
         // Insufficient credits – show alert with option to buy credits
         const shouldBuy = window.confirm(
-          `${t('postDoubt.insufficientCredits') || 'Insufficient Doubt Credits'}\n\n` +
+          `${t('postDoubt.insufficientCredits')}\n\n` +
           `${errorMessage}\n\n` +
-          `${t('postDoubt.buyCreditsPrompt') || 'Would you like to buy more credits?'}`
+          t('postDoubt.buyCreditsPrompt')
         );
         if (shouldBuy) {
           router.push('/student/credits');
         }
       } else {
         toast.error(
-          (t('postDoubt.submissionFailed') || 'Submission failed') + ': ' + errorMessage
+          t('postDoubt.submissionFailed') + ': ' + errorMessage
         );
       }
     } finally {
@@ -329,7 +329,7 @@ function PostDoubtContent() {
                 key={tutor.id}
                 onClick={() => {
                   if (!isOnline) {
-                    toast.error(t('postDoubt.offlineSelect') || '🔴 This tutor is offline. Please select an online tutor.');
+                    toast.error(t('postDoubt.offlineSelect'));
                     return;
                   }
                   setSelectedTutor(tutor);
@@ -400,9 +400,9 @@ function PostDoubtContent() {
                     {/* Credit info card */}
                     {!loadingCredits && (
                       <div className="rounded-xl bg-white/10 px-5 py-3 backdrop-blur-sm">
-                        <div className="text-xs text-violet-200">💳 {t('postDoubt.availableCredits') || 'Available'}</div>
+                        <div className="text-xs text-violet-200">💳 {t('postDoubt.availableCredits')}</div>
                         <div className="text-xl font-bold">{doubtCredits}</div>
-                        <div className="text-xs text-violet-200 mt-1">⚡ {t('postDoubt.costPerDoubt') || 'Cost'}: {doubtCreditCost}</div>
+                        <div className="text-xs text-violet-200 mt-1">⚡ {t('postDoubt.costPerDoubt')}: {doubtCreditCost}</div>
                       </div>
                     )}
                     {loadingCredits && (
@@ -626,7 +626,7 @@ function PostDoubtContent() {
                 {submitting ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    {t('common.loading') || 'Submitting...'}
+                    {t('common.loading')}
                   </div>
                 ) : (
                   '🚀 ' + t('postDoubt.postDoubt')

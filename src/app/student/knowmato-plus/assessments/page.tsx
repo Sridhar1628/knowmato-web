@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next'; // ✅ added
 import {
   getAssignments,
   Assignment,
@@ -12,12 +13,13 @@ import {
   ProgrammingMark,
   getMCQMarks,
   MCQMark,
-} from '@/services/assessmentService'; // adjust path to your service file
+} from '@/services/assessmentService';
 
 // ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
 export default function AssessmentDashboard() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
 
   // ─── state ──────────────────────────────────────────────
@@ -61,11 +63,11 @@ export default function AssessmentDashboard() {
       setRecentMCQMarks((mcqMarksRes || []).slice(0, 5));
     } catch (error) {
       console.error('Assessment dashboard fetch error:', error);
-      toast.error('Could not load assessment data.');
+      toast.error(t('assessmentDashboard.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -83,7 +85,7 @@ export default function AssessmentDashboard() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading assessment data…</p>
+          <p className="mt-2 text-sm text-white/70">{t('assessmentDashboard.loading')}</p>
         </div>
       </div>
     );
@@ -101,10 +103,10 @@ export default function AssessmentDashboard() {
         {/* ── Header ── */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 md:text-3xl lg:text-4xl">
-            📊 Assessment Dashboard
+            {t('assessmentDashboard.title')}
           </h1>
           <p className="mt-2 text-sm text-white/70">
-            Track your programming challenges and MCQ performance
+            {t('assessmentDashboard.subtitle')}
           </p>
         </div>
 
@@ -114,11 +116,15 @@ export default function AssessmentDashboard() {
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-2xl">
             <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-violet-500/20 blur-2xl" />
             <div className="relative z-10">
-              <p className="text-sm font-semibold text-violet-300">💻 Programming</p>
+              <p className="text-sm font-semibold text-violet-300">
+                {t('assessmentDashboard.programmingLabel')}
+              </p>
               <p className="mt-2 text-4xl font-bold text-white">
                 {formatScore(avgProgramMarks)}
               </p>
-              <p className="mt-1 text-xs text-white/50">Average score across challenges</p>
+              <p className="mt-1 text-xs text-white/50">
+                {t('assessmentDashboard.programmingAvgDesc')}
+              </p>
             </div>
           </div>
 
@@ -126,11 +132,15 @@ export default function AssessmentDashboard() {
           <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-2xl">
             <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-fuchsia-500/20 blur-2xl" />
             <div className="relative z-10">
-              <p className="text-sm font-semibold text-fuchsia-300">📝 MCQ</p>
+              <p className="text-sm font-semibold text-fuchsia-300">
+                {t('assessmentDashboard.mcqLabel')}
+              </p>
               <p className="mt-2 text-4xl font-bold text-white">
                 {formatScore(avgMCQMarks)}
               </p>
-              <p className="mt-1 text-xs text-white/50">Average score across tests</p>
+              <p className="mt-1 text-xs text-white/50">
+                {t('assessmentDashboard.mcqAvgDesc')}
+              </p>
             </div>
           </div>
         </div>
@@ -139,20 +149,26 @@ export default function AssessmentDashboard() {
         <div className="mb-8">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-white">📋 Your Assignments</h2>
-              <p className="text-xs text-white/50">Active & upcoming tasks</p>
+              <h2 className="text-lg font-bold text-white">
+                {t('assessmentDashboard.assignmentsTitle')}
+              </h2>
+              <p className="text-xs text-white/50">
+                {t('assessmentDashboard.assignmentsSubtitle')}
+              </p>
             </div>
             <button
               onClick={() => router.push('/student/knowmato-plus/assignments')}
               className="rounded-lg px-3 py-1.5 text-sm font-semibold text-cyan-300 hover:bg-white/10 hover:text-cyan-200 transition-all"
             >
-              View all
+              {t('assessmentDashboard.viewAll')}
             </button>
           </div>
 
           {assignments.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-8 text-center">
-              <p className="text-sm text-white/50">No assignments at the moment</p>
+              <p className="text-sm text-white/50">
+                {t('assessmentDashboard.noAssignments')}
+              </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -167,7 +183,7 @@ export default function AssessmentDashboard() {
                   >
                     <div className="mb-2 flex items-start justify-between">
                       <span className="rounded-full bg-violet-400/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-300 border border-violet-400/30">
-                        Batch {assignment.batch}
+                        {t('assessmentDashboard.batch', { batch: assignment.batch })}
                       </span>
                       <span
                         className={`rounded-full px-3 py-1 text-[10px] font-bold ${
@@ -176,17 +192,19 @@ export default function AssessmentDashboard() {
                             : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
                         }`}
                       >
-                        {isExpired ? 'Expired' : 'Active'}
+                        {isExpired ? t('assessmentDashboard.expired') : t('assessmentDashboard.active')}
                       </span>
                     </div>
                     <h3 className="text-base font-bold text-white">
-                      Assignment #{assignment.id}
+                      {t('assessmentDashboard.assignmentNumber', { id: assignment.id })}
                     </h3>
                     <p className="mt-1 text-xs text-white/50">
-                      Total Score: {assignment.total_score || 'N/A'}
+                      {t('assessmentDashboard.totalScore', {
+                        score: assignment.total_score || t('assessmentDashboard.na')
+                      })}
                     </p>
                     <p className="mt-2 flex items-center gap-1 text-xs text-white/40">
-                      <span>⏳ Due:</span>
+                      <span>{t('assessmentDashboard.due')}</span>
                       <span>
                         {new Date(assignment.date_of_expiry).toLocaleDateString(undefined, {
                           month: 'short',
@@ -197,7 +215,7 @@ export default function AssessmentDashboard() {
                       {assignment.time && (
                         <span>
                           {' '}
-                          at {assignment.time}
+                          {t('assessmentDashboard.at', { time: assignment.time })}
                         </span>
                       )}
                     </p>
@@ -208,7 +226,7 @@ export default function AssessmentDashboard() {
                         }
                         className="mt-4 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-2 text-xs font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
                       >
-                        Attempt Now
+                        {t('assessmentDashboard.attemptNow')}
                       </button>
                     )}
                   </div>
@@ -224,19 +242,25 @@ export default function AssessmentDashboard() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">💻 Recent Challenges</h3>
-                <p className="text-xs text-white/50">Your latest programming attempts</p>
+                <h3 className="text-base font-bold text-white">
+                  {t('assessmentDashboard.recentChallengesTitle')}
+                </h3>
+                <p className="text-xs text-white/50">
+                  {t('assessmentDashboard.recentChallengesSubtitle')}
+                </p>
               </div>
               <button
                 onClick={() => router.push('/student/knowmato-plus/programming-history')}
                 className="text-sm font-semibold text-violet-300 hover:text-violet-200"
               >
-                View all
+                {t('assessmentDashboard.viewAll')}
               </button>
             </div>
             {recentProgramMarks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-white/20 bg-white/5 backdrop-blur-md p-6 text-center">
-                <p className="text-sm text-white/50">No programming attempts yet</p>
+                <p className="text-sm text-white/50">
+                  {t('assessmentDashboard.noProgrammingAttempts')}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -247,7 +271,7 @@ export default function AssessmentDashboard() {
                   >
                     <div>
                       <p className="text-sm font-bold text-white">
-                        Question #{mark.question}
+                        {t('assessmentDashboard.questionNumber', { question: mark.question })}
                       </p>
                       <p className="text-xs text-white/50">
                         {new Date(mark.created_at).toLocaleDateString()} ·{' '}
@@ -268,7 +292,7 @@ export default function AssessmentDashboard() {
                             : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                         }`}
                       >
-                        {mark.status}
+                        {t(`assessmentDashboard.status_${mark.status}`, { defaultValue: mark.status })}
                       </span>
                     </div>
                   </div>
@@ -281,19 +305,25 @@ export default function AssessmentDashboard() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">📝 Recent MCQs</h3>
-                <p className="text-xs text-white/50">Your latest multiple‑choice tests</p>
+                <h3 className="text-base font-bold text-white">
+                  {t('assessmentDashboard.recentMcqTitle')}
+                </h3>
+                <p className="text-xs text-white/50">
+                  {t('assessmentDashboard.recentMcqSubtitle')}
+                </p>
               </div>
               <button
                 onClick={() => router.push('/student/knowmato-plus/mcq-history')}
                 className="text-sm font-semibold text-fuchsia-300 hover:text-fuchsia-200"
               >
-                View all
+                {t('assessmentDashboard.viewAll')}
               </button>
             </div>
             {recentMCQMarks.length === 0 ? (
               <div className="rounded-xl border border-dashed border-white/20 bg-white/5 backdrop-blur-md p-6 text-center">
-                <p className="text-sm text-white/50">No MCQ attempts yet</p>
+                <p className="text-sm text-white/50">
+                  {t('assessmentDashboard.noMcqAttempts')}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -304,7 +334,7 @@ export default function AssessmentDashboard() {
                   >
                     <div>
                       <p className="text-sm font-bold text-white">
-                        {mark.type} · {mark.subtype || 'General'}
+                        {mark.type} · {mark.subtype || t('assessmentDashboard.general')}
                       </p>
                       <p className="text-xs text-white/50">
                         {new Date(mark.created_at).toLocaleDateString()} ·{' '}
@@ -316,10 +346,10 @@ export default function AssessmentDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold text-white">
-                        {mark.marks} pts
+                        {t('assessmentDashboard.marksPts', { marks: mark.marks })}
                       </p>
                       <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-400/30">
-                        {mark.status}
+                        {t(`assessmentDashboard.status_${mark.status}`, { defaultValue: mark.status })}
                       </span>
                     </div>
                   </div>

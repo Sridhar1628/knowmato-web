@@ -9,8 +9,11 @@ import {
   type Internship,
   type InternshipApplication,
 } from '@/services/v2Service';
+import { useTranslation } from 'react-i18next';
 
 export default function InternshipsPage() {
+  const { t } = useTranslation();
+
   // --- Data & loading states ---
   const [internships, setInternships] = useState<Internship[]>([]);
   const [applications, setApplications] = useState<InternshipApplication[]>([]);
@@ -51,14 +54,14 @@ export default function InternshipsPage() {
         setInternships(internshipsData);
         setApplications(myApps);
       } catch (err: any) {
-        setError(err?.response?.data?.detail || err?.message || 'Failed to load internships');
+        setError(err?.response?.data?.detail || err?.message || t('internships.loadError'));
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [t]);
 
   // --- Client‑side filtering ---
   const filteredInternships = useMemo(() => {
@@ -98,20 +101,18 @@ export default function InternshipsPage() {
         cover_letter: coverLetter || undefined,
         resume_url: resumeUrl || undefined,
       });
-      // Add new application to local state if the API returns it
       if (result && result.data) {
         setApplications((prev) => [...prev, result.data]);
       } else {
-        // fallback: refetch
         const updatedApps = await getMyInternshipApplications();
         setApplications(updatedApps);
       }
       setApplyMessage({
         type: 'success',
-        text: 'Application submitted successfully!',
+        text: t('internships.applicationSuccess'),
       });
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || 'Something went wrong';
+      const detail = err?.response?.data?.detail || err?.message || t('internships.somethingWentWrong');
       setApplyMessage({ type: 'error', text: detail });
     } finally {
       setApplying(false);
@@ -124,12 +125,10 @@ export default function InternshipsPage() {
     setWithdrawing(true);
     try {
       await withdrawInternshipApplication(selectedApplication.id);
-      // Remove withdrawn app from state
       setApplications((prev) => prev.filter((app) => app.id !== selectedApplication.id));
-      // Optionally close modal or reset state to allow re‑apply
       setDetailModalOpen(false);
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || 'Withdraw failed';
+      const detail = err?.response?.data?.detail || err?.message || t('internships.withdrawFailed');
       setApplyMessage({ type: 'error', text: detail });
     } finally {
       setWithdrawing(false);
@@ -158,6 +157,29 @@ export default function InternshipsPage() {
     }
   };
 
+  // --- Translate type and status ---
+  const translateInternshipType = (type: string) => {
+    const keys: Record<string, string> = {
+      full_time: 'internships.types.full_time',
+      part_time: 'internships.types.part_time',
+      remote: 'internships.types.remote',
+      hybrid: 'internships.types.hybrid',
+    };
+    return t(keys[type] || type);
+  };
+
+  const translateApplicationStatus = (status: string) => {
+    const keys: Record<string, string> = {
+      applied: 'internships.status.applied',
+      shortlisted: 'internships.status.shortlisted',
+      interview: 'internships.status.interview',
+      selected: 'internships.status.selected',
+      rejected: 'internships.status.rejected',
+      withdrawn: 'internships.status.withdrawn',
+    };
+    return t(keys[status] || status);
+  };
+
   // --- Render ---
   return (
     <div className="min-h-screen bg-[#0B0C10] p-6 text-white">
@@ -165,10 +187,10 @@ export default function InternshipsPage() {
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            Internships
+            {t('internships.title')}
           </h1>
           <p className="mt-2 text-white/70">
-            Discover internship opportunities that match your skills.
+            {t('internships.subtitle')}
           </p>
         </div>
 
@@ -176,35 +198,35 @@ export default function InternshipsPage() {
         <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="search-title" className="mb-1.5 block text-sm font-medium text-white/60">
-              Search
+              {t('internships.search')}
             </label>
             <input
               id="search-title"
               type="text"
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
-              placeholder="Internship title..."
+              placeholder={t('internships.searchPlaceholder')}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="filter-location" className="mb-1.5 block text-sm font-medium text-white/60">
-              Location
+              {t('internships.location')}
             </label>
             <input
               id="filter-location"
               type="text"
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
-              placeholder="City or remote..."
+              placeholder={t('internships.locationPlaceholder')}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             />
           </div>
 
           <div>
             <label htmlFor="filter-type" className="mb-1.5 block text-sm font-medium text-white/60">
-              Type
+              {t('internships.type')}
             </label>
             <select
               id="filter-type"
@@ -212,11 +234,11 @@ export default function InternshipsPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
             >
-              <option value="">All</option>
-              <option value="full_time">Full-time</option>
-              <option value="part_time">Part-time</option>
-              <option value="remote">Remote</option>
-              <option value="hybrid">Hybrid</option>
+              <option value="">{t('internships.typeAll')}</option>
+              <option value="full_time">{t('internships.types.full_time')}</option>
+              <option value="part_time">{t('internships.types.part_time')}</option>
+              <option value="remote">{t('internships.types.remote')}</option>
+              <option value="hybrid">{t('internships.types.hybrid')}</option>
             </select>
           </div>
         </div>
@@ -249,7 +271,7 @@ export default function InternshipsPage() {
               onClick={() => window.location.reload()}
               className="mt-3 text-sm underline hover:text-white"
             >
-              Retry
+              {t('internships.retry')}
             </button>
           </div>
         )}
@@ -257,14 +279,14 @@ export default function InternshipsPage() {
         {/* Empty API data */}
         {!loading && !error && internships.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-12 text-center text-white/50">
-            <p className="text-lg">No internships available at the moment.</p>
+            <p className="text-lg">{t('internships.noInternships')}</p>
           </div>
         )}
 
         {/* Filtered empty */}
         {!loading && !error && internships.length > 0 && filteredInternships.length === 0 && (
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-12 text-center text-white/50">
-            <p>No internships match your filters.</p>
+            <p>{t('internships.noMatchingInternships')}</p>
             <button
               onClick={() => {
                 setSearchTitle('');
@@ -273,7 +295,7 @@ export default function InternshipsPage() {
               }}
               className="mt-2 text-sm text-violet-400 underline hover:text-violet-300"
             >
-              Clear filters
+              {t('internships.clearFilters')}
             </button>
           </div>
         )}
@@ -297,15 +319,15 @@ export default function InternshipsPage() {
 
                   {/* Tags */}
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-violet-200 capitalize">
-                      {internship.internship_type.replace('_', ' ')}
+                    <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-violet-200">
+                      {translateInternshipType(internship.internship_type)}
                     </span>
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/60">
                       {internship.location}
                     </span>
                     {internship.duration_months && (
                       <span className="rounded-full bg-white/10 px-2 py-0.5 text-white/60">
-                        {internship.duration_months} mo
+                        {t('internships.months', { count: internship.duration_months })}
                       </span>
                     )}
                   </div>
@@ -332,7 +354,7 @@ export default function InternshipsPage() {
                   {/* Stipend & Deadline */}
                   <div className="mt-auto pt-4 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-400">
-                      {internship.stipend > 0 ? `₹${internship.stipend.toLocaleString()}/mo` : 'Unpaid'}
+                      {internship.stipend > 0 ? `₹${internship.stipend.toLocaleString()}/mo` : t('internships.unpaid')}
                     </span>
                     {internship.application_deadline && (
                       <span className="text-xs text-white/40">
@@ -344,11 +366,11 @@ export default function InternshipsPage() {
                   {/* Status badge or action prompt */}
                   {application ? (
                     <div className={`mt-4 w-full rounded-lg px-4 py-2 text-center text-sm font-medium ${getStatusColor(application.status)}`}>
-                      {application.status.replace('_', ' ').toUpperCase()}
+                      {translateApplicationStatus(application.status).toUpperCase()}
                     </div>
                   ) : (
                     <div className="mt-4 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-center text-sm font-bold text-white">
-                      View & Apply
+                      {t('internships.viewAndApply')}
                     </div>
                   )}
                 </div>
@@ -361,7 +383,7 @@ export default function InternshipsPage() {
       {/* Detail / Apply / Status Modal */}
       {detailModalOpen && selectedInternship && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl relative">
             {/* Close button */}
             <button
               onClick={() => setDetailModalOpen(false)}
@@ -377,53 +399,53 @@ export default function InternshipsPage() {
             )}
 
             <div className="mt-4 flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-200 capitalize">
-                {selectedInternship.internship_type.replace('_', ' ')}
+              <span className="rounded-full bg-violet-500/20 px-3 py-1 text-violet-200">
+                {translateInternshipType(selectedInternship.internship_type)}
               </span>
               <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
                 {selectedInternship.location}
               </span>
               {selectedInternship.duration_months && (
                 <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
-                  {selectedInternship.duration_months} months
+                  {t('internships.months', { count: selectedInternship.duration_months })}
                 </span>
               )}
               {selectedInternship.vacancies && (
                 <span className="rounded-full bg-white/10 px-3 py-1 text-white/60">
-                  {selectedInternship.vacancies} open{selectedInternship.vacancies > 1 ? 's' : ''}
+                  {t('internships.openVacancy', { count: selectedInternship.vacancies })}
                 </span>
               )}
             </div>
 
             <div className="mt-6 grid gap-6 md:grid-cols-2">
               <div>
-                <h3 className="font-semibold text-white/80">Stipend</h3>
+                <h3 className="font-semibold text-white/80">{t('internships.stipend')}</h3>
                 <p className="mt-1 text-emerald-400 text-lg font-bold">
                   {selectedInternship.stipend > 0
                     ? `₹${selectedInternship.stipend.toLocaleString()}/mo`
-                    : 'Unpaid'}
+                    : t('internships.unpaid')}
                 </p>
               </div>
               <div>
-                <h3 className="font-semibold text-white/80">Application Deadline</h3>
+                <h3 className="font-semibold text-white/80">{t('internships.applicationDeadline')}</h3>
                 <p className="mt-1 text-white/80">
                   {selectedInternship.application_deadline
                     ? formatDeadline(selectedInternship.application_deadline)
-                    : 'Ongoing'}
+                    : t('internships.ongoing')}
                 </p>
               </div>
             </div>
 
             {/* Description */}
             <div className="mt-6">
-              <h3 className="font-semibold text-white/80">Description</h3>
+              <h3 className="font-semibold text-white/80">{t('internships.description')}</h3>
               <p className="mt-2 text-white/70 whitespace-pre-line">{selectedInternship.description}</p>
             </div>
 
             {/* Responsibilities */}
             {selectedInternship.responsibilities && (
               <div className="mt-6">
-                <h3 className="font-semibold text-white/80">Responsibilities</h3>
+                <h3 className="font-semibold text-white/80">{t('internships.responsibilities')}</h3>
                 <p className="mt-2 text-white/70 whitespace-pre-line">{selectedInternship.responsibilities}</p>
               </div>
             )}
@@ -431,7 +453,7 @@ export default function InternshipsPage() {
             {/* Requirements */}
             {selectedInternship.requirements && (
               <div className="mt-6">
-                <h3 className="font-semibold text-white/80">Requirements</h3>
+                <h3 className="font-semibold text-white/80">{t('internships.requirements')}</h3>
                 <p className="mt-2 text-white/70 whitespace-pre-line">{selectedInternship.requirements}</p>
               </div>
             )}
@@ -439,7 +461,7 @@ export default function InternshipsPage() {
             {/* Skills */}
             {selectedInternship.skills && selectedInternship.skills.length > 0 && (
               <div className="mt-6">
-                <h3 className="font-semibold text-white/80">Required Skills</h3>
+                <h3 className="font-semibold text-white/80">{t('internships.requiredSkills')}</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedInternship.skills.map((skill, idx) => (
                     <span key={idx} className="rounded-full bg-cyan-500/10 px-3 py-1 text-sm text-cyan-300">
@@ -453,10 +475,10 @@ export default function InternshipsPage() {
             {/* Additional info */}
             <div className="mt-6 flex flex-wrap gap-4 text-sm text-white/60">
               {selectedInternship.ppo_available && (
-                <span className="flex items-center gap-1">🎓 PPO Available</span>
+                <span className="flex items-center gap-1">{t('internships.ppoAvailable')}</span>
               )}
               {selectedInternship.certificate_provided && (
-                <span className="flex items-center gap-1">📜 Certificate Provided</span>
+                <span className="flex items-center gap-1">{t('internships.certificateProvided')}</span>
               )}
             </div>
 
@@ -466,17 +488,17 @@ export default function InternshipsPage() {
                 // Already applied
                 <div>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white">Your Application</h3>
+                    <h3 className="text-lg font-semibold text-white">{t('internships.yourApplication')}</h3>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedApplication.status)}`}>
-                      {selectedApplication.status.replace('_', ' ').toUpperCase()}
+                      {translateApplicationStatus(selectedApplication.status).toUpperCase()}
                     </span>
                   </div>
                   <p className="mt-2 text-sm text-white/50">
-                    Applied on {new Date(selectedApplication.applied_at).toLocaleDateString()}
+                    {t('internships.appliedOn', { date: new Date(selectedApplication.applied_at).toLocaleDateString() })}
                   </p>
                   {selectedApplication.cover_letter && (
                     <div className="mt-4 p-4 rounded-lg bg-white/5 border border-white/10">
-                      <h4 className="text-sm font-medium text-white/70">Cover Letter</h4>
+                      <h4 className="text-sm font-medium text-white/70">{t('internships.coverLetter')}</h4>
                       <p className="mt-1 text-white/60 text-sm">{selectedApplication.cover_letter}</p>
                     </div>
                   )}
@@ -485,37 +507,37 @@ export default function InternshipsPage() {
                     disabled={withdrawing}
                     className="mt-6 w-full rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-50"
                   >
-                    {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
+                    {withdrawing ? t('internships.withdrawing') : t('internships.withdrawApplication')}
                   </button>
                 </div>
               ) : (
                 // Apply form
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Apply for this internship</h3>
+                  <h3 className="text-lg font-semibold text-white">{t('internships.applyForThisInternship')}</h3>
                   <div className="mt-4 space-y-4">
                     <div>
                       <label htmlFor="cover-letter" className="block text-sm text-white/70">
-                        Cover Letter <span className="text-xs text-white/40">(optional)</span>
+                        {t('internships.coverLetter')} <span className="text-xs text-white/40">{t('internships.optional')}</span>
                       </label>
                       <textarea
                         id="cover-letter"
                         rows={4}
                         value={coverLetter}
                         onChange={(e) => setCoverLetter(e.target.value)}
-                        placeholder="Why are you a good fit?"
+                        placeholder={t('internships.coverLetterPlaceholder')}
                         className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none resize-none"
                       />
                     </div>
                     <div>
                       <label htmlFor="resume-url" className="block text-sm text-white/70">
-                        Resume URL <span className="text-xs text-white/40">(optional)</span>
+                        {t('internships.resumeUrl')} <span className="text-xs text-white/40">{t('internships.optional')}</span>
                       </label>
                       <input
                         id="resume-url"
                         type="url"
                         value={resumeUrl}
                         onChange={(e) => setResumeUrl(e.target.value)}
-                        placeholder="https://drive.google.com/..."
+                        placeholder={t('internships.resumeUrlPlaceholder')}
                         className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none"
                       />
                     </div>
@@ -530,7 +552,7 @@ export default function InternshipsPage() {
                     disabled={applying}
                     className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50"
                   >
-                    {applying ? 'Submitting...' : 'Submit Application'}
+                    {applying ? t('internships.submitting') : t('internships.submitApplication')}
                   </button>
                 </div>
               )}

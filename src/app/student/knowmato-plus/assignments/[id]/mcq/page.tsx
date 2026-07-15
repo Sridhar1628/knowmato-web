@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next'; // ✅ added
 import {
   getAssignmentDetails,
   MCQQuestion,
@@ -16,6 +17,7 @@ interface AnswerMap {
 }
 
 export default function MCQPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -36,7 +38,7 @@ export default function MCQPage() {
   // ─── Fetch assignment MCQs ────────────────────────────
   useEffect(() => {
     if (!assignmentId || !type || !subtype) {
-      setError('Invalid MCQ parameters.');
+      setError(t('mcq.invalidParams'));
       setLoading(false);
       return;
     }
@@ -51,18 +53,18 @@ export default function MCQPage() {
         setMcqs(filtered);
 
         if (filtered.length === 0) {
-          setError('No questions found for this category.');
+          setError(t('mcq.noQuestionsCategory'));
         }
       } catch (err) {
-        toast.error('Failed to load MCQ questions.');
-        setError('Could not load questions.');
+        toast.error(t('mcq.loadError'));
+        setError(t('mcq.loadError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchMCQs();
-  }, [assignmentId, type, subtype]);
+  }, [assignmentId, type, subtype, t]);
 
   // ─── Answer selection handler ──────────────────────────
   const handleSelectAnswer = (questionIndex: number, option: string) => {
@@ -74,7 +76,7 @@ export default function MCQPage() {
     // Validate all questions answered
     const unanswered = mcqs.some((_, idx) => !answers[idx + 1]);
     if (unanswered) {
-      toast.error('Please answer all questions before submitting.');
+      toast.error(t('mcq.answerAll'));
       return;
     }
 
@@ -90,9 +92,9 @@ export default function MCQPage() {
 
       const res = await evaluateAnswers(payload);
       setResults(res);
-      toast.success('MCQ test completed!');
+      toast.success(t('mcq.testCompletedToast'));
     } catch (err) {
-      toast.error('Evaluation failed. Please try again.');
+      toast.error(t('mcq.evaluationFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -104,7 +106,7 @@ export default function MCQPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading questions…</p>
+          <p className="mt-2 text-sm text-white/70">{t('mcq.loading')}</p>
         </div>
       </div>
     );
@@ -115,12 +117,12 @@ export default function MCQPage() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center max-w-md rounded-2xl border border-dashed border-white/20 bg-white/5 p-8 backdrop-blur-xl">
           <p className="text-4xl mb-4">📭</p>
-          <p className="text-white/70">{error || 'No questions found.'}</p>
+          <p className="text-white/70">{error || t('mcq.noQuestions')}</p>
           <button
             onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}`)}
             className="mt-4 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2 text-sm font-bold text-white shadow-lg"
           >
-            Back to Assignment
+            {t('mcq.backToAssignment')}
           </button>
         </div>
       </div>
@@ -142,37 +144,37 @@ export default function MCQPage() {
             onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}`)}
             className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
           >
-            ← Back to Assignment
+            ← {t('mcq.backToAssignment')}
           </button>
           <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 md:text-3xl">
-            📝 {type} – {subtype !== 'default' && subtype !== '' ? subtype : 'General'}
+            📝 {type} – {subtype !== 'default' && subtype !== '' ? subtype : t('mcq.general')}
           </h1>
           <p className="mt-2 text-sm text-white/50">
-            {mcqs.length} question{mcqs.length > 1 ? 's' : ''} • Select the best answer for each
+            {t('mcq.questionCount', { count: mcqs.length })} • {t('mcq.selectBest')}
           </p>
         </div>
 
         {/* Results display (after submission) */}
         {results ? (
           <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-lg">
-            <h2 className="text-xl font-bold text-white">✅ Test Completed</h2>
+            <h2 className="text-xl font-bold text-white">{t('mcq.testCompleted')}</h2>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Correct</p>
+                <p className="text-xs text-white/50">{t('mcq.correct')}</p>
                 <p className="text-2xl font-bold text-emerald-300">{results.total_correct}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Total</p>
+                <p className="text-xs text-white/50">{t('mcq.total')}</p>
                 <p className="text-2xl font-bold text-white">{results.total_questions}</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Percentage</p>
+                <p className="text-xs text-white/50">{t('mcq.percentage')}</p>
                 <p className="text-2xl font-bold text-cyan-300">{results.percentage.toFixed(0)}%</p>
               </div>
               <div className="rounded-xl bg-white/5 p-4 text-center">
-                <p className="text-xs text-white/50">Status</p>
+                <p className="text-xs text-white/50">{t('mcq.status')}</p>
                 <span className="inline-block mt-1 rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-bold text-emerald-300 border border-emerald-400/30">
-                  Completed
+                  {t('mcq.completed')}
                 </span>
               </div>
             </div>
@@ -218,7 +220,7 @@ export default function MCQPage() {
                 onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}`)}
                 className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
               >
-                Back to Assignment
+                {t('mcq.backToAssignment')}
               </button>
             </div>
           </div>
@@ -266,10 +268,10 @@ export default function MCQPage() {
                 {isSubmitting ? (
                   <>
                     <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Submitting…
+                    {t('mcq.submitting')}
                   </>
                 ) : (
-                  '📊 Submit Answers'
+                  t('mcq.submitAnswers')
                 )}
               </button>
             </div>

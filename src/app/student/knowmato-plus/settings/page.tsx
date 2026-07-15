@@ -1,7 +1,7 @@
 // app/student/settings/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/redux/store";
@@ -10,147 +10,57 @@ import { saveLanguage, AppLanguage } from "@/services/languageService";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-// Optional: API call to save language preference (pseudo)
-// import { updateLanguagePreference } from "@/services/v1Service";
-
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const router = useRouter();
-  const language = useSelector((state: RootState) => (state as RootState).auth.language || "en");
+  const language = useSelector((state: RootState) => state.auth.language || "en");
 
   // UI toggles (placeholder – you can integrate real functionality later)
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [autoStart, setAutoStart] = useState(false);
 
-  const [showLegal, setShowLegal] =
-  useState(false);
+  const [showLegal, setShowLegal] = useState(false);
 
+  // Legal page items (key-based for translations)
   const legalPages = [
-    {
-      icon: "ℹ️",
-      title: "About KnowMato",
-      route: "/student/legal/about",
-    },
-
-    {
-      icon: "📜",
-      title: "Terms & Conditions",
-      route: "/student/legal/terms",
-    },
-
-    {
-      icon: "🔒",
-      title: "Privacy Policy",
-      route: "/student/legal/privacy",
-    },
-
-    {
-      icon: "🛡",
-      title: "Community Guidelines",
-      route: "/student/legal/community-guidelines",
-    },
-
-    {
-      icon: "💳",
-      title: "Credits Policy",
-      route: "/student/legal/credits-policy",
-    },
-
-    {
-      icon: "💰",
-      title: "Refund & Cancellation Policy",
-      route: "/student/legal/refund-policy",
-    },
-
-    {
-      icon: "🤖",
-      title: "AI Usage Policy",
-      route: "/student/legal/ai-policy",
-    },
-
-    {
-      icon: "👨‍🎓",
-      title: "Student Guidelines",
-      route: "/student/legal/student-guidelines",
-    },
-
-    {
-      icon: "👨‍🏫",
-      title: "Mentor Guidelines",
-      route: "/student/legal/mentor-guidelines",
-    },
-
-    {
-      icon: "🏫",
-      title: "Institution Policy",
-      route: "/student/legal/institution-policy",
-    },
-
-    {
-      icon: "🏢",
-      title: "Company / Recruiter Policy",
-      route: "/student/legal/company-policy",
-    },
-
-    {
-      icon: "❓",
-      title: "Help & Support",
-      route: "/student/legal/help",
-    },
-
-    {
-      icon: "❔",
-      title: "Frequently Asked Questions",
-      route: "/student/legal/faq",
-    },
-
-    {
-      icon: "📄",
-      title: "Open Source Licenses",
-      route: "/student/legal/licenses",
-    },
+    { icon: "ℹ️", key: "legal.about" },
+    { icon: "📜", key: "legal.terms" },
+    { icon: "🔒", key: "legal.privacy" },
+    { icon: "🛡", key: "legal.communityGuidelines" },
+    { icon: "💳", key: "legal.creditsPolicy" },
+    { icon: "💰", key: "legal.refundPolicy" },
+    { icon: "🤖", key: "legal.aiPolicy" },
+    { icon: "👨‍🎓", key: "legal.studentGuidelines" },
+    { icon: "👨‍🏫", key: "legal.mentorGuidelines" },
+    { icon: "🏫", key: "legal.institutionPolicy" },
+    { icon: "🏢", key: "legal.companyPolicy" },
+    { icon: "❓", key: "legal.help" },
+    { icon: "❔", key: "legal.faq" },
+    { icon: "📄", key: "legal.licenses" },
   ];
 
   // Handle language change
-  const handleLanguageChange = async (
-    lang: AppLanguage
-  ) => {
+  const handleLanguageChange = async (lang: AppLanguage) => {
     try {
-      // Save locally
       saveLanguage(lang);
-
-      // Update i18next immediately
       await i18n.changeLanguage(lang);
-
-      // Update Redux
       dispatch(setLanguage(lang));
 
       toast.success(
-        lang === "ta"
-          ? "மொழி தமிழுக்கு மாற்றப்பட்டது"
-          : "Language changed to English",
-        {
-          icon: "🌐",
-        }
+        t(`settings.languageChangedTo${lang === "ta" ? "Tamil" : "English"}`),
+        { icon: "🌐" }
       );
     } catch (error) {
       console.error(error);
-
-      toast.error(
-        "Failed to change language."
-      );
+      toast.error(t("settings.languageChangeFailed"));
     }
   };
 
   const handleLogout = () => {
-    const confirmLogout = window.confirm(
-      t("settings.logoutConfirm") || "Are you sure you want to logout?"
-    );
+    const confirmLogout = window.confirm(t("settings.logoutConfirm"));
     if (confirmLogout) {
-      // Clear auth state (depends on your Redux setup)
-      // dispatch(logoutAction());
       router.push("/login");
     }
   };
@@ -166,16 +76,16 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="mb-8 text-center sm:text-left">
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            ⚙️ {t("sidebar.settings", "Settings")}
+            ⚙️ {t("sidebar.settings")}
           </h1>
-          <p className="mt-1 text-white/70">{t("settings.subtitle", "Manage your preferences and account")}</p>
+          <p className="mt-1 text-white/70">{t("settings.subtitle")}</p>
         </div>
 
         <div className="space-y-6">
           {/* Language Section */}
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white/90 mb-4">
-              🌐 {t("settings.language", "Language")}
+              🌐 {t("settings.language")}
             </h2>
             <div className="flex gap-3">
               <button
@@ -204,83 +114,64 @@ export default function SettingsPage() {
           {/* Preferences Section */}
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white/90 mb-4">
-              🎛️ {t("settings.preferences", "Preferences")}
+              🎛️ {t("settings.preferences")}
             </h2>
             <div className="space-y-4">
               <ToggleRow
                 icon="🔔"
-                label={t("settings.notifications", "Notifications")}
+                label={t("settings.notifications")}
                 value={notifications}
                 onChange={setNotifications}
               />
-              <ToggleRow
+              {/*<ToggleRow
                 icon="🌙"
-                label={t("settings.darkMode", "Dark Mode")}
+                label={t("settings.darkMode")}
                 value={darkMode}
                 onChange={setDarkMode}
               />
               <ToggleRow
                 icon="🚀"
-                label={t("settings.autoStart", "Auto-start Learning")}
+                label={t("settings.autoStart")}
                 value={autoStart}
                 onChange={setAutoStart}
-              />
+              />*/}
             </div>
           </div>
 
+          {/* Legal & Policies */}
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl">
-
             <button
-              onClick={() =>
-                setShowLegal(!showLegal)
-              }
+              onClick={() => setShowLegal(!showLegal)}
               className="w-full flex items-center justify-between"
             >
               <h2 className="text-lg font-semibold text-white">
-
-                📘 Legal & Policies
-
+                📘 {t("settings.legalAndPolicies")}
               </h2>
-
               <span className="text-white/60">
-
                 {showLegal ? "▲" : "▼"}
-
               </span>
             </button>
 
             {showLegal && (
-
               <div className="mt-5 space-y-2">
                 {legalPages.map((item) => (
-
-                    <AboutRow
-
-                      key={item.route}
-
-                      label={`${item.icon} ${item.title}`}
-
-                      isLink
-
-                      onClick={() =>
-                        router.push(item.route)
-                      }
-
-                    />
-
-                  ))}
-
+                  <AboutRow
+                    key={item.key}
+                    label={`${item.icon} ${t(item.key)}`}
+                    isLink
+                    onClick={() => router.push(`/student/legal/${item.key.split(".")[1]}`)}
+                  />
+                ))}
               </div>
-
             )}
-
           </div>
+
           {/* Logout */}
           <button
             onClick={handleLogout}
             className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 p-4 text-center font-semibold text-red-400 hover:bg-red-500/20 transition"
           >
-            {t("sidebar.logout", "Logout")}
+            {t("sidebar.logout")}
           </button>
         </div>
       </div>

@@ -4,15 +4,13 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { getAssignments, Assignment } from '@/services/assessmentService';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
-// Status filter tabs
-const TABS = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'expired', label: 'Expired' },
-] as const;
+// Status filter tabs – labels moved to translation
+const TABS_KEYS = ['all', 'active', 'expired'] as const;
 
 export default function AssignmentsListPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
 
   // ─── state ────────────────────────────────────────────────
@@ -34,13 +32,13 @@ export default function AssignmentsListPage() {
         setAssignments(sorted);
       } catch (error) {
         console.error('Error fetching assignments:', error);
-        toast.error('Could not load assignments.');
+        toast.error(t('assignments.loadError') || 'Could not load assignments.');
       } finally {
         setLoading(false);
       }
     };
     fetchAssignments();
-  }, []);
+  }, [t]);
 
   // ─── filter logic ────────────────────────────────────────
   const filteredAssignments = useMemo(() => {
@@ -61,7 +59,7 @@ export default function AssignmentsListPage() {
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-2 text-sm text-white/70">Loading assignments…</p>
+          <p className="mt-2 text-sm text-white/70">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -79,26 +77,26 @@ export default function AssignmentsListPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 md:text-3xl lg:text-4xl">
-            📋 Assignments
+            📋 {t('assignments.title')}
           </h1>
           <p className="mt-2 text-sm text-white/70">
-            Browse all your programming challenges and MCQ tests
+            {t('assignments.subtitle')}
           </p>
         </div>
 
         {/* Filter Tabs */}
         <div className="mb-6 flex gap-2">
-          {TABS.map((tab) => (
+          {TABS_KEYS.map((tab) => (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
+              key={tab}
+              onClick={() => setActiveTab(tab)}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
-                activeTab === tab.key
+                activeTab === tab
                   ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
                   : 'border border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
               }`}
             >
-              {tab.label}
+              {t(`assignments.tabs.${tab}`)}
             </button>
           ))}
         </div>
@@ -108,7 +106,7 @@ export default function AssignmentsListPage() {
           <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
             <div className="text-4xl">📭</div>
             <p className="mt-4 text-sm text-white/50">
-              No {activeTab === 'all' ? '' : activeTab} assignments found.
+              {t('assignments.empty', { tab: activeTab === 'all' ? '' : activeTab })}
             </p>
           </div>
         ) : (
@@ -125,7 +123,7 @@ export default function AssignmentsListPage() {
                   {/* Status badge */}
                   <div className="mb-3 flex items-start justify-between">
                     <span className="rounded-full bg-violet-400/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-300 border border-violet-400/30">
-                      Batch {assignment.batch}
+                      {t('assignments.batchLabel', { batch: assignment.batch })}
                     </span>
                     <span
                       className={`rounded-full px-3 py-1 text-[10px] font-bold ${
@@ -134,18 +132,18 @@ export default function AssignmentsListPage() {
                           : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
                       }`}
                     >
-                      {isExpired ? 'Expired' : 'Active'}
+                      {isExpired ? t('assignments.statusExpired') : t('assignments.statusActive')}
                     </span>
                   </div>
 
                   {/* Title */}
                   <h3 className="text-lg font-bold text-white">
-                    Assignment #{assignment.id}
+                    {t('assignments.idLabel', { id: assignment.id })}
                   </h3>
 
                   {/* Score */}
                   <p className="mt-1 text-sm text-white/50">
-                    Total Score: {assignment.total_score || 'N/A'}
+                    {t('assignments.totalScore', { score: assignment.total_score || t('assignments.notAvailable') })}
                   </p>
 
                   {/* Deadline */}
@@ -156,7 +154,7 @@ export default function AssignmentsListPage() {
                         undefined,
                         { month: 'short', day: 'numeric', year: 'numeric' }
                       )}
-                      {assignment.time && ` at ${assignment.time}`}
+                      {assignment.time && ` ${t('assignments.atTime')} ${assignment.time}`}
                     </span>
                   </div>
 
@@ -177,7 +175,7 @@ export default function AssignmentsListPage() {
                         : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600'
                     }`}
                   >
-                    {isExpired ? 'Expired' : 'Attempt Now'}
+                    {isExpired ? t('assignments.expiredButton') : t('assignments.attemptNow')}
                   </button>
                 </div>
               );

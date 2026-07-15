@@ -6,6 +6,7 @@ import { getDoubtDetails } from "@/services/v1Service";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getTokens } from "@/services/storageService";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 // ---------- Types ----------
 interface DoubtDetail {
@@ -41,6 +42,7 @@ interface DoubtDetail {
 }
 
 export default function MyDoubtsDetailsPage() {
+  const { t } = useTranslation(); // ✅ added
   const params = useParams();
   const doubtId = Number(params.doubtId);
   const router = useRouter();
@@ -58,11 +60,11 @@ export default function MyDoubtsDetailsPage() {
       setDoubt(data);
     } catch (error) {
       console.error("Fetch details error:", error);
-      toast.error("Failed to load doubt details.");
+      toast.error(t("doubtDetails.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [doubtId]);
+  }, [doubtId, t]);
 
   useEffect(() => {
     fetchDetails();
@@ -124,21 +126,21 @@ export default function MyDoubtsDetailsPage() {
           emoji: "🟢",
           color: "text-emerald-300",
           bg: "bg-emerald-400/20 border-emerald-400/40",
-          text: "Open",
+          text: t("doubtDetails.open"),
         };
       case "assigned":
         return {
           emoji: "🔵",
           color: "text-sky-300",
           bg: "bg-sky-400/20 border-sky-400/40",
-          text: "Assigned",
+          text: t("doubtDetails.assigned"),
         };
       case "completed":
         return {
           emoji: "✅",
           color: "text-gray-300",
           bg: "bg-gray-400/20 border-gray-400/40",
-          text: "Completed",
+          text: t("doubtDetails.completed"),
         };
       default:
         return {
@@ -159,7 +161,7 @@ export default function MyDoubtsDetailsPage() {
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
         <div className="relative z-10 text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-4 text-white/80 font-medium">Loading doubt details...</p>
+          <p className="mt-4 text-white/80 font-medium">{t("doubtDetails.loading")}</p>
         </div>
       </div>
     );
@@ -173,7 +175,7 @@ export default function MyDoubtsDetailsPage() {
         <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
         <div className="relative z-10 text-center text-white">
-          <p className="text-xl text-rose-400">Doubt not found</p>
+          <p className="text-xl text-rose-400">{t("doubtDetails.notFound")}</p>
         </div>
       </div>
     );
@@ -200,7 +202,7 @@ export default function MyDoubtsDetailsPage() {
             <span className="text-lg">←</span>
           </button>
           <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-            📄 Doubt Details
+            📄 {t("doubtDetails.title")}
           </h1>
           <div className="w-10" /> {/* spacer */}
         </div>
@@ -222,36 +224,36 @@ export default function MyDoubtsDetailsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-white/50">📂 Category:</span>{" "}
+              <span className="text-white/50">{t("doubtDetails.categoryLabel")}</span>{" "}
               <span className="font-medium text-white">{doubt.category}</span>
             </div>
             <div>
-              <span className="text-white/50">🎯 Mode:</span>{" "}
+              <span className="text-white/50">{t("doubtDetails.modeLabel")}</span>{" "}
               <span className="font-medium text-white capitalize">{doubt.mode}</span>
             </div>
             <div>
-              <span className="text-white/50">💬 Explanation:</span>{" "}
+              <span className="text-white/50">{t("doubtDetails.explanationLabel")}</span>{" "}
               <span className="font-medium text-white">{doubt.preferred_explanation}</span>
             </div>
             <div>
-              <span className="text-white/50">💰 Price:</span>{" "}
+              <span className="text-white/50">{t("doubtDetails.priceLabel")}</span>{" "}
               <span className="font-bold text-emerald-300">
-                {doubt.price ? `₹${doubt.price}` : "Free"}
+                {doubt.price ? `₹${doubt.price}` : t("doubtDetails.free")}
               </span>
             </div>
             <div className="sm:col-span-2">
-              <span className="text-white/50">📅 Created:</span>{" "}
+              <span className="text-white/50">{t("doubtDetails.createdLabel")}</span>{" "}
               <span className="text-white">{formatDate(doubt.created_at)}</span>
             </div>
             {doubt.tutor && (
               <div className="sm:col-span-2">
-                <span className="text-white/50">👨‍🏫 Tutor:</span>{" "}
+                <span className="text-white/50">{t("doubtDetails.tutorLabel")}</span>{" "}
                 <span className="font-medium text-white">{doubt.tutor.name}</span>
               </div>
             )}
             {doubt.keywords && (
               <div className="sm:col-span-2">
-                <span className="text-white/50">🔑 Keywords:</span>{" "}
+                <span className="text-white/50">{t("doubtDetails.keywordsLabel")}</span>{" "}
                 <span className="text-white">{doubt.keywords}</span>
               </div>
             )}
@@ -264,15 +266,13 @@ export default function MyDoubtsDetailsPage() {
         {doubt.status === "open" && doubt.mode === "pool" && (
           <div className="mb-6 rounded-3xl border border-amber-400/30 bg-amber-400/10 backdrop-blur-md p-6 text-center shadow-xl">
             <div className="text-5xl">⏳</div>
-            <h3 className="mt-3 text-xl font-bold text-amber-300">Waiting For Tutor</h3>
-            <p className="mt-2 text-sm text-amber-200/80">
-              Your doubt is visible to online tutors.
-            </p>
+            <h3 className="mt-3 text-xl font-bold text-amber-300">{t("doubtDetails.poolWaitingTitle")}</h3>
+            <p className="mt-2 text-sm text-amber-200/80">{t("doubtDetails.poolWaitingDesc")}</p>
             <button
               onClick={fetchDetails}
               className="mt-4 rounded-xl bg-amber-500/20 border border-amber-400/40 px-5 py-3 font-semibold text-amber-300 hover:bg-amber-500/30 transition"
             >
-              🔄 Refresh Status
+              {t("doubtDetails.refreshStatus")}
             </button>
           </div>
         )}
@@ -280,13 +280,13 @@ export default function MyDoubtsDetailsPage() {
         {/* Tutor accepted / session ready */}
         {hasSession && doubt.status === "assigned" && (
           <div className="mb-6 rounded-3xl border border-emerald-400/30 bg-emerald-400/10 backdrop-blur-md p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-emerald-300">🎉 Tutor Accepted</h3>
-            <p className="mt-2 text-emerald-200/80">Your session is ready.</p>
+            <h3 className="text-xl font-bold text-emerald-300">{t("matching.tutorAccepted")}</h3>
+            <p className="mt-2 text-emerald-200/80">{t("doubtDetails.sessionReady")}</p>
             <button
               onClick={joinSession}
               className="mt-5 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:to-green-600 transition"
             >
-              🚀 Join Session
+              🚀 {t("doubtDetails.joinSession")}
             </button>
           </div>
         )}
@@ -295,16 +295,16 @@ export default function MyDoubtsDetailsPage() {
         {hasDirectRequest && (
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-2xl mb-6">
             <h3 className="text-lg font-bold text-white mb-4">
-              📨 Tutor Proposal
+              {t("doubtDetails.tutorProposal")}
             </h3>
             <div className="flex justify-between mb-3">
-              <span className="text-white/60">👨‍🏫 Tutor:</span>
+              <span className="text-white/60">{t("doubtDetails.tutorLabel")}</span>
               <span className="font-medium text-white">
                 {doubt.direct_request?.tutor_name}
               </span>
             </div>
             <div className="flex justify-between mb-6">
-              <span className="text-white/60">💰 Proposed Price:</span>
+              <span className="text-white/60">{t("doubtDetails.proposedPrice")}</span>
               <span className="font-bold text-violet-300 text-lg">
                 ₹{doubt.direct_request?.price}
               </span>
@@ -318,13 +318,13 @@ export default function MyDoubtsDetailsPage() {
         {/* Completed – no review */}
         {doubt.status === "completed" && !hasReview && (
           <div className="mb-6 rounded-3xl border border-violet-400/30 bg-violet-400/10 backdrop-blur-md p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-violet-300">⭐ Session Completed</h3>
-            <p className="mt-2 text-violet-200/80">Share your feedback.</p>
+            <h3 className="text-xl font-bold text-violet-300">{t("doubtDetails.completedTitle")}</h3>
+            <p className="mt-2 text-violet-200/80">{t("doubtDetails.completedFeedbackDesc")}</p>
             <button
               onClick={() => router.push(`/student/submit-review/${doubt.session?.id}`)}
               className="mt-4 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition"
             >
-              ⭐ Submit Review
+              {t("submitReview.submitReview")}
             </button>
           </div>
         )}
@@ -332,8 +332,8 @@ export default function MyDoubtsDetailsPage() {
         {/* Completed – review done */}
         {doubt.status === "completed" && hasReview && (
           <div className="mb-6 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-white">✅ Session Completed</h3>
-            <p className="mt-2 text-white/70">Review already submitted.</p>
+            <h3 className="text-xl font-bold text-white">{t("doubtDetails.completedWithReviewTitle")}</h3>
+            <p className="mt-2 text-white/70">{t("doubtDetails.reviewAlreadySubmitted")}</p>
             <div className="mt-4 text-amber-300 text-xl">
               {"⭐".repeat(doubt.review?.rating || 0)}
             </div>
@@ -345,7 +345,7 @@ export default function MyDoubtsDetailsPage() {
           <div className="mb-6 rounded-3xl border border-sky-400/30 bg-sky-400/10 backdrop-blur-md p-6 text-center shadow-xl">
             <span className="text-4xl block mb-3">🔵</span>
             <p className="text-lg font-semibold text-sky-300">
-              Assigned to a tutor. Session will start soon.
+              {t("doubtDetails.assignedToTutor")}
             </p>
           </div>
         )}
@@ -355,10 +355,10 @@ export default function MyDoubtsDetailsPage() {
           <div className="border border-amber-400/30 bg-amber-400/10 backdrop-blur-md rounded-3xl p-6 text-center mb-6 shadow-xl">
             <span className="text-4xl block mb-3">⏳</span>
             <p className="text-lg font-semibold text-amber-300">
-              Waiting for a tutor to accept your doubt...
+              {t("doubtDetails.waitingForTutor")}
             </p>
             <p className="text-sm text-amber-200/80 mt-2">
-              You will be notified when a tutor responds.
+              {t("doubtDetails.notifiedWhenResponds")}
             </p>
           </div>
         )}

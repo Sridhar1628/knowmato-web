@@ -46,6 +46,12 @@ export default function LoginPage() {
       };
       const res = await loginWithOtp(payload);
 
+      console.log("LOGIN RESPONSE:", res);
+
+      saveTokens(res.access, res.refresh);
+
+      console.log("TOKENS IN LOCALSTORAGE:", localStorage.getItem("tokens"));
+
       if (res?.access) {
         saveTokens(res.access, res.refresh);
         const profile = await getProfileByRole(res.role);
