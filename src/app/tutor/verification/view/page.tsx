@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { getTutorBankVerification } from "@/services/v1Service";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 export default function VerificationViewPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -22,20 +24,20 @@ export default function VerificationViewPage() {
         }
         setVerification(res.data);
       } catch {
-        toast.error("Failed to load verification.");
+        toast.error(t("bankVerification.loadError"));
       } finally {
         setLoading(false);
       }
     };
     fetchVerification();
-  }, [router]);
+  }, [router, t]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-white/70">Loading verification...</p>
+          <p className="text-white/70">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -44,16 +46,16 @@ export default function VerificationViewPage() {
   if (!verification) return null;
 
   const infoItems = [
-    { title: "Account Holder", value: verification.account_holder_name },
-    { title: "Account Number", value: `XXXXXX${verification.account_number.slice(-4)}` },
-    { title: "IFSC", value: verification.ifsc_code },
-    { title: "Bank", value: verification.bank_name },
-    { title: "Branch", value: verification.branch_name },
-    { title: "Account Type", value: verification.account_type },
-    { title: "PAN", value: verification.pan_number },
-    { title: "Aadhaar", value: `XXXXXXXX${verification.aadhaar_number.slice(-4)}` },
-    { title: "Mobile", value: verification.mobile_number },
-    { title: "Status", value: verification.status.toUpperCase() },
+    { title: t("bankVerification.holderName"), value: verification.account_holder_name },
+    { title: t("bankVerification.accountNumber"), value: `XXXXXX${verification.account_number.slice(-4)}` },
+    { title: t("bankVerification.ifsc"), value: verification.ifsc_code },
+    { title: t("bankVerification.bankName"), value: verification.bank_name },
+    { title: t("bankVerification.branch"), value: verification.branch_name },
+    { title: t("bankVerification.accountType"), value: verification.account_type },
+    { title: t("bankVerification.pan"), value: verification.pan_number },
+    { title: t("bankVerification.aadhaar"), value: `XXXXXXXX${verification.aadhaar_number.slice(-4)}` },
+    { title: t("bankVerification.mobile"), value: verification.mobile_number },
+    { title: t("bankVerification.status"), value: verification.status.toUpperCase() },
   ];
 
   return (
@@ -70,7 +72,7 @@ export default function VerificationViewPage() {
         className="relative z-10 max-w-3xl mx-auto bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl p-6 sm:p-8"
       >
         <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mb-8">
-          Bank Verification
+          {t("bankVerification.title")}
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -92,7 +94,7 @@ export default function VerificationViewPage() {
             animate={{ opacity: 1 }}
             className="mt-6 rounded-xl bg-rose-500/10 border border-rose-400/30 backdrop-blur-md p-4"
           >
-            <p className="font-semibold text-rose-300">Rejection Reason</p>
+            <p className="font-semibold text-rose-300">{t("bankVerification.rejectionReason")}</p>
             <p className="text-rose-200/80 mt-1">{verification.rejection_reason}</p>
           </motion.div>
         )}
@@ -102,14 +104,14 @@ export default function VerificationViewPage() {
             onClick={() => router.push("/tutor/wallet")}
             className="flex-1 bg-white/10 hover:bg-white/20 text-white/80 font-semibold py-3 rounded-xl border border-white/10 transition"
           >
-            Back
+            {t("common.goBack")}
           </button>
           {verification.status === "rejected" && (
             <button
               onClick={() => router.push("/tutor/verification")}
               className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-semibold py-3 rounded-xl shadow-lg shadow-violet-500/25 transition"
             >
-              Update Verification
+              {t("bankVerification.updateVerification")}
             </button>
           )}
         </div>

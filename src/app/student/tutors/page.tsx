@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getOnlineTutors } from '@/services/v1Service';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
 import { dashboardCache } from '@/store/dashboardCache';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 interface Tutor {
   id: number;
@@ -19,6 +20,7 @@ interface Tutor {
 }
 
 export default function TutorsPage() {
+  const { t } = useTranslation(); // ✅
   const router = useRouter();
   const [tutors, setTutors] = useState<Tutor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,15 +70,15 @@ export default function TutorsPage() {
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-              👨‍🏫 Expert Tutors
+              👨‍🏫 {t('tutorsPage.title')}
             </h1>
-            <p className="mt-2 text-white/70">Connect with verified experts</p>
+            <p className="mt-2 text-white/70">{t('tutorsPage.subtitle')}</p>
           </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tutors..."
+            placeholder={t('tutorsPage.searchPlaceholder')}
             className="w-full rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-md px-4 py-3 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition-all md:w-80"
           />
         </div>
@@ -85,12 +87,12 @@ export default function TutorsPage() {
           <div className="flex justify-center py-20 text-white/70 text-lg">
             <div className="text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-              <p className="mt-3">Loading tutors...</p>
+              <p className="mt-3">{t('tutorsPage.loading')}</p>
             </div>
           </div>
         ) : filteredTutors.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-md p-10 text-center">
-            <p className="text-white/60 text-lg">No tutors available.</p>
+            <p className="text-white/60 text-lg">{t('tutorsPage.noTutors')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -108,7 +110,7 @@ export default function TutorsPage() {
                     <div>
                       <h3 className="font-semibold text-white">{tutor.display_name}</h3>
                       <p className="text-sm text-white/60">
-                        {tutor.experience}+ Years Experience
+                        {t('tutorsPage.yearsExperience', { experience: tutor.experience })}
                       </p>
                     </div>
                   </div>
@@ -131,19 +133,19 @@ export default function TutorsPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   {tutor.is_verified && (
                     <span className="rounded-full bg-sky-400/20 text-sky-300 border border-sky-400/30 px-3 py-1 text-xs font-semibold">
-                      ✅ Verified
+                      ✅ {t('studentHome.verified')}
                     </span>
                   )}
                   {tutor.is_top_tutor && (
                     <span className="rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 px-3 py-1 text-xs font-semibold">
-                      ⭐ Top Tutor
+                      ⭐ {t('studentHome.topTutor')}
                     </span>
                   )}
                 </div>
 
                 {/* Rating */}
                 <div className="mt-4 text-sm text-white/50">
-                  ⭐ {tutor.average_rating} • {tutor.total_reviews} Reviews
+                  {t('tutorsPage.ratingAndReviews', { rating: tutor.average_rating, reviews: tutor.total_reviews })}
                 </div>
 
                 {/* Action Button */}
@@ -153,7 +155,7 @@ export default function TutorsPage() {
                   }
                   className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-semibold text-white shadow-lg shadow-violet-500/25 transition hover:from-violet-600 hover:to-fuchsia-600"
                 >
-                  Request Tutor
+                  {t('tutorsPage.requestTutorButton')}
                 </button>
               </div>
             ))}

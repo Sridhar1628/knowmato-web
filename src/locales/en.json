@@ -49,7 +49,10 @@
     "from": "From",
     "to": "To",
     "reset": "Reset",
-    "apply": "Apply"
+    "apply": "Apply",
+    "saving": "Saving...",
+    "newBadge": "NEW",
+    "other": "Other"
   },
   "login": {
     "phone": "Phone",
@@ -136,7 +139,8 @@
     "notifications": "Notifications",
     "leaderboard": "Leaderboard",
     "settings": "Settings",
-    "home": "Home"
+    "home": "Home",
+    "credits":"Credits"
   },
   "tutorSidebar": {
     "browseDoubts": "Browse Doubts",
@@ -233,7 +237,12 @@
     "refundedCredits": "Refunded Credits",
     "cancelFailed": "Unable to cancel the doubt.",
     "cancelConfirmationMessage": "A platform fee of 0.25 credits will be deducted.\n\nThe remaining credits will be refunded.\n\nDo you want to continue?",
-    "doubtCancelled": "Doubt Cancelled\n\nRefunded: {{refund}} Credits\n\nPlatform Fee: {{fee}} Credits"
+    "doubtCancelled": "Doubt Cancelled\n\nRefunded: {{refund}} Credits\n\nPlatform Fee: {{fee}} Credits",
+    "findingTutorBannerTitle": "🔍 Finding Your Tutor",
+    "findingTutorBannerDesc": "Your tutor is being matched. Tap to return.",
+    "actionRequiredBannerTitle": "⚠️ Action Required",
+    "actionRequiredBannerDesc": "Return to the matching screen to choose Wait More or Refund.",
+    "returnButton": "Return →"
   },
   "myDoubts": {
     "title": "My Doubts",
@@ -375,7 +384,18 @@
     "success": "Success",
     "updated": "Profile updated successfully",
     "updateFailed": "Update failed",
-    "notFound": "Profile not found."
+    "notFound": "Profile not found.",
+    "languagesLabel": "What languages do you prefer for Communication?",
+    "languagesPlaceholder": "Select or type a language…",
+    "subjectsLabel": "Which subjects are you focusing on?",
+    "subjectsPlaceholder": "Select or type a subject…",
+    "goalsLabel": "What are your learning goals?",
+    "goalsPlaceholder": "Select or type a goal…",
+    "sessionTypesLabel": "What session types work best for you?",
+    "sessionTypesPlaceholder": "Select or type a session type…",
+    "preferredTimeLabel": "When are you usually available?",
+    "preferredTimePlaceholder": "Select or type a time slot…",
+    "aboutLearningPlaceholder": "Tell us about your learning style, goals, and expectations…"
   },
   "postDoubt": {
     "title": "Ask Your Doubt",
@@ -453,7 +473,30 @@
     "availableCredits": "Available",
     "continuePrompt": "Do you want to continue?",
     "insufficientCredits": "Insufficient Doubt Credits",
-    "buyCreditsPrompt": "Would you like to buy more credits?"
+    "buyCreditsPrompt": "Would you like to buy more credits?",
+    "modalTitle": "Find Experts",
+  "completeDetails": "Complete your doubt details",
+  "doubtTitleLabel": "Doubt Title",
+  "modalTitlePlaceholder": "Example: React useEffect not updating",
+  "doubtDescriptionLabel": "Doubt Description",
+  "edit": "✏ Edit",
+  "save": "✔ Save",
+  "keywordsLabel": "Keywords",
+  "keywordsPlaceholder": "react, hooks, authentication",
+  "selectModeLabel": "Select Mode",
+  "availableTutorsLabel": "Available Tutors",
+  "loadingTutors": "Loading tutors...",
+  "noTutorsOnline": "No tutors online",
+  "posting": "Posting...",
+  "findingExperts": "Finding experts...",
+  "categories": [
+    "Programming",
+    "Python",
+    "JavaScript",
+    "React",
+    "Django",
+    "Database",
+    "AI / ML"]
   },
   "chatHistory": {
     "title": "Chat History",
@@ -554,7 +597,10 @@
     "warning": "Your rating directly affects tutor payment and their reputation.",
     "feedbackOptional": "Share your experience (optional)",
     "submitReview": "Submit Review",
-    "submitError": "Submission failed."
+    "submitError": "Submission failed.",
+    "loadingReviews": "Loading reviews...",
+    "unknownTutor": "Unknown Tutor",
+    "ratingLabel": "Rating (1-5)"
   },
   "doubtDetails": {
     "title": "Doubt Details",
@@ -670,7 +716,11 @@
     "hrAgo": "hr ago",
     "loadError": "Failed to load available doubts.",
     "noDoubts": "No doubts available right now.",
-    "noAccepted": "You haven't accepted any doubts yet."
+    "noAccepted": "You haven't accepted any doubts yet.",
+    "loading": "Loading doubts...",
+  "budgetLabel": "Budget:",
+  "rejectComingSoon": "Reject feature coming soon!",
+  "expiresInTime": "Expires in {{time}}"
   },
   "respondRequest": {
     "title": "Respond to Request",
@@ -787,7 +837,14 @@
     "mobileInvalid": "Invalid 10‑digit mobile number.",
     "bankProofRequired": "Bank proof document is required.",
     "panCardRequired": "PAN card document is required.",
-    "agreementRequired": "Please confirm all details are correct."
+    "agreementRequired": "Please confirm all details are correct.",
+  "status": "Status",
+  "rejectionReason": "Rejection Reason",
+  "back": "Back",
+  "backToWallet": "Back to Wallet",
+  "chooseFile": "Choose File",
+  "bankProof": "Bank Proof (Passbook / Statement)",
+  "panCard": "PAN Card"
   },
   "tutorChats": {
     "chatWith": "Chat with",
@@ -836,7 +893,10 @@
     "earningDetails": "Earning Details",
     "session": "Session",
     "loadError": "Failed to load earnings",
-    "noEarnings": "No earnings yet."
+    "noEarnings": "No earnings yet.",
+  "sessionId": "Session #{{id}}",
+  "paidStatusLabel": "✅ Paid",
+  "pendingStatusLabel": "⏳ Pending"
   },
   "fixedDoubts": {
     "loading": "Loading fixed price doubts...",
@@ -877,7 +937,12 @@
     "languageChangedToEnglish": "Language changed to English",
     "languageChangedToTamil": "மொழி தமிழுக்கு மாற்றப்பட்டது",
     "languageChangeFailed": "Failed to change language.",
-    "logoutConfirm": "Are you sure you want to logout?"
+    "logoutConfirm": "Are you sure you want to logout?",
+     "tutorSettings": "Tutor Settings",
+    "onlineStatus": "Online (Accepting Requests)",
+    "soundAlerts": "Sound Alerts",
+    "onlineNow": "You are now online",
+    "offlineNow": "You are offline"
   },
   "knowmatoPlus": {
     "courses": "Courses",
@@ -897,7 +962,8 @@
     "featureJobs": "Job Openings",
     "enableNow": "Enable Now",
     "switchToKnowmato": "📚 Knowmato",
-    "switchToKnowmatoPlus": "✨ Knowmato+"
+    "switchToKnowmatoPlus": "✨ Knowmato+",
+    "assessments": "Assessments"
   },
   "credits": {
     "title": "My Credits",
@@ -916,7 +982,8 @@
     "confirmPurchaseMessage": "You are about to purchase the following plan:",
     "cancel": "Cancel",
     "confirm": "Confirm",
-    "processing": "Processing..."
+    "processing": "Processing...",
+     "credits": "Credits"
   },
   "courseDetail": {
     "backToCourses": "Back to courses",
@@ -2103,6 +2170,204 @@
       "content": "**Jeblio Corporation Private Limited**\n\n📧 Email: support@knowmato.in\n🌐 Website: https://www.knowmato.in\n📍 Registered Office: [Address available on request]\n🕘 Business Hours: Monday – Saturday, 09:00 AM – 06:00 PM (IST)"
     }
   ]
+},
+"search": {
+  "title": "Search Results",
+  "queryLabel": "Search Query:",
+  "noQuery": "None",
+  "noMatchingDoubts": "No matching doubts found.",
+  "noMatchingTutors": "No matching tutors found.",
+  "tutorsSection": "Tutors",
+  "onlineBadge": "🟢 Online",
+  "offlineBadge": "🔴 Offline",
+  "requestTutor": "🚀 Request This Tutor",
+  "tutorOffline": "🔴 Tutor Offline",
+  "reviews": "{{count}} reviews",
+  "loadError": "Failed to load search results"
+},
+"tutorsPage": {
+  "title": "Expert Tutors",
+  "subtitle": "Connect with verified experts",
+  "searchPlaceholder": "Search tutors...",
+  "loading": "Loading tutors...",
+  "noTutors": "No tutors available.",
+  "yearsExperience": "{{experience}}+ Years Experience",
+  "ratingAndReviews": "⭐ {{rating}} • {{reviews}} Reviews",
+  "requestTutorButton": "Request Tutor"
+},
+"tutorDashboard": {
+  "onlineBanner": "🟢 You are online & accepting requests",
+  "statsTitle": "Your Stats",
+  "walletBalance": "Wallet Balance",
+  "totalEarnings": "Total Earnings",
+  "totalSessions": "Total Sessions",
+  "completed": "Completed",
+  "pendingRequestsCount_one": "{{count}} pending request",
+  "pendingRequestsCount_other": "{{count}} pending requests",
+  "tapToReview": "Tap to review →",
+  "viewRequests": "View Requests",
+  "browsePoolDoubts": "Browse Pool Doubts",
+  "activeSessionsTitle": "Active & Scheduled Sessions",
+  "noActiveSessions": "No active or scheduled sessions",
+  "sessionActive": "Active",
+  "sessionScheduled": "Scheduled",
+  "studentLabel": "👩‍🎓 Student:",
+  "unknownStudent": "Unknown",
+  "typeLabel": "💬 Type:",
+  "startedLabel": "🕒 Started:",
+  "upcomingSessionAlert": "Upcoming Session: {{title}}\nScheduled on {{time}}",
+  "proTipTitle": "Pro Tip",
+  "proTipDesc": "Respond within 5 minutes to increase your acceptance rate and earn the “Top Expert” badge!",
+  "loadError": "Failed to load dashboard. Please try again."
+},
+"tutorProfile": {
+  "loadError": "Failed to load profile",
+  "updateSuccess": "Profile updated successfully",
+  "updateFailed": "Update failed",
+  "notFound": "Profile not found.",
+  "tutorId": "Tutor ID: {{id}}",
+  "ratingBadge": "⭐ {{rating}}",
+  "reviewsBadge": "📝 {{reviews}} reviews",
+  "verifiedYes": "✅ Yes",
+  "verifiedNo": "❌ No",
+  "onlineStatus": "🟢 Online",
+  "offlineStatus": "⚫ Offline",
+  "saveProfile": "Save Profile",
+  "saving": "Saving...",
+  "section": {
+    "personalInfo": "Personal Information",
+    "aboutMe": "About Me",
+    "education": "Education",
+    "professionalInfo": "Professional Information",
+    "mentorSubjects": "Mentor Subjects",
+    "languages": "Languages",
+    "resume": "Resume"
+  },
+  "field": {
+    "phoneNumber": "Phone Number",
+    "cityState": "City / State",
+    "linkedin": "LinkedIn Profile",
+    "highestQualification": "Highest Qualification",
+    "degree": "Degree",
+    "collegeName": "College Name",
+    "yearOfCompletion": "Year of Completion",
+    "skills": "Skills",
+    "experienceYears": "Experience (years)",
+    "expertiseLevel": "Expertise Level",
+    "currentStatus": "Current Status",
+    "organization": "Organization"
+  },
+  "placeholder": {
+    "bio": "Write a short bio...",
+    "professionalSummary": "Professional summary...",
+    "addSubject": "Add subject...",
+    "addLanguage": "Add language..."
+  },
+  "viewResume": "View Current Resume",
+  "newFile": "New file: {{name}}",
+  "label": {
+    "averageRating": "Average Rating",
+    "totalReviews": "Total Reviews",
+    "verified": "Verified",
+    "online": "Online"
+  }
+},
+"tutorRequests": {
+  "title": "📨 Tutor Requests",
+  "loading": "Loading requests...",
+  "loadError": "Failed to load requests.",
+  "filter": "🔍 Filter",
+  "newRequests": "🆕 New Requests",
+  "completed": "✅ Completed",
+  "oldest": "🕒 Oldest",
+  "studentAZ": "👤 Student A–Z",
+  "refresh": "Refresh",
+  "refreshing": "Refreshing...",
+  "noRequestsMatchFilters": "No requests match filters",
+  "unknownStudent": "Unknown",
+  "acceptConfirm": "Accept this request?",
+  "acceptSuccess": "Request accepted!",
+  "acceptError": "Failed to accept request.",
+  "rejectConfirm": "Reject this request?",
+  "rejectSuccess": "Request rejected.",
+  "rejectError": "Failed to reject request.",
+  "accept": "Accept",
+  "reject": "Reject",
+  "statusPrefix": "Request {{status}}",
+  "status": {
+    "pending": "Pending",
+    "accepted": "Accepted",
+    "countered": "Countered",
+    "proposed": "Proposed"
+  },
+  "explanation": {
+    "live_video": "Live Video",
+    "text_chat": "Text Chat",
+    "audio": "Audio",
+    "video": "Video"
+  },
+  "filterTitle": "🔧 Filter Requests",
+  "filterStudentName": "👤 Student Name",
+  "filterSearchPlaceholder": "Search by student name",
+  "filterDateRange": "📅 Date Range",
+  "filterStatus": "📌 Status",
+  "filterReset": "Reset All",
+  "filterApplyClose": "Apply & Close"
+},
+"tutorWallet": {
+  "title": "My Wallet",
+  "subtitle": "Manage your earnings, withdrawals & verification",
+  "txLoadError": "Failed to load transactions",
+  "wdLoadError": "Failed to load withdrawals",
+  "verifLoadError": "Failed to load verification",
+  "walletLoadError": "Failed to load wallet",
+  "realBalance": "Real Balance",
+  "totalBalance": "Total Balance",
+  "pendingWithdrawals": "Pending Withdrawals",
+  "lifetimeEarnings": "Lifetime Earnings",
+  "pendingEarnings": "Pending Earnings",
+  "txHistory": "Transaction History",
+  "searchPlaceholder": "Search...",
+  "credit": "Credit",
+  "debit": "Debit",
+  "noTransactions": "No transactions yet",
+  "noTransactionsDesc": "Once you start earning or spending, your transactions will appear here.",
+  "withdrawalsTitle": "Withdrawal Requests",
+  "noWithdrawals": "No withdrawal requests",
+  "noWithdrawalsDesc": "Once you request a withdrawal, it will show up here.",
+  "withdrawButton": "Withdraw ₹",
+  "enterValidAmount": "Please enter a valid amount greater than 0.",
+  "insufficientBalance": "Insufficient real balance. Available: ₹{{balance}}",
+  "withdrawSuccess": "Withdrawal request submitted!",
+  "withdrawFailed": "Withdrawal failed",
+  "withdrawModalTitle": "Withdraw Funds",
+  "withdrawAvailable": "Available (Real Balance):",
+  "withdrawAmountLabel": "Amount to withdraw",
+  "withdrawAmountPlaceholder": "Enter amount",
+  "submitting": "Submitting...",
+  "verification": {
+    "bankVerified": "Bank Verified",
+    "rejected": "Verification Rejected",
+    "underReview": "Under Review",
+    "required": "Bank Verification Required",
+    "reason": "Reason",
+    "update": "Update Verification",
+    "view": "View Verification",
+    "go": "Go to Verification"
+  },
+  "withdrawal": {
+    "requested": "Requested",
+    "processed": "Processed",
+    "reason": "Reason",
+    "status": {
+      "pending": "Pending",
+      "under_review": "Under Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "processing": "Processing",
+      "completed": "Completed"
+    }
+  }
 }
 }
 

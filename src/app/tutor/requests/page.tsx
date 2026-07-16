@@ -7,6 +7,7 @@ import { getTutorRequests, handleDirectRequest } from "@/services/v1Service";
 import { subscribeSocket } from "@/services/socketEventBus";
 import { SocketEvents } from "@/services/versionSocketEvents";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅
 
 import {
   tutorRequestsCache,
@@ -38,12 +39,7 @@ interface TutorRequest {
   };
 }
 
-const statusIcons: Record<string, string> = {
-  pending: "⏳",
-  accepted: "✅",
-  countered: "🔄",
-  proposed: "💡",
-};
+// Static mapping for status badge colours (not translated)
 const statusBadgeClass = (status: string) => {
   const map: Record<string, string> = {
     pending: "bg-amber-400/20 text-amber-300 border-amber-400/40",
@@ -55,6 +51,7 @@ const statusBadgeClass = (status: string) => {
 };
 
 export default function TutorRequestsPage() {
+  const { t } = useTranslation(); // ✅
   const router = useRouter();
   const [, forceUpdate] = useState({});
 
@@ -103,12 +100,12 @@ export default function TutorRequestsPage() {
       extractStatuses(data);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load requests.");
+      toast.error(t("tutorRequests.loadError"));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   const filteredRequests = tutorRequestsCache.requests
     .filter((request) => {
@@ -146,26 +143,26 @@ export default function TutorRequestsPage() {
   }, []);
 
   const handleAccept = async (requestId: number) => {
-    if (!window.confirm("Accept this request?")) return;
+    if (!window.confirm(t("tutorRequests.acceptConfirm"))) return;
     try {
       await handleDirectRequest({ request_id: requestId, action: "accept" });
       removeTutorRequest(requestId);
-      toast.success("Request accepted!");
+      toast.success(t("tutorRequests.acceptSuccess"));
     } catch (error) {
       console.error("Accept error:", error);
-      toast.error("Failed to accept request.");
+      toast.error(t("tutorRequests.acceptError"));
     }
   };
 
   const handleReject = async (requestId: number) => {
-    if (!window.confirm("Reject this request?")) return;
+    if (!window.confirm(t("tutorRequests.rejectConfirm"))) return;
     try {
       await handleDirectRequest({ request_id: requestId, action: "reject" });
-      toast.success("Request rejected.");
+      toast.success(t("tutorRequests.rejectSuccess"));
       removeTutorRequest(requestId);
     } catch (error) {
       console.error("Reject error:", error);
-      toast.error("Failed to reject request.");
+      toast.error(t("tutorRequests.rejectError"));
     }
   };
 
@@ -200,12 +197,17 @@ export default function TutorRequestsPage() {
     setFilterModalOpen(false);
   };
 
+  // Helper to get translated status text
+  const getStatusLabel = (status: string) => t(`tutorRequests.status.${status}`) || status;
+  // Helper to get translated explanation type
+  const getExplanationLabel = (type: string) => t(`tutorRequests.explanation.${type}`) || type;
+
   if (loading && !refreshing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-4 text-white/70">Loading requests...</p>
+          <p className="mt-4 text-white/70">{t("tutorRequests.loading")}</p>
         </div>
       </div>
     );
@@ -222,13 +224,13 @@ export default function TutorRequestsPage() {
         {/* Header */}
         <div className="backdrop-blur-xl bg-white/5 border-b border-white/10 px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-            📨 Tutor Requests
+            {t("tutorRequests.title")}
           </h1>
           <button
             onClick={() => setFilterModalOpen(true)}
             className="bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white px-4 py-2 rounded-full font-semibold text-sm hover:from-violet-600 hover:to-fuchsia-600 transition shadow-lg"
           >
-            🔍 Filter
+            {t("tutorRequests.filter")}
           </button>
         </div>
 
@@ -242,7 +244,7 @@ export default function TutorRequestsPage() {
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            🆕 New Requests
+            {t("tutorRequests.newRequests")}
           </button>
           <button
             onClick={() => setRequestFilter("completed")}
@@ -252,7 +254,7 @@ export default function TutorRequestsPage() {
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            ✅ Completed
+            {t("tutorRequests.completed")}
           </button>
           <button
             onClick={() => setSortBy("oldest")}
@@ -262,7 +264,7 @@ export default function TutorRequestsPage() {
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            🕒 Oldest
+            {t("tutorRequests.oldest")}
           </button>
           <button
             onClick={() => setSortBy("student_asc")}
@@ -272,7 +274,7 @@ export default function TutorRequestsPage() {
                 : "bg-white/10 text-white/70 hover:bg-white/20"
             }`}
           >
-            👤 Student A–Z
+            {t("tutorRequests.studentAZ")}
           </button>
         </div>
 
@@ -299,7 +301,7 @@ export default function TutorRequestsPage() {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {refreshing ? t("tutorRequests.refreshing") : t("tutorRequests.refresh")}
           </button>
         </div>
 
@@ -308,7 +310,7 @@ export default function TutorRequestsPage() {
           {filteredRequests.length === 0 && !loading && (
             <div className="col-span-full text-center py-16 text-white/50">
               <span className="text-4xl mb-4 block">📭</span>
-              <p className="text-lg font-semibold">No requests match filters</p>
+              <p className="text-lg font-semibold">{t("tutorRequests.noRequestsMatchFilters")}</p>
             </div>
           )}
 
@@ -316,7 +318,14 @@ export default function TutorRequestsPage() {
             {filteredRequests.map((item) => {
               const isPending = item.status === "pending";
               const badgeClass = statusBadgeClass(item.status);
-              const statusIcon = statusIcons[item.status] || "📌";
+              const statusLabel = getStatusLabel(item.status);
+              // Choose status icon based on status
+              const statusIcon = {
+                pending: "⏳",
+                accepted: "✅",
+                countered: "🔄",
+                proposed: "💡",
+              }[item.status] || "📌";
 
               return (
                 <motion.div
@@ -338,10 +347,10 @@ export default function TutorRequestsPage() {
                       📂 {item.category}
                     </span>
                     <span className="text-sm text-white/70 flex items-center gap-1">
-                      👤 {item.student?.name || "Unknown"}
+                      👤 {item.student?.name || t("tutorRequests.unknownStudent")}
                     </span>
                     <span className="text-sm text-white/70 flex items-center gap-1">
-                      💬 {item.preferred_explanation}
+                      💬 {getExplanationLabel(item.preferred_explanation)}
                     </span>
                   </div>
 
@@ -352,7 +361,7 @@ export default function TutorRequestsPage() {
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border ${badgeClass}`}
                     >
-                      {statusIcon} {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      {statusIcon} {statusLabel}
                     </span>
                   </div>
 
@@ -363,18 +372,18 @@ export default function TutorRequestsPage() {
                           onClick={() => handleAccept(item.request_id)}
                           className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-2.5 rounded-xl transition shadow-lg shadow-emerald-500/25"
                         >
-                          ✓ Accept
+                          ✓ {t("tutorRequests.accept")}
                         </button>
                         <button
                           onClick={() => handleReject(item.request_id)}
                           className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold py-2.5 rounded-xl transition shadow-lg shadow-rose-500/25"
                         >
-                          ✗ Reject
+                          ✗ {t("tutorRequests.reject")}
                         </button>
                       </div>
                     ) : (
                       <div className="text-center py-3 bg-white/10 rounded-xl text-sm text-white/70 font-medium border border-white/10">
-                        Request {item.status}
+                        {t("tutorRequests.statusPrefix", { status: statusLabel })}
                       </div>
                     )}
                   </div>
@@ -399,19 +408,23 @@ export default function TutorRequestsPage() {
                 className="bg-gradient-to-b from-[#1a1535] to-[#0f0c29] w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 max-h-[80vh] overflow-y-auto border border-white/10 shadow-2xl"
               >
                 <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mb-4">
-                  🔧 Filter Requests
+                  {t("tutorRequests.filterTitle")}
                 </h2>
 
-                <label className="block text-sm font-medium text-white/80 mb-1">👤 Student Name</label>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  {t("tutorRequests.filterStudentName")}
+                </label>
                 <input
                   type="text"
-                  placeholder="Search by student name"
+                  placeholder={t("tutorRequests.filterSearchPlaceholder")}
                   value={searchStudent}
                   onChange={(e) => setSearchStudent(e.target.value)}
                   className="w-full bg-gray-900/60 border border-white/20 rounded-xl px-4 py-2 text-sm text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none mb-4"
                 />
 
-                <label className="block text-sm font-medium text-white/80 mb-1">📅 Date Range</label>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  {t("tutorRequests.filterDateRange")}
+                </label>
                 <div className="flex gap-2 mb-4">
                   <input
                     type="date"
@@ -428,7 +441,9 @@ export default function TutorRequestsPage() {
                   />
                 </div>
 
-                <label className="block text-sm font-medium text-white/80 mb-1">📌 Status</label>
+                <label className="block text-sm font-medium text-white/80 mb-1">
+                  {t("tutorRequests.filterStatus")}
+                </label>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {statusOptions.map((status) => (
                     <button
@@ -440,7 +455,7 @@ export default function TutorRequestsPage() {
                           : "bg-white/10 text-white/70 hover:bg-white/20"
                       }`}
                     >
-                      {status === "All" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+                      {status === "All" ? t("common.all") : getStatusLabel(status)}
                     </button>
                   ))}
                 </div>
@@ -450,13 +465,13 @@ export default function TutorRequestsPage() {
                     onClick={resetFilters}
                     className="flex-1 bg-white/10 hover:bg-white/20 text-white/80 font-semibold py-2 rounded-xl border border-white/20"
                   >
-                    Reset All
+                    {t("tutorRequests.filterReset")}
                   </button>
                   <button
                     onClick={() => setFilterModalOpen(false)}
                     className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-semibold py-2 rounded-xl shadow-lg"
                   >
-                    Apply & Close
+                    {t("tutorRequests.filterApplyClose")}
                   </button>
                 </div>
               </motion.div>

@@ -18,6 +18,8 @@ interface NavItemProps {
 
 function NavItem({ icon, label, href, active, isNew, onClick }: NavItemProps) {
   const router = useRouter();
+  const { t } = useTranslation();
+
   return (
     <button
       onClick={() => {
@@ -34,7 +36,7 @@ function NavItem({ icon, label, href, active, isNew, onClick }: NavItemProps) {
       {label}
       {isNew && (
         <span className="ml-auto rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2 py-0.5 text-[10px] font-bold text-white shadow">
-          NEW
+          {t('common.newBadge')}
         </span>
       )}
     </button>
@@ -64,19 +66,19 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
 
   // ---- Student routes ----
   const studentRoutes: SidebarRoute[] = [
-    { icon: '🏠', label: t('sidebar.home') || 'Home', href: '/student/dashboard' },
-    { icon: '🏠', label: t('sidebar.credits') || 'Credits', href: '/student/credits' },
-    { icon: '❓', label: t('sidebar.askDoubt') || 'Ask Doubt', href: '/student/post-doubt' },
-    { icon: '📋', label: t('sidebar.myDoubts') || 'My Doubts', href: '/student/my-doubts' },
-    { icon: '📰', label: t('currentAffairs.title') || 'Current Affairs', href: '/student/current-affairs' },
-    { icon: '💰', label: t('sidebar.wallet') || 'My Wallet', href: '/student/wallet' },
-    { icon: '🏆', label: t('leaderboard.title') || 'Leaderboard', href: '/student/leaderboard' },
-    { icon: '🧑‍🎓', label: t('studentProfile.myProfile') || 'My Profile', href: '/student/profile' },
+    { icon: '🏠', label: t('sidebar.home'), href: '/student/dashboard' },
+    { icon: '💳', label: t('sidebar.credits'), href: '/student/credits' }, // added credits key
+    { icon: '❓', label: t('sidebar.askDoubt'), href: '/student/post-doubt' },
+    { icon: '📋', label: t('sidebar.myDoubts'), href: '/student/my-doubts' },
+    { icon: '📰', label: t('currentAffairs.title'), href: '/student/current-affairs' },
+    { icon: '💰', label: t('sidebar.wallet'), href: '/student/wallet' },
+    { icon: '🏆', label: t('leaderboard.title'), href: '/student/leaderboard' },
+    { icon: '🧑‍🎓', label: t('studentProfile.myProfile'), href: '/student/profile' },
     {
       icon: '✨',
-      label: t('knowmatoPlus.knowmatoPlus') || 'Knowmato+',
+      label: t('knowmatoPlus.knowmatoPlus'),
       href: '/student/knowmato-plus',
-      isNew: true, // 🆕 NEW badge
+      isNew: true,
     },
   ];
 
@@ -84,32 +86,32 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
   const knowmatoPlusRoutes: SidebarRoute[] = [
     {
       icon: '📚',
-      label: t('knowmatoPlus.knowmato') || 'Knowmato',
-      href: '/student/dashboard', // go back to student mode
+      label: t('knowmatoPlus.knowmato'),
+      href: '/student/dashboard',
     },
-    { icon: '📚', label: t('knowmatoPlus.courses') || 'Courses', href: '/student/knowmato-plus' },
-    { icon: '📖', label: t('knowmatoPlus.myCourses') || 'My Courses', href: '/student/knowmato-plus/my-courses' },
-    { icon: '📖', label: t('knowmatoPlus.Assessments') || 'Assessments', href: '/student/knowmato-plus/assessments' },
-    { icon: '🧪', label: t('knowmatoPlus.tests') || 'Tests', href: '/student/knowmato-plus/tests' },
-    { icon: '💼', label: t('knowmatoPlus.internships') || 'Internships', href: '/student/knowmato-plus/internships' },
-    { icon: '💻', label: t('knowmatoPlus.jobOpenings') || 'Job Openings', href: '/student/knowmato-plus/jobs' },
-    { icon: '🏆', label: t('leaderboard.title') || 'Leaderboard', href: '/student/knowmato-plus/leaderboard' },
-    { icon: '⚙️', label: t('settings.title') || 'Settings', href: '/student/knowmato-plus/settings' },
+    { icon: '📚', label: t('knowmatoPlus.courses'), href: '/student/knowmato-plus' },
+    { icon: '📖', label: t('knowmatoPlus.myCourses'), href: '/student/knowmato-plus/my-courses' },
+    { icon: '📖', label: t('knowmatoPlus.assessments'), href: '/student/knowmato-plus/assessments' }, // added assessments key
+    { icon: '🧪', label: t('knowmatoPlus.tests'), href: '/student/knowmato-plus/tests' },
+    { icon: '💼', label: t('knowmatoPlus.internships'), href: '/student/knowmato-plus/internships' },
+    { icon: '💻', label: t('knowmatoPlus.jobOpenings'), href: '/student/knowmato-plus/jobs' },
+    { icon: '🏆', label: t('leaderboard.title'), href: '/student/knowmato-plus/leaderboard' },
+    { icon: '⚙️', label: t('sidebar.settings'), href: '/student/knowmato-plus/settings' }, // corrected to sidebar.settings
   ];
 
   const routes = isKnowmatoPlus ? knowmatoPlusRoutes : studentRoutes;
 
   const handleLogout = async () => {
-    const confirmed = window.confirm(t('settings.logoutConfirm') || "Are you sure you want to logout?");
+    const confirmed = window.confirm(t('settings.logoutConfirm'));
     if (!confirmed) return;
 
     try {
       await clearTokens();
       dispatch(logout());
-      toast.success(t('common.logoutSuccess') || "Logged out successfully");
+      toast.success(t('common.logoutSuccess'));
       router.push("/entry");
     } catch {
-      toast.error(t('common.error') || "Logout failed");
+      toast.error(t('common.error'));
     }
     onClose();
   };
@@ -150,8 +152,8 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
               {isKnowmatoPlus
-                ? t('knowmatoPlus.knowmatoPlus') || 'Knowmato+'
-                : t('common.appName') || 'Knowmato'}
+                ? t('knowmatoPlus.knowmatoPlus')
+                : t('common.appName')}
             </span>
           </div>
           <button
@@ -182,7 +184,7 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-rose-500/10 text-rose-300 font-bold border border-rose-400/30 hover:border-rose-400/50 transition"
           >
-            🚪 {t('sidebar.logout') || 'Sign Out'}
+            🚪 {t('sidebar.logout')}
           </button>
         </div>
 
@@ -191,15 +193,15 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
           <div className="border-t border-white/10 p-4">
             <div className="rounded-xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 p-4 text-center border border-white/10 backdrop-blur-md">
               <div className="mb-2 text-2xl">👑</div>
-              <h4 className="font-semibold text-white">{t('knowmatoPlus.enableKnowmatoPlus') || '✨ Knowmato+'}</h4>
+              <h4 className="font-semibold text-white">{t('knowmatoPlus.enableKnowmatoPlus')}</h4>
               <p className="mt-1 text-[10px] text-white/70">
-                {t('knowmatoPlus.enableDescription') || 'Unlock industry-oriented features'}
+                {t('knowmatoPlus.enableDescription')}
               </p>
               <button
                 onClick={() => router.push('/student/knowmato-plus')}
                 className="mt-3 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 py-1.5 text-xs font-bold text-white hover:shadow-lg"
               >
-                {t('knowmatoPlus.enableNow') || 'Enable Now'}
+                {t('knowmatoPlus.enableNow')}
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅ added
 import {
   getStudentProfile,
   buildStudentProfileFormData,
@@ -11,7 +12,7 @@ import {
   StudentProfile,
 } from "@/services/v1Service";
 
-// ========== Suggestion Options ==========
+// ========== Suggestion Options (not translated – they are proper names) ==========
 const LANGUAGE_OPTIONS = [
   "English", "Hindi", "Bengali", "Telugu", "Marathi", "Tamil",
   "Urdu", "Gujarati", "Malayalam", "Kannada", "Odia", "Punjabi",
@@ -50,12 +51,14 @@ const AutocompleteChipInput = ({
   placeholder,
   suggestions = [],
   label,
+  addLabel, // ✅ new prop for translation
 }: {
   items: string[];
   onChange: (items: string[]) => void;
   placeholder: string;
   suggestions?: string[];
   label: string;
+  addLabel?: string; // ✅
 }) => {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -94,10 +97,8 @@ const AutocompleteChipInput = ({
     if (e.key === "Enter") {
       e.preventDefault();
       if (activeIndex >= 0 && filtered.length > 0) {
-        // Select highlighted suggestion
         addItem(filtered[activeIndex]);
       } else if (showCustomAdd) {
-        // Add custom text
         addItem(input);
       } else if (input.trim()) {
         addItem(input);
@@ -188,7 +189,7 @@ const AutocompleteChipInput = ({
               <div
                 key={suggestion}
                 onMouseDown={(e) => {
-                  e.preventDefault(); // prevent blur
+                  e.preventDefault();
                   addItem(suggestion);
                 }}
                 onMouseEnter={() => setActiveIndex(idx)}
@@ -214,7 +215,7 @@ const AutocompleteChipInput = ({
                     : "text-violet-300 hover:bg-white/10"
                 } flex items-center gap-2`}
               >
-                <span>✨</span> Add "{input.trim()}"
+                <span>✨</span> {addLabel || "Add"} "{input.trim()}"
               </div>
             )}
           </div>
@@ -236,6 +237,8 @@ const ProfileSkeleton = () => (
 );
 
 export default function StudentProfilePage() {
+  const { t } = useTranslation(); // ✅
+
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -250,13 +253,13 @@ export default function StudentProfilePage() {
         const data = response?.data?.data ?? response?.data ?? res;
         setProfile(data);
       } catch (err: any) {
-        toast.error("Failed to load profile");
+        toast.error(t("studentProfile.loadError"));
       } finally {
         setLoading(false);
       }
     };
     fetch();
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,9 +286,9 @@ export default function StudentProfilePage() {
         profilePhoto
       );
       await updateStudentProfile(formData);
-      toast.success("Profile updated successfully");
+      toast.success(t("studentProfile.updated"));
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Update failed");
+      toast.error(err?.response?.data?.error || t("studentProfile.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -307,7 +310,7 @@ export default function StudentProfilePage() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
-        <p className="text-white/70">Profile not found.</p>
+        <p className="text-white/70">{t("studentProfile.notFound")}</p>
       </div>
     );
   }
@@ -354,28 +357,30 @@ export default function StudentProfilePage() {
                       : "bg-amber-400/20 text-amber-300 border-amber-400/40"
                   }`}
                 >
-                  {profile.profile_completed ? "✅ Complete" : "⚠️ Incomplete"}
+                  {profile.profile_completed
+                    ? t("studentProfile.complete")
+                    : t("studentProfile.incomplete")}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Personal Information */}
-          <Section title="Personal Information">
+          <Section title={t("studentProfile.personalInfo")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Full Name"
+                label={t("studentProfile.fullName")}
                 value={profile.full_name}
                 onChange={(v) => setProfile({ ...profile, full_name: v })}
               />
               <Field
-                label="Email"
+                label={t("studentProfile.email")}
                 value={profile.email}
                 onChange={(v) => setProfile({ ...profile, email: v })}
                 type="email"
               />
               <Field
-                label="Mobile Number"
+                label={t("studentProfile.mobileNumber")}
                 value={profile.mobile_number}
                 onChange={(v) => setProfile({ ...profile, mobile_number: v })}
                 type="tel"
@@ -384,25 +389,25 @@ export default function StudentProfilePage() {
           </Section>
 
           {/* Education */}
-          <Section title="Education">
+          <Section title={t("studentProfile.education")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Education Level"
+                label={t("studentProfile.educationLevel")}
                 value={profile.education_level}
                 onChange={(v) => setProfile({ ...profile, education_level: v })}
               />
               <Field
-                label="Grade / Year"
+                label={t("studentProfile.gradeYear")}
                 value={profile.grade_year}
                 onChange={(v) => setProfile({ ...profile, grade_year: v })}
               />
               <Field
-                label="Stream Category"
+                label={t("studentProfile.streamCategory")}
                 value={profile.stream_category}
                 onChange={(v) => setProfile({ ...profile, stream_category: v })}
               />
               <Field
-                label="Stream"
+                label={t("studentProfile.stream")}
                 value={profile.stream}
                 onChange={(v) => setProfile({ ...profile, stream: v })}
               />
@@ -410,10 +415,10 @@ export default function StudentProfilePage() {
           </Section>
 
           {/* Learning Preferences */}
-          <Section title="Learning Preferences">
+          <Section title={t("studentProfile.learningPreferences")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Skill Level"
+                label={t("studentProfile.skillLevel")}
                 value={profile.skill_level}
                 onChange={(v) => setProfile({ ...profile, skill_level: v })}
               />
@@ -421,48 +426,53 @@ export default function StudentProfilePage() {
 
             <div className="mt-6 space-y-6">
               <AutocompleteChipInput
-                label="What languages do you prefer for Communication?"
+                label={t("studentProfile.languagesLabel")}
                 items={profile.preferred_languages}
                 onChange={(items) => setProfile({ ...profile, preferred_languages: items })}
                 suggestions={LANGUAGE_OPTIONS}
-                placeholder="Select or type a language..."
+                placeholder={t("studentProfile.languagesPlaceholder")}
+                addLabel={t("studentProfile.add")}
               />
               <AutocompleteChipInput
-                label="Which subjects are you focusing on?"
+                label={t("studentProfile.subjectsLabel")}
                 items={profile.subjects}
                 onChange={(items) => setProfile({ ...profile, subjects: items })}
                 suggestions={SUBJECT_OPTIONS}
-                placeholder="Select or type a subject..."
+                placeholder={t("studentProfile.subjectsPlaceholder")}
+                addLabel={t("studentProfile.add")}
               />
               <AutocompleteChipInput
-                label="What are your learning goals?"
+                label={t("studentProfile.goalsLabel")}
                 items={profile.learning_goals}
                 onChange={(items) => setProfile({ ...profile, learning_goals: items })}
                 suggestions={LEARNING_GOAL_OPTIONS}
-                placeholder="Select or type a goal..."
+                placeholder={t("studentProfile.goalsPlaceholder")}
+                addLabel={t("studentProfile.add")}
               />
               <AutocompleteChipInput
-                label="What session types work best for you?"
+                label={t("studentProfile.sessionTypesLabel")}
                 items={profile.session_types}
                 onChange={(items) => setProfile({ ...profile, session_types: items })}
                 suggestions={SESSION_TYPE_OPTIONS}
-                placeholder="Select or type a session type..."
+                placeholder={t("studentProfile.sessionTypesPlaceholder")}
+                addLabel={t("studentProfile.add")}
               />
               <AutocompleteChipInput
-                label="When are you usually available?"
+                label={t("studentProfile.preferredTimeLabel")}
                 items={profile.preferred_time}
                 onChange={(items) => setProfile({ ...profile, preferred_time: items })}
                 suggestions={PREFERRED_TIME_OPTIONS}
-                placeholder="Select or type a time slot..."
+                placeholder={t("studentProfile.preferredTimePlaceholder")}
+                addLabel={t("studentProfile.add")}
               />
             </div>
           </Section>
 
           {/* About Learning */}
-          <Section title="About Your Learning">
+          <Section title={t("studentProfile.aboutLearning")}>
             <textarea
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[120px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
-              placeholder="Tell us about your learning style, goals, and expectations..."
+              placeholder={t("studentProfile.aboutLearningPlaceholder")}
               value={profile.about_learning}
               onChange={(e) => setProfile({ ...profile, about_learning: e.target.value })}
             />
@@ -477,7 +487,7 @@ export default function StudentProfilePage() {
               whileTap={{ scale: 0.98 }}
               className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition disabled:opacity-60 flex items-center gap-2"
             >
-              {saving ? "Saving..." : "Save Profile"}
+              {saving ? t("studentProfile.saving") : t("studentProfile.saveProfile")}
             </motion.button>
           </div>
         </motion.form>

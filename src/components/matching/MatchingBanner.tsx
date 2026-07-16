@@ -3,12 +3,14 @@
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 import { RootState } from '@/redux/store';
 
 const HEADER_HEIGHT = 80; // Adjust if your header height changes
 
 const MatchingBanner = () => {
+  const { t } = useTranslation(); // ✅
   const router = useRouter();
   const pathname = usePathname();
 
@@ -75,19 +77,15 @@ const MatchingBanner = () => {
         <div className="flex-1 pr-4">
 
           <h3 className="text-lg font-bold">
-
             {isDecision
-              ? '⚠️ Action Required'
-              : '🔍 Finding Your Tutor'}
-
+              ? t('matching.actionRequiredBannerTitle')
+              : t('matching.findingTutorBannerTitle')}
           </h3>
 
           <p className="mt-1 text-sm text-violet-100">
-
             {isDecision
-              ? 'Return to the matching screen to choose Wait More or Refund.'
-              : 'Your tutor is being matched. Tap to return.'}
-
+              ? t('matching.actionRequiredBannerDesc')
+              : t('matching.findingTutorBannerDesc')}
           </p>
 
         </div>
@@ -97,22 +95,18 @@ const MatchingBanner = () => {
           {isDecision ? (
 
             <div className="text-lg font-bold">
-              Return →
+              {t('matching.returnButton')}
             </div>
 
           ) : (
 
             <>
               <div className="text-2xl font-extrabold">
-
                 {formattedTime}
-
               </div>
 
               <div className="mt-1 text-sm font-medium">
-
-                Return →
-
+                {t('matching.returnButton')}
               </div>
             </>
 

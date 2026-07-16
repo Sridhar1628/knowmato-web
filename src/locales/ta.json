@@ -48,7 +48,9 @@
     "to": "வரை",
     "reset": "மீட்டமை",
     "apply": "விண்ணப்பிக்கவும்",
-    "refresh": "புதுப்பி"
+    "refresh": "புதுப்பி",
+    "newBadge": "புதியது",
+    "other": "மற்றவை"
   },
   "login": {
     "phone": "தொலைபேசி",
@@ -135,7 +137,8 @@
     "logout": "வெளியேறு",
     "leaderboard": "தலைவர் பட்டியல்",
     "settings": "அமைப்புகள்",
-    "home": "முகப்பு"
+    "home": "முகப்பு",
+    "credits":"கிரெடிட்கள்"
   },
   "tutorSidebar": {
     "browseDoubts": "சந்தேகங்களை உலாவுக",
@@ -232,7 +235,12 @@
     "refundedCredits": "திருப்பியளிக்கப்பட்ட கிரெடிட்கள்",
     "cancelFailed": "சந்தேகத்தை ரத்து செய்ய முடியவில்லை.",
     "cancelConfirmationMessage": "0.25 கிரெடிட்கள் தளக் கட்டணமாகக் கழிக்கப்படும்.\n\nமீதமுள்ள கிரெடிட்கள் திரும்பப்பெறப்படும்.\n\nநீங்கள் தொடர விரும்புகிறீர்களா?",
-    "doubtCancelled": "சந்தேகம் ரத்து செய்யப்பட்டது\n\nதிரும்பப்பெறப்பட்டது: {{refund}} கிரெடிட்கள்\n\nதளக் கட்டணம்: {{fee}} கிரெடிட்கள்"
+    "doubtCancelled": "சந்தேகம் ரத்து செய்யப்பட்டது\n\nதிரும்பப்பெறப்பட்டது: {{refund}} கிரெடிட்கள்\n\nதளக் கட்டணம்: {{fee}} கிரெடிட்கள்",
+    "findingTutorBannerTitle": "🔍 உங்கள் ஆசிரியரைத் தேடுகிறோம்",
+    "findingTutorBannerDesc": "உங்கள் ஆசிரியர் பொருத்தப்படுகிறார். திரும்ப தட்டவும்.",
+    "actionRequiredBannerTitle": "⚠️ நடவடிக்கை தேவை",
+    "actionRequiredBannerDesc": "காத்திருப்பு அல்லது பணத்தைத் திரும்பப் பெறுவதைத் தேர்ந்தெடுக்க பொருத்துத் திரைக்குத் திரும்பவும்.",
+    "returnButton": "திரும்பு →"
   },
   "myDoubts": {
     "title": "என் சந்தேகங்கள்",
@@ -375,7 +383,18 @@
     "success": "வெற்றி",
     "updated": "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது",
     "updateFailed": "புதுப்பிப்பு தோல்வியடைந்தது",
-    "notFound": "சுயவிவரம் காணப்படவில்லை."
+    "notFound": "சுயவிவரம் காணப்படவில்லை.",
+    "languagesLabel": "தொடர்புக்கு நீங்கள் விரும்பும் மொழிகள் எவை?",
+    "languagesPlaceholder": "மொழியைத் தேர்ந்தெடுக்கவும் அல்லது தட்டச்சு செய்யவும்…",
+    "subjectsLabel": "நீங்கள் கவனம் செலுத்தும் பாடங்கள் எவை?",
+    "subjectsPlaceholder": "பாடத்தைத் தேர்ந்தெடுக்கவும் அல்லது தட்டச்சு செய்யவும்…",
+    "goalsLabel": "உங்கள் கற்றல் இலக்குகள் என்ன?",
+    "goalsPlaceholder": "இலக்கைத் தேர்ந்தெடுக்கவும் அல்லது தட்டச்சு செய்யவும்…",
+    "sessionTypesLabel": "உங்களுக்கு எந்த அமர்வு வகைகள் சிறந்தவை?",
+    "sessionTypesPlaceholder": "அமர்வு வகையைத் தேர்ந்தெடுக்கவும் அல்லது தட்டச்சு செய்யவும்…",
+    "preferredTimeLabel": "நீங்கள் வழக்கமாக எப்போது கிடைப்பீர்கள்?",
+    "preferredTimePlaceholder": "நேர இடைவெளியைத் தேர்ந்தெடுக்கவும் அல்லது தட்டச்சு செய்யவும்…",
+    "aboutLearningPlaceholder": "உங்கள் கற்றல் பாணி, இலக்குகள் மற்றும் எதிர்பார்ப்புகளைப் பற்றி சொல்லுங்கள்…"
   },
   "postDoubt": {
     "title": "உங்கள் சந்தேகத்தை கேளுங்கள்",
@@ -453,7 +472,31 @@
     "availableCredits": "கிடைக்கும்",
     "continuePrompt": "நீங்கள் தொடர விரும்புகிறீர்களா?",
     "insufficientCredits": "போதுமான சந்தேக கிரெடிட்டுகள் இல்லை",
-    "buyCreditsPrompt": "மேலும் கிரெடிட்டுகளை வாங்க விரும்புகிறீர்களா?"
+    "buyCreditsPrompt": "மேலும் கிரெடிட்டுகளை வாங்க விரும்புகிறீர்களா?",
+    "modalTitle": "நிபுணர்களைக் கண்டறி",
+  "completeDetails": "உங்கள் சந்தேக விவரங்களை முழுமையாக்கவும்",
+  "doubtTitleLabel": "சந்தேக தலைப்பு",
+  "modalTitlePlaceholder": "எடுத்துக்காட்டு: React useEffect புதுப்பிக்கவில்லை",
+  "doubtDescriptionLabel": "சந்தேக விளக்கம்",
+  "edit": "✏ திருத்து",
+  "save": "✔ சேமி",
+  "keywordsLabel": "முக்கிய சொற்கள்",
+  "keywordsPlaceholder": "react, hooks, authentication",
+  "selectModeLabel": "பயன்முறையைத் தேர்ந்தெடு",
+  "availableTutorsLabel": "கிடைக்கும் ஆசிரியர்கள்",
+  "loadingTutors": "ஆசிரியர்களை ஏற்றுகிறது...",
+  "noTutorsOnline": "ஆன்லைன் ஆசிரியர்கள் இல்லை",
+  "posting": "இடுகையிடுகிறது...",
+  "findingExperts": "நிபுணர்களைத் தேடுகிறோம்...",
+  "categories": [
+    "நிரலாக்கம்",
+    "பைதான்",
+    "ஜாவாஸ்கிரிப்ட்",
+    "ரியாக்ட்",
+    "டிஜாங்கோ",
+    "தரவுத்தளம்",
+    "AI / ML"
+  ]
   },
   "chatHistory": {
     "title": "அரட்டை வரலாறு",
@@ -554,7 +597,11 @@
     "warning": "உங்கள் மதிப்பீடு ஆசிரியரின் பணம் மற்றும் அவர்களின் நற்பெயரை நேரடியாக பாதிக்கிறது.",
     "feedbackOptional": "உங்கள் அனுபவத்தை பகிர்ந்து கொள்ளுங்கள் (விருப்பத்தேர்வு)",
     "submitReview": "மதிப்பீட்டை சமர்ப்பிக்கவும்",
-    "submitError": "சமர்ப்பிப்பு தோல்வியடைந்தது."
+    "submitError": "சமர்ப்பிப்பு தோல்வியடைந்தது.",
+    "loadingReviews": "மதிப்பீடுகளை ஏற்றுகிறது...",
+    "unknownTutor": "தெரியாத ஆசிரியர்",
+    "ratingLabel": "மதிப்பீடு (1-5)"
+
   },
   "doubtDetails": {
     "title": "சந்தேக விவரங்கள்",
@@ -670,7 +717,11 @@
     "hrAgo": "மணிநேரங்களுக்கு முன்",
     "loadError": "கிடைக்கும் சந்தேகங்களை ஏற்ற முடியவில்லை.",
     "noDoubts": "இப்போது சந்தேகங்கள் எதுவும் இல்லை.",
-    "noAccepted": "நீங்கள் இதுவரை எந்த சந்தேகத்தையும் ஏற்கவில்லை."
+    "noAccepted": "நீங்கள் இதுவரை எந்த சந்தேகத்தையும் ஏற்கவில்லை.",
+    "loading": "சந்தேகங்களை ஏற்றுகிறது...",
+    "budgetLabel": "பட்ஜெட்:",
+    "rejectComingSoon": "நிராகரிப்பு விரைவில் வருகிறது!",
+    "expiresInTime": "{{time}} இல் காலாவதியாகும்"
   },
   "respondRequest": {
     "title": "கோரிக்கைக்கு பதிலளி",
@@ -787,7 +838,14 @@
     "mobileInvalid": "தவறான 10 இலக்க தொலைபேசி எண்.",
     "bankProofRequired": "வங்கி ஆதார ஆவணம் தேவை.",
     "panCardRequired": "PAN கார்டு ஆவணம் தேவை.",
-    "agreementRequired": "அனைத்து விவரங்களும் சரியானவை என்பதை உறுதிப்படுத்தவும்."
+    "agreementRequired": "அனைத்து விவரங்களும் சரியானவை என்பதை உறுதிப்படுத்தவும்.",
+  "status": "நிலை",
+  "rejectionReason": "நிராகரிப்பு காரணம்",
+  "back": "திரும்பு",
+  "backToWallet": "பணப்பைக்குத் திரும்பு",
+  "chooseFile": "கோப்பைத் தேர்வுசெய்",
+  "bankProof": "வங்கி ஆதாரம் (பாஸ்புக் / அறிக்கை)",
+  "panCard": "PAN அட்டை"
   },
   "tutorChats": {
     "chatWith": "உடன் அரட்டை",
@@ -836,7 +894,10 @@
     "earningDetails": "வருமான விவரங்கள்",
     "session": "அமர்வு",
     "loadError": "வருமானத்தை ஏற்ற முடியவில்லை",
-    "noEarnings": "இதுவரை வருமானம் இல்லை."
+    "noEarnings": "இதுவரை வருமானம் இல்லை.",
+    "sessionId": "அமர்வு #{{id}}",
+    "paidStatusLabel": "✅ செலுத்தப்பட்டது",
+    "pendingStatusLabel": "⏳ நிலுவையில்"
   },
   "fixedDoubts": {
     "loading": "நிலையான விலை சந்தேகங்களை ஏற்றுகிறது...",
@@ -877,7 +938,12 @@
     "languageChangedToEnglish": "Language changed to English",
     "languageChangedToTamil": "மொழி தமிழுக்கு மாற்றப்பட்டது",
     "languageChangeFailed": "மொழியை மாற்ற முடியவில்லை.",
-    "logoutConfirm": "நீங்கள் வெளியேற விரும்புகிறீர்களா?"
+    "logoutConfirm": "நீங்கள் வெளியேற விரும்புகிறீர்களா?",
+    "tutorSettings": "ஆசிரியர் அமைப்புகள்",
+    "onlineStatus": "ஆன்லைன் (கோரிக்கைகளை ஏற்கிறது)",
+    "soundAlerts": "ஒலி எச்சரிக்கைகள்",
+    "onlineNow": "நீங்கள் இப்போது ஆன்லைனில் உள்ளீர்கள்",
+    "offlineNow": "நீங்கள் இப்போது ஆஃப்லைனில் உள்ளீர்கள்"
   },
   "knowmatoPlus": {
     "courses": "பாடங்கள்",
@@ -897,7 +963,8 @@
     "featureJobs": "வேலை வாய்ப்புகள்",
     "enableNow": "இப்போது செயல்படுத்து",
     "switchToKnowmato": "📚 நோமாடோ",
-    "switchToKnowmatoPlus": "✨ நோமாடோ+"
+    "switchToKnowmatoPlus": "✨ நோமாடோ+",
+    "assessments": "மதிப்பீடுகள்"
   },
   "credits": {
     "title": "என் கிரெடிட்கள்",
@@ -916,7 +983,8 @@
     "confirmPurchaseMessage": "நீங்கள் பின்வரும் பிளானை வாங்க உள்ளீர்கள்:",
     "cancel": "ரத்து செய்",
     "confirm": "உறுதிப்படுத்து",
-    "processing": "செயல்படுத்துகிறது..."
+    "processing": "செயல்படுத்துகிறது...",
+    "credits": "கிரெடிட்கள்"
   },
   "courseDetail": {
     "backToCourses": "படிப்புகளுக்குத் திரும்பு",
@@ -2103,5 +2171,203 @@
       "content": "**Jeblio Corporation Private Limited**\n\n📧 மின்னஞ்சல்: support@knowmato.in\n🌐 இணையதளம்: https://www.knowmato.in\n📍 பதிவுசெய்யப்பட்ட அலுவலகம்: [கோரிக்கையின் பேரில் முகவரி கிடைக்கும்]\n🕘 வணிக நேரம்: திங்கள் – சனி, காலை 09:00 – மாலை 06:00 (IST)"
     }
   ]
+},
+"search": {
+  "title": "தேடல் முடிவுகள்",
+  "queryLabel": "தேடல் கேள்வி:",
+  "noQuery": "இல்லை",
+  "noMatchingDoubts": "பொருந்தக்கூடிய சந்தேகங்கள் எதுவும் இல்லை.",
+  "noMatchingTutors": "பொருந்தக்கூடிய ஆசிரியர்கள் எதுவும் இல்லை.",
+  "tutorsSection": "ஆசிரியர்கள்",
+  "onlineBadge": "🟢 ஆன்லைன்",
+  "offlineBadge": "🔴 ஆஃப்லைன்",
+  "requestTutor": "🚀 இந்த ஆசிரியரை கோருக",
+  "tutorOffline": "🔴 ஆசிரியர் ஆஃப்லைனில்",
+  "reviews": "{{count}} மதிப்புரைகள்",
+  "loadError": "தேடல் முடிவுகளை ஏற்ற முடியவில்லை"
+},
+"tutorsPage": {
+  "title": "நிபுணர் ஆசிரியர்கள்",
+  "subtitle": "சரிபார்க்கப்பட்ட நிபுணர்களுடன் இணையுங்கள்",
+  "searchPlaceholder": "ஆசிரியர்களைத் தேடுங்கள்...",
+  "loading": "ஆசிரியர்களை ஏற்றுகிறது...",
+  "noTutors": "ஆசிரியர்கள் எதுவும் இல்லை.",
+  "yearsExperience": "{{experience}}+ ஆண்டுகள் அனுபவம்",
+  "ratingAndReviews": "⭐ {{rating}} • {{reviews}} மதிப்புரைகள்",
+  "requestTutorButton": "ஆசிரியரைக் கோருக"
+},
+"tutorDashboard": {
+  "onlineBanner": "🟢 நீங்கள் ஆன்லைனில் உள்ளீர்கள் & கோரிக்கைகளை ஏற்கிறீர்கள்",
+  "statsTitle": "உங்கள் புள்ளிவிவரங்கள்",
+  "walletBalance": "பணப்பை இருப்பு",
+  "totalEarnings": "மொத்த வருமானம்",
+  "totalSessions": "மொத்த அமர்வுகள்",
+  "completed": "முடிக்கப்பட்டது",
+  "pendingRequestsCount_one": "{{count}} நிலுவையில் உள்ள கோரிக்கை",
+  "pendingRequestsCount_other": "{{count}} நிலுவையில் உள்ள கோரிக்கைகள்",
+  "tapToReview": "மதிப்பாய்வு செய்ய தட்டவும் →",
+  "viewRequests": "கோரிக்கைகளை பார்க்கவும்",
+  "browsePoolDoubts": "குளத்தில் உள்ள சந்தேகங்களை உலாவு",
+  "activeSessionsTitle": "செயலில் & திட்டமிடப்பட்ட அமர்வுகள்",
+  "noActiveSessions": "செயலில் அல்லது திட்டமிடப்பட்ட அமர்வுகள் இல்லை",
+  "sessionActive": "செயலில்",
+  "sessionScheduled": "திட்டமிடப்பட்டது",
+  "studentLabel": "👩‍🎓 மாணவர்:",
+  "unknownStudent": "தெரியாத",
+  "typeLabel": "💬 வகை:",
+  "startedLabel": "🕒 தொடங்கியது:",
+  "upcomingSessionAlert": "வரவிருக்கும் அமர்வு: {{title}}\nதிட்டமிடப்பட்ட நேரம்: {{time}}",
+  "proTipTitle": "சிறந்த உதவிக்குறிப்பு",
+  "proTipDesc": "5 நிமிடங்களுக்குள் பதிலளிப்பதன் மூலம் உங்கள் ஏற்றுக்கொள்ளும் விகிதத்தை அதிகரித்து \"சிறந்த நிபுணர்\" பேட்ஜைப் பெறுங்கள்!",
+  "loadError": "டாஷ்போர்டை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."
+},
+"tutorProfile": {
+  "loadError": "சுயவிவரத்தை ஏற்ற முடியவில்லை",
+  "updateSuccess": "சுயவிவரம் வெற்றிகரமாக புதுப்பிக்கப்பட்டது",
+  "updateFailed": "புதுப்பிப்பு தோல்வியடைந்தது",
+  "notFound": "சுயவிவரம் காணப்படவில்லை.",
+  "tutorId": "ஆசிரியர் ஐடி: {{id}}",
+  "ratingBadge": "⭐ {{rating}}",
+  "reviewsBadge": "📝 {{reviews}} மதிப்புரைகள்",
+  "verifiedYes": "✅ ஆம்",
+  "verifiedNo": "❌ இல்லை",
+  "onlineStatus": "🟢 ஆன்லைன்",
+  "offlineStatus": "⚫ ஆஃப்லைன்",
+  "saveProfile": "சுயவிவரத்தைச் சேமி",
+  "saving": "சேமிக்கிறது...",
+  "section": {
+    "personalInfo": "தனிப்பட்ட தகவல்",
+    "aboutMe": "என்னைப் பற்றி",
+    "education": "கல்வி",
+    "professionalInfo": "தொழில்முறை தகவல்",
+    "mentorSubjects": "வழிகாட்டு பாடங்கள்",
+    "languages": "மொழிகள்",
+    "resume": "விண்ணப்பப் படிவம்"
+  },
+  "field": {
+    "phoneNumber": "தொலைபேசி எண்",
+    "cityState": "நகரம் / மாநிலம்",
+    "linkedin": "லிங்க்டுஇன் சுயவிவரம்",
+    "highestQualification": "உயர் தகுதி",
+    "degree": "பட்டம்",
+    "collegeName": "கல்லூரி பெயர்",
+    "yearOfCompletion": "முடித்த ஆண்டு",
+    "skills": "திறன்கள்",
+    "experienceYears": "அனுபவம் (ஆண்டுகள்)",
+    "expertiseLevel": "நிபுணத்துவ நிலை",
+    "currentStatus": "தற்போதைய நிலை",
+    "organization": "அமைப்பு"
+  },
+  "placeholder": {
+    "bio": "ஒரு சிறு சுயசரிதை எழுதுக...",
+    "professionalSummary": "தொழில்முறை சுருக்கம்...",
+    "addSubject": "பாடத்தைச் சேர்...",
+    "addLanguage": "மொழியைச் சேர்..."
+  },
+  "viewResume": "தற்போதைய விண்ணப்பப் படிவத்தைப் பார்",
+  "newFile": "புதிய கோப்பு: {{name}}",
+  "label": {
+    "averageRating": "சராசரி மதிப்பீடு",
+    "totalReviews": "மொத்த மதிப்புரைகள்",
+    "verified": "சரிபார்க்கப்பட்டது",
+    "online": "ஆன்லைன்"
+  }
+},
+"tutorRequests": {
+  "title": "📨 ஆசிரியர் கோரிக்கைகள்",
+  "loading": "கோரிக்கைகளை ஏற்றுகிறது...",
+  "loadError": "கோரிக்கைகளை ஏற்ற முடியவில்லை.",
+  "filter": "🔍 வடிகட்டு",
+  "newRequests": "🆕 புதிய கோரிக்கைகள்",
+  "completed": "✅ முடிந்தது",
+  "oldest": "🕒 பழையது",
+  "studentAZ": "👤 மாணவர் A–Z",
+  "refresh": "புதுப்பி",
+  "refreshing": "புதுப்பிக்கிறது...",
+  "noRequestsMatchFilters": "வடிகட்டிகளுக்கு பொருந்தும் கோரிக்கைகள் இல்லை",
+  "unknownStudent": "தெரியவில்லை",
+  "acceptConfirm": "இந்த கோரிக்கையை ஏற்கவா?",
+  "acceptSuccess": "கோரிக்கை ஏற்றுக்கொள்ளப்பட்டது!",
+  "acceptError": "கோரிக்கையை ஏற்க முடியவில்லை.",
+  "rejectConfirm": "இந்த கோரிக்கையை நிராகரிக்கவா?",
+  "rejectSuccess": "கோரிக்கை நிராகரிக்கப்பட்டது.",
+  "rejectError": "கோரிக்கையை நிராகரிக்க முடியவில்லை.",
+  "accept": "ஏற்கவும்",
+  "reject": "நிராகரி",
+  "statusPrefix": "கோரிக்கை {{status}}",
+  "status": {
+    "pending": "நிலுவையில்",
+    "accepted": "ஏற்கப்பட்டது",
+    "countered": "எதிர் வழங்கப்பட்டது",
+    "proposed": "முன்மொழியப்பட்டது"
+  },
+  "explanation": {
+    "live_video": "நேரடி வீடியோ",
+    "text_chat": "உரை அரட்டை",
+    "audio": "ஆடியோ",
+    "video": "வீடியோ"
+  },
+  "filterTitle": "🔧 கோரிக்கைகளை வடிகட்டு",
+  "filterStudentName": "👤 மாணவர் பெயர்",
+  "filterSearchPlaceholder": "மாணவர் பெயரால் தேடு",
+  "filterDateRange": "📅 தேதி வரம்பு",
+  "filterStatus": "📌 நிலை",
+  "filterReset": "அனைத்தையும் மீட்டமை",
+  "filterApplyClose": "விண்ணப்பி & மூடு"
+},
+"tutorWallet": {
+  "title": "என் பணப்பை",
+  "subtitle": "உங்கள் வருமானம், பணம் எடுப்புகள் & சரிபார்ப்பை நிர்வகிக்கவும்",
+  "txLoadError": "பரிவர்த்தனைகளை ஏற்ற முடியவில்லை",
+  "wdLoadError": "பணம் எடுப்புகளை ஏற்ற முடியவில்லை",
+  "verifLoadError": "சரிபார்ப்பை ஏற்ற முடியவில்லை",
+  "walletLoadError": "பணப்பையை ஏற்ற முடியவில்லை",
+  "realBalance": "உண்மையான இருப்பு",
+  "totalBalance": "மொத்த இருப்பு",
+  "pendingWithdrawals": "நிலுவையில் உள்ள பணம் எடுப்புகள்",
+  "lifetimeEarnings": "வாழ்நாள் வருமானம்",
+  "pendingEarnings": "நிலுவையிலுள்ள வருமானம்",
+  "txHistory": "பரிவர்த்தனை வரலாறு",
+  "searchPlaceholder": "தேடு...",
+  "credit": "வரவு",
+  "debit": "பற்று",
+  "noTransactions": "இன்னும் பரிவர்த்தனைகள் இல்லை",
+  "noTransactionsDesc": "நீங்கள் சம்பாதிக்கத் தொடங்கியவுடன் அல்லது செலவு செய்தவுடன், உங்கள் பரிவர்த்தனைகள் இங்கே தோன்றும்.",
+  "withdrawalsTitle": "பணம் எடுப்பு கோரிக்கைகள்",
+  "noWithdrawals": "பணம் எடுப்பு கோரிக்கைகள் எதுவும் இல்லை",
+  "noWithdrawalsDesc": "நீங்கள் பணம் எடுப்பதற்கான கோரிக்கையைச் சமர்ப்பித்தவுடன், அது இங்கே காண்பிக்கப்படும்.",
+  "withdrawButton": "₹ எடு",
+  "enterValidAmount": "0-க்கும் அதிகமான சரியான தொகையை உள்ளிடவும்.",
+  "insufficientBalance": "உண்மையான இருப்பு போதுமானதாக இல்லை. கிடைக்கும்: ₹{{balance}}",
+  "withdrawSuccess": "பணம் எடுப்பு கோரிக்கை சமர்ப்பிக்கப்பட்டது!",
+  "withdrawFailed": "பணம் எடுப்பு தோல்வியடைந்தது",
+  "withdrawModalTitle": "பணத்தை எடு",
+  "withdrawAvailable": "கிடைக்கும் (உண்மையான இருப்பு):",
+  "withdrawAmountLabel": "எடுக்க வேண்டிய தொகை",
+  "withdrawAmountPlaceholder": "தொகையை உள்ளிடவும்",
+  "submitting": "சமர்ப்பிக்கிறது...",
+  "verification": {
+    "bankVerified": "வங்கி சரிபார்க்கப்பட்டது",
+    "rejected": "சரிபார்ப்பு நிராகரிக்கப்பட்டது",
+    "underReview": "மதிப்பாய்வில் உள்ளது",
+    "required": "வங்கி சரிபார்ப்பு தேவை",
+    "reason": "காரணம்",
+    "update": "சரிபார்ப்பைப் புதுப்பி",
+    "view": "சரிபார்ப்பைப் பார்க்க",
+    "go": "சரிபார்ப்புக்குச் செல்"
+  },
+  "withdrawal": {
+    "requested": "கோரப்பட்டது",
+    "processed": "செயலாக்கப்பட்டது",
+    "reason": "காரணம்",
+    "status": {
+      "pending": "நிலுவையில்",
+      "under_review": "மதிப்பாய்வில்",
+      "approved": "அனுமதிக்கப்பட்டது",
+      "rejected": "நிராகரிக்கப்பட்டது",
+      "processing": "செயலாக்கத்தில்",
+      "completed": "முடிக்கப்பட்டது"
+    }
+  }
 }
 }

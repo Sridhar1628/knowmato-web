@@ -1,7 +1,6 @@
-// app/tutor/settings/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
 import { RootState } from "@/redux/store";
@@ -10,72 +9,66 @@ import { saveLanguage, AppLanguage } from "@/services/languageService";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-// Optional: API call to update online status (placeholder)
-// import { updateTutorStatus } from "@/services/v1Service";
-
 export default function TutorSettingsPage() {
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const router = useRouter();
-  const language = useSelector((state: RootState) => (state as RootState).auth.language || "en");
+  const language = useSelector((state: RootState) => state.auth.language || "en");
 
   // Tutor‑specific toggles
-  const [onlineStatus, setOnlineStatus] = useState(true);    // Accepting requests
+  const [onlineStatus, setOnlineStatus] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
   const [soundAlerts, setSoundAlerts] = useState(false);
 
   const [showLegal, setShowLegal] = useState(false);
 
+  // Legal page items (key-based for translations)
   const legalPages = [
-    { icon: "ℹ️", title: "About KnowMato", route: "/tutor/legal/about" },
-    { icon: "📜", title: "Terms & Conditions", route: "/tutor/legal/terms" },
-    { icon: "🔒", title: "Privacy Policy", route: "/tutor/legal/privacy" },
-    { icon: "🛡", title: "Community Guidelines", route: "/tutor/legal/community-guidelines" },
-    { icon: "💳", title: "Credits Policy", route: "/tutor/legal/credits-policy" },
-    { icon: "💰", title: "Refund & Cancellation Policy", route: "/tutor/legal/refund-policy" },
-    { icon: "🤖", title: "AI Usage Policy", route: "/tutor/legal/ai-policy" },
-    { icon: "👨‍🎓", title: "Student Guidelines", route: "/tutor/legal/student-guidelines" },
-    { icon: "👨‍🏫", title: "Mentor Guidelines", route: "/tutor/legal/mentor-guidelines" },
-    { icon: "🏫", title: "Institution Policy", route: "/tutor/legal/institution-policy" },
-    { icon: "🏢", title: "Company / Recruiter Policy", route: "/tutor/legal/company-policy" },
-    { icon: "❓", title: "Help & Support", route: "/tutor/legal/help" },
-    { icon: "❔", title: "Frequently Asked Questions", route: "/tutor/legal/faq" },
-    { icon: "📄", title: "Open Source Licenses", route: "/tutor/legal/licenses" },
+    { icon: "ℹ️", key: "legal.about" },
+    { icon: "📜", key: "legal.terms" },
+    { icon: "🔒", key: "legal.privacy" },
+    { icon: "🛡", key: "legal.communityGuidelines" },
+    { icon: "💳", key: "legal.creditsPolicy" },
+    { icon: "💰", key: "legal.refundPolicy" },
+    { icon: "🤖", key: "legal.aiPolicy" },
+    { icon: "👨‍🎓", key: "legal.studentGuidelines" },
+    { icon: "👨‍🏫", key: "legal.mentorGuidelines" },
+    { icon: "🏫", key: "legal.institutionPolicy" },
+    { icon: "🏢", key: "legal.companyPolicy" },
+    { icon: "❓", key: "legal.help" },
+    { icon: "❔", key: "legal.faq" },
+    { icon: "📄", key: "legal.licenses" },
   ];
 
-  // Handle language change (same logic)
+  // Handle language change
   const handleLanguageChange = async (lang: AppLanguage) => {
     try {
       saveLanguage(lang);
       await i18n.changeLanguage(lang);
       dispatch(setLanguage(lang));
       toast.success(
-        lang === "ta"
-          ? "மொழி தமிழுக்கு மாற்றப்பட்டது"
-          : "Language changed to English",
+        t(`settings.languageChangedTo${lang === "ta" ? "Tamil" : "English"}`),
         { icon: "🌐" }
       );
     } catch (error) {
       console.error(error);
-      toast.error("Failed to change language.");
+      toast.error(t("settings.languageChangeFailed"));
     }
   };
 
-  // Toggle online status (placeholder – you can add a real API call)
+  // Toggle online status
   const handleOnlineStatusToggle = (newValue: boolean) => {
     setOnlineStatus(newValue);
     // TODO: call API to update tutor online/offline status
-    toast.success(newValue ? "You are now online" : "You are offline");
+    toast.success(
+      newValue ? t("settings.onlineNow") : t("settings.offlineNow")
+    );
   };
 
   const handleLogout = () => {
-    const confirmLogout = window.confirm(
-      t("settings.logoutConfirm") || "Are you sure you want to logout?"
-    );
+    const confirmLogout = window.confirm(t("settings.logoutConfirm"));
     if (confirmLogout) {
-      // Clear auth state (depends on your Redux setup)
-      // dispatch(logoutAction());
       router.push("/login");
     }
   };
@@ -91,10 +84,10 @@ export default function TutorSettingsPage() {
         {/* Header */}
         <div className="mb-8 text-center sm:text-left">
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
-            ⚙️ {t("settings.tutorSettings", "Tutor Settings")}
+            ⚙️ {t("settings.tutorSettings")}
           </h1>
           <p className="mt-1 text-white/70">
-            {t("settings.subtitle", "Manage your preferences and account")}
+            {t("settings.subtitle")}
           </p>
         </div>
 
@@ -102,7 +95,7 @@ export default function TutorSettingsPage() {
           {/* Language Section */}
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white/90 mb-4">
-              🌐 {t("settings.language", "Language")}
+              🌐 {t("settings.language")}
             </h2>
             <div className="flex gap-3">
               <button
@@ -131,31 +124,30 @@ export default function TutorSettingsPage() {
           {/* Preferences Section */}
           <div className="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-6 shadow-2xl">
             <h2 className="text-lg font-semibold text-white/90 mb-4">
-              🎛️ {t("settings.preferences", "Preferences")}
+              🎛️ {t("settings.preferences")}
             </h2>
             <div className="space-y-4">
-              {/* Online Status – Accepting Requests */}
               <ToggleRow
                 icon="🟢"
-                label={t("settings.onlineStatus", "Online (Accepting Requests)")}
+                label={t("settings.onlineStatus")}
                 value={onlineStatus}
                 onChange={handleOnlineStatusToggle}
               />
               <ToggleRow
                 icon="🔔"
-                label={t("settings.notifications", "Notifications")}
+                label={t("settings.notifications")}
                 value={notifications}
                 onChange={setNotifications}
               />
               <ToggleRow
                 icon="🔊"
-                label={t("settings.soundAlerts", "Sound Alerts")}
+                label={t("settings.soundAlerts")}
                 value={soundAlerts}
                 onChange={setSoundAlerts}
               />
               <ToggleRow
                 icon="🌙"
-                label={t("settings.darkMode", "Dark Mode")}
+                label={t("settings.darkMode")}
                 value={darkMode}
                 onChange={setDarkMode}
               />
@@ -168,7 +160,9 @@ export default function TutorSettingsPage() {
               onClick={() => setShowLegal(!showLegal)}
               className="w-full flex items-center justify-between"
             >
-              <h2 className="text-lg font-semibold text-white">📘 Legal & Policies</h2>
+              <h2 className="text-lg font-semibold text-white">
+                📘 {t("settings.legalAndPolicies")}
+              </h2>
               <span className="text-white/60">{showLegal ? "▲" : "▼"}</span>
             </button>
 
@@ -176,10 +170,10 @@ export default function TutorSettingsPage() {
               <div className="mt-5 space-y-2">
                 {legalPages.map((item) => (
                   <AboutRow
-                    key={item.route}
-                    label={`${item.icon} ${item.title}`}
+                    key={item.key}
+                    label={`${item.icon} ${t(item.key)}`}
                     isLink
-                    onClick={() => router.push(item.route)}
+                    onClick={() => router.push(`/tutor/legal/${item.key.split(".")[1]}`)}
                   />
                 ))}
               </div>
@@ -191,7 +185,7 @@ export default function TutorSettingsPage() {
             onClick={handleLogout}
             className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 p-4 text-center font-semibold text-red-400 hover:bg-red-500/20 transition"
           >
-            {t("sidebar.logout", "Logout")}
+            {t("sidebar.logout")}
           </button>
         </div>
       </div>
@@ -200,7 +194,6 @@ export default function TutorSettingsPage() {
 }
 
 // ---------- Reusable Components ----------
-
 function ToggleRow({
   icon,
   label,

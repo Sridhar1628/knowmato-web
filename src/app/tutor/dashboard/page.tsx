@@ -14,6 +14,7 @@ import {
   setTutorDashboard,
   clearTutorDashboard,
 } from "@/store/tutorDashboardRealtime";
+import { useTranslation } from "react-i18next"; // ✅
 
 // ---------- Type definitions ----------
 interface DashboardStats {
@@ -42,6 +43,7 @@ interface PendingRequest {
 }
 
 export default function TutorDashboard() {
+  const { t } = useTranslation(); // ✅
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [, forceUpdate] = useState({});
@@ -63,7 +65,6 @@ export default function TutorDashboard() {
       console.log('📡 WEB EVENT:', event, data);
       if (event === 'PRESENCE_UPDATE') {
         console.log('🟢 PRESENCE:', data);
-        // Update UI if needed
       }
     });
     return unsubscribe;
@@ -94,12 +95,12 @@ export default function TutorDashboard() {
       setTutorDashboard(dashboardStats, pending, active);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
-      alert("Failed to load dashboard. Please try again.");
+      alert(t("tutorDashboard.loadError"));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   // Initial load
   useEffect(() => {
@@ -119,9 +120,6 @@ export default function TutorDashboard() {
   };
 
   // ---------- Helpers ----------
-  const displayName = user?.display_name || user?.email?.split("@")[0] || "Expert";
-  const displayEmail = user?.email || "";
-
   const formatDate = (dateString: string | null) => {
     if (!dateString || dateString === "None") return "N/A";
     const date = new Date(dateString);
@@ -144,13 +142,24 @@ export default function TutorDashboard() {
     }
   };
 
+  const translateSessionStatus = (status: string) => {
+    const key = status.toLowerCase() === "active" ? "tutorDashboard.sessionActive" : "tutorDashboard.sessionScheduled";
+    return t(key);
+  };
+
+  const translateSessionType = (type: string) => {
+    if (type === "live_video") return t("myDoubts.liveVideo");
+    if (type === "text_chat") return t("myDoubts.textChat");
+    return type; // fallback
+  };
+
   // ---------- Loading State ----------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-white/70">Loading dashboard...</p>
+          <p className="text-white/70">{t("common.loading")}</p>
         </div>
       </div>
     );
@@ -166,12 +175,12 @@ export default function TutorDashboard() {
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {/* Online Status Banner */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 mx-4 mt-4 py-3 px-6 rounded-full text-center text-white font-bold text-sm shadow-lg shadow-emerald-500/25">
-          🟢 You are online & accepting requests
+          {t("tutorDashboard.onlineBanner")}
         </div>
 
         {/* Stats Row */}
         <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mt-8 mb-4">
-          📊 Your Stats
+          📊 {t("tutorDashboard.statsTitle")}
         </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Wallet Balance */}
@@ -180,7 +189,7 @@ export default function TutorDashboard() {
               ₹{tutorDashboardCache.stats.walletBalance}
             </div>
             <div className="text-xs text-white/60 mt-1 font-medium">
-              Wallet Balance
+              {t("tutorDashboard.walletBalance")}
             </div>
           </div>
 
@@ -190,7 +199,7 @@ export default function TutorDashboard() {
               ₹{tutorDashboardCache.stats.totalEarnings}
             </div>
             <div className="text-xs text-white/60 mt-1 font-medium">
-              Total Earnings
+              {t("tutorDashboard.totalEarnings")}
             </div>
           </div>
 
@@ -200,7 +209,7 @@ export default function TutorDashboard() {
               {tutorDashboardCache.stats.totalSessions}
             </div>
             <div className="text-xs text-white/60 mt-1 font-medium">
-              Total Sessions
+              {t("tutorDashboard.totalSessions")}
             </div>
           </div>
 
@@ -210,7 +219,7 @@ export default function TutorDashboard() {
               {tutorDashboardCache.stats.completedSessions}
             </div>
             <div className="text-xs text-white/60 mt-1 font-medium">
-              Completed
+              {t("tutorDashboard.completed")}
             </div>
           </div>
         </div>
@@ -225,9 +234,9 @@ export default function TutorDashboard() {
               <span className="text-3xl">📨</span>
               <div>
                 <div className="font-bold text-amber-300">
-                  {tutorDashboardCache.pendingRequests.length} pending request{tutorDashboardCache.pendingRequests.length !== 1 ? "s" : ""}
+                  {t("tutorDashboard.pendingRequestsCount", { count: tutorDashboardCache.pendingRequests.length })}
                 </div>
-                <div className="text-sm text-amber-200/80">Tap to review →</div>
+                <div className="text-sm text-amber-200/80">{t("tutorDashboard.tapToReview")}</div>
               </div>
             </div>
           </button>
@@ -239,23 +248,23 @@ export default function TutorDashboard() {
             onClick={() => router.push("/tutor/requests")}
             className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 text-white p-4 rounded-2xl shadow-lg shadow-violet-500/25 transition transform hover:-translate-y-1 text-center font-bold"
           >
-            📩 View Requests
+            📩 {t("tutorDashboard.viewRequests")}
           </button>
           <button
             onClick={() => router.push("/tutor/doubts")}
             className="border-2 border-violet-400/50 text-violet-300 p-4 rounded-2xl backdrop-blur-md bg-white/5 hover:bg-violet-400/10 transition transform hover:-translate-y-1 text-center font-bold"
           >
-            📚 Browse Pool Doubts
+            📚 {t("tutorDashboard.browsePoolDoubts")}
           </button>
         </div>
 
         {/* Active / Scheduled Sessions */}
         <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mb-4">
-          📅 Active & Scheduled Sessions
+          📅 {t("tutorDashboard.activeSessionsTitle")}
         </h2>
         {tutorDashboardCache.activeSessions.length === 0 ? (
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 text-center border border-white/10 shadow-lg">
-            <p className="text-white/50">No active or scheduled sessions</p>
+            <p className="text-white/50">{t("tutorDashboard.noActiveSessions")}</p>
           </div>
         ) : (
           <div className="space-y-4 mb-8">
@@ -269,7 +278,10 @@ export default function TutorDashboard() {
                       router.push(`/chat?sessionId=${session.session_id}`);
                     } else {
                       alert(
-                        `Upcoming Session: ${session.title}\nScheduled on ${formatDate(session.started_at) || "TBD"}`
+                        t("tutorDashboard.upcomingSessionAlert", {
+                          title: session.title,
+                          time: formatDate(session.started_at) || "TBD",
+                        })
                       );
                     }
                   }}
@@ -278,15 +290,19 @@ export default function TutorDashboard() {
                   <div className="flex justify-between items-start flex-wrap gap-2">
                     <span className="font-semibold text-white flex-1">{session.title}</span>
                     <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border ${statusStyle.color}`}>
-                      {statusStyle.emoji} {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                      {statusStyle.emoji} {translateSessionStatus(session.status)}
                     </span>
                   </div>
                   <div className="text-sm text-white/70 mt-1">
-                    👩‍🎓 Student: {session.student_name || "Unknown"}
+                    {t("tutorDashboard.studentLabel")} {session.student_name || t("tutorDashboard.unknownStudent")}
                   </div>
-                  <div className="text-sm text-white/60">💬 Type: {session.session_type}</div>
+                  <div className="text-sm text-white/60">
+                    {t("tutorDashboard.typeLabel")} {translateSessionType(session.session_type)}
+                  </div>
                   {session.started_at && (
-                    <div className="text-sm text-white/50">🕒 Started: {formatDate(session.started_at)}</div>
+                    <div className="text-sm text-white/50">
+                      {t("tutorDashboard.startedLabel")} {formatDate(session.started_at)}
+                    </div>
                   )}
                 </button>
               );
@@ -298,10 +314,8 @@ export default function TutorDashboard() {
         <div className="bg-white/5 backdrop-blur-md border border-white/10 p-5 rounded-2xl shadow-lg flex items-start gap-4 mb-8">
           <div className="text-3xl">💡</div>
           <div>
-            <h3 className="font-semibold text-violet-300">Pro Tip</h3>
-            <p className="text-sm text-white/70">
-              Respond within 5 minutes to increase your acceptance rate and earn the “Top Expert” badge!
-            </p>
+            <h3 className="font-semibold text-violet-300">{t("tutorDashboard.proTipTitle")}</h3>
+            <p className="text-sm text-white/70">{t("tutorDashboard.proTipDesc")}</p>
           </div>
         </div>
 
@@ -311,7 +325,7 @@ export default function TutorDashboard() {
           disabled={refreshing}
           className="w-full sm:w-auto bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold py-3 px-8 rounded-full shadow-xl shadow-violet-500/25 transition mx-auto block mb-4 disabled:opacity-60"
         >
-          {refreshing ? "Refreshing..." : "🔄 Refresh"}
+          {refreshing ? t("common.refreshing") : t("common.refresh")}
         </button>
       </div>
     </div>

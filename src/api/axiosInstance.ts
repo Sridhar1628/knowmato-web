@@ -1,4 +1,5 @@
 import axios from "axios";
+import { parseApiError } from "@/utils/errorHandler";
 
 const axiosInstance = axios.create({
   baseURL: "http://127.0.0.1:8000/api/",
@@ -98,6 +99,25 @@ axiosInstance.interceptors.request.use(
   },
 
   (error) => Promise.reject(error)
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => {
+    // Successful response
+    return response;
+  },
+
+  (error) => {
+    // Convert AxiosError -> AppError
+    const parsedError = parseApiError(error);
+
+    // Optional: log only in development
+    if (process.env.NODE_ENV === "development") {
+      console.error("API Error:", parsedError);
+    }
+
+    return Promise.reject(parsedError);
+  }
 );
 
 export default axiosInstance;

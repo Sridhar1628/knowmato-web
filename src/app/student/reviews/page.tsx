@@ -5,8 +5,10 @@ import { getMyReviews, updateReview, StudentReview } from "@/services/reviewServ
 import { getTokens } from "@/services/storageService";
 import { WS_BASE_URL } from "@/config/env";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 export default function StudentReviewsPage() {
+  const { t } = useTranslation(); // ✅ added
   const [reviews, setReviews] = useState<StudentReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,21 +21,24 @@ export default function StudentReviewsPage() {
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  const fetchReviews = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      const data = await getMyReviews();
-      setReviews(Array.isArray(data) ? data : []);
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Failed to load reviews.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const fetchReviews = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setLoading(true);
+      setError(null);
+      try {
+        const data = await getMyReviews();
+        setReviews(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        const msg = err?.response?.data?.error || err?.message || t("reviews.loadError");
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [t]
+  );
 
   // Real-time WebSocket
   useEffect(() => {
@@ -105,10 +110,10 @@ export default function StudentReviewsPage() {
             : r
         )
       );
-      toast.success("Review updated!");
+      toast.success(t("reviews.updated"));
       setEditingReview(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Update failed");
+      toast.error(err?.response?.data?.error || t("reviews.updateFailed"));
     } finally {
       setUpdating(false);
     }
@@ -123,7 +128,7 @@ export default function StudentReviewsPage() {
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
         <div className="relative z-10 text-center">
           <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-          <p className="mt-4 text-white/80 font-medium">Loading reviews...</p>
+          <p className="mt-4 text-white/80 font-medium">{t("reviews.loadingReviews")}</p>
         </div>
       </div>
     );
@@ -141,9 +146,9 @@ export default function StudentReviewsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 flex items-center gap-2">
-              <span className="text-4xl">📝</span> My Reviews
+              <span className="text-4xl">📝</span> {t("reviews.title")}
             </h1>
-            <p className="text-white/60 mt-1">Manage your tutor reviews & feedback</p>
+            <p className="text-white/60 mt-1">{t("reviews.subtitle")}</p>
           </div>
           <button
             onClick={handleRefresh}
@@ -152,14 +157,18 @@ export default function StudentReviewsPage() {
           >
             <svg
               className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
               <path
-                strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            {refreshing ? "Refreshing..." : "Refresh"}
+            {refreshing ? t("common.refreshing") : t("common.refresh")}
           </button>
         </div>
 
@@ -171,7 +180,7 @@ export default function StudentReviewsPage() {
               onClick={() => fetchReviews()}
               className="px-4 py-1.5 bg-rose-400/20 hover:bg-rose-400/30 rounded-xl font-medium text-sm text-rose-200 transition"
             >
-              Retry
+              {t("common.retry")}
             </button>
           </div>
         )}
@@ -180,10 +189,8 @@ export default function StudentReviewsPage() {
         {!error && reviews.length === 0 && !loading && (
           <div className="text-center py-20 bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl">
             <div className="text-6xl mb-4">📝</div>
-            <h2 className="text-2xl font-bold text-white">No reviews yet</h2>
-            <p className="text-white/50 mt-2">
-              Once you complete a session, you can review your tutor here.
-            </p>
+            <h2 className="text-2xl font-bold text-white">{t("reviews.noReviews")}</h2>
+            <p className="text-white/50 mt-2">{t("reviews.noReviewsMsg")}</p>
           </div>
         )}
 
@@ -198,7 +205,7 @@ export default function StudentReviewsPage() {
                 {/* Tutor name & rating */}
                 <div className="flex justify-between items-start mb-3">
                   <h2 className="text-lg font-bold text-white group-hover:text-violet-300 transition-colors">
-                    👨‍🏫 {review.tutor_name ?? "Unknown Tutor"}
+                    👨‍🏫 {review.tutor_name ?? t("reviews.unknownTutor")}
                   </h2>
                   <div className="flex items-center gap-1 bg-amber-400/20 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40">
                     <span className="text-amber-300 font-bold text-sm">
@@ -209,7 +216,7 @@ export default function StudentReviewsPage() {
 
                 {/* Feedback */}
                 <p className="text-white/70 text-sm leading-relaxed flex-1">
-                  {review.feedback?.trim() || "No feedback provided."}
+                  {review.feedback?.trim() || t("reviews.noFeedback")}
                 </p>
 
                 {/* Date & Edit */}
@@ -230,7 +237,7 @@ export default function StudentReviewsPage() {
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Edit
+                    {t("reviews.editReview")}
                   </button>
                 </div>
               </div>
@@ -243,9 +250,11 @@ export default function StudentReviewsPage() {
       {editingReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-4">Edit Review</h2>
+            <h2 className="text-xl font-bold text-white mb-4">{t("reviews.editReview")}</h2>
 
-            <label className="block text-sm font-medium text-white/70 mb-2">Rating (1-5)</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              {t("reviews.ratingLabel")}
+            </label>
             <div className="flex gap-2 mb-5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -261,10 +270,12 @@ export default function StudentReviewsPage() {
               ))}
             </div>
 
-            <label className="block text-sm font-medium text-white/70 mb-2">Feedback</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">
+              {t("submitReview.feedbackOptional") || t("reviews.feedbackPlaceholder")}
+            </label>
             <textarea
               className="w-full bg-gray-900/60 border-2 border-white/20 rounded-xl p-3 text-sm min-h-[100px] text-white placeholder-white/40 focus:outline-none focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400"
-              placeholder="Write your feedback..."
+              placeholder={t("reviews.feedbackPlaceholder")}
               value={editFeedback}
               onChange={(e) => setEditFeedback(e.target.value)}
             />
@@ -274,14 +285,14 @@ export default function StudentReviewsPage() {
                 onClick={() => setEditingReview(null)}
                 className="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold py-2.5 rounded-xl transition-colors border border-white/20"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={handleSave}
                 disabled={updating}
                 className="flex-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold py-2.5 rounded-xl disabled:opacity-60 shadow-lg shadow-violet-500/25 transition-all"
               >
-                {updating ? "Saving..." : "Save"}
+                {updating ? t("common.saving") : t("common.save")}
               </button>
             </div>
           </div>

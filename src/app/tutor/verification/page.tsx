@@ -1,10 +1,10 @@
-// app/tutor/verification/page.tsx
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next"; // ✅
 
 import {
   getTutorBankVerification,
@@ -17,7 +17,7 @@ const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
 const AADHAAR_REGEX = /^\d{12}$/;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 // ---------- Types ----------
@@ -53,39 +53,14 @@ const maskPAN = (pan: string) =>
 const maskAadhaar = (aadhaar: string) =>
   aadhaar.length > 4 ? `********${aadhaar.slice(-4)}` : aadhaar;
 
-// ---------- Status Helpers (Dark Theme) ----------
-const statusBadge = (status: string) => {
-  const map: Record<string, string> = {
-    pending: "bg-amber-400/20 text-amber-300 border-amber-400/40",
-    under_review: "bg-sky-400/20 text-sky-300 border-sky-400/40",
-    approved: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
-    rejected: "bg-rose-400/20 text-rose-300 border-rose-400/40",
-  };
-  return map[status] || "bg-gray-400/20 text-gray-300 border-gray-400/40";
-};
-
-const statusIcons: Record<string, string> = {
-  pending: "⏳",
-  under_review: "🔍",
-  approved: "✅",
-  rejected: "❌",
-};
-
-const statusMessages: Record<string, { title: string; description: string }> = {
-  pending: { title: "Pending Review", description: "Your verification is in the queue." },
-  under_review: { title: "Under Review", description: "We are checking your documents." },
-  approved: { title: "Verified", description: "Your bank account is verified." },
-  rejected: { title: "Rejected", description: "Please review the reason and resubmit." },
-};
-
 export default function TutorVerificationPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [status, setStatus] = useState<string>("pending");
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // Form state
   const [form, setForm] = useState({
     account_holder_name: "",
     account_number: "",
@@ -100,33 +75,26 @@ export default function TutorVerificationPage() {
     agreed: false,
   });
 
-  // Files
   const [bankProof, setBankProof] = useState<File | null>(null);
   const [panCard, setPanCard] = useState<File | null>(null);
   const [bankProofPreview, setBankProofPreview] = useState<string>("");
   const [panCardPreview, setPanCardPreview] = useState<string>("");
 
-  // Editing mode
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Image modal
   const [imageModal, setImageModal] = useState<string | null>(null);
 
-  // Form ref
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setImageModal(null);
-      }
+      if (e.key === "Escape") setImageModal(null);
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, []);
 
-  // Revoke Object URLs (memory leak fix)
   useEffect(() => {
     return () => {
       if (bankProofPreview.startsWith("blob:")) URL.revokeObjectURL(bankProofPreview);
@@ -165,11 +133,11 @@ export default function TutorVerificationPage() {
         setEditing(true);
       }
     } catch {
-      toast.error("Failed to load verification details");
+      toast.error(t("bankVerification.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchVerification();
@@ -178,10 +146,10 @@ export default function TutorVerificationPage() {
   // ---------- File Handlers with Validation ----------
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      return "Only JPG, PNG, and WEBP images are allowed.";
+      return t("bankVerification.fileTypeError");
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size must be under 5MB.";
+      return t("bankVerification.fileSizeError");
     }
     return null;
   };
@@ -219,62 +187,62 @@ export default function TutorVerificationPage() {
   // ---------- Form Validation ----------
   const validateForm = (): boolean => {
     if (!form.account_holder_name.trim()) {
-      toast.error("Account holder name is required.");
+      toast.error(t("bankVerification.holderNameRequired"));
       return false;
     }
     if (!form.account_number.trim()) {
-      toast.error("Account number is required.");
+      toast.error(t("bankVerification.accountRequired"));
       return false;
     }
     if (form.account_number !== form.confirm_account_number) {
-      toast.error("Account numbers do not match.");
+      toast.error(t("bankVerification.accountMismatch"));
       return false;
     }
     if (!IFSC_REGEX.test(form.ifsc_code.toUpperCase())) {
-      toast.error("Invalid IFSC code (e.g., HDFC0001234).");
+      toast.error(t("bankVerification.ifscInvalid"));
       return false;
     }
     if (!form.bank_name.trim()) {
-      toast.error("Bank name is required.");
+      toast.error(t("bankVerification.bankRequired"));
       return false;
     }
     if (!form.branch_name.trim()) {
-      toast.error("Branch name is required.");
+      toast.error(t("bankVerification.branchRequired"));
       return false;
     }
     if (!PAN_REGEX.test(form.pan_number.toUpperCase())) {
-      toast.error("Invalid PAN number (e.g., ABCDE1234F).");
+      toast.error(t("bankVerification.panInvalid"));
       return false;
     }
     if (form.aadhaar_number && !AADHAAR_REGEX.test(form.aadhaar_number)) {
-      toast.error("Aadhaar must be exactly 12 digits.");
+      toast.error(t("bankVerification.aadhaarInvalid"));
       return false;
     }
     if (!MOBILE_REGEX.test(form.mobile_number)) {
-      toast.error("Invalid 10‑digit mobile number.");
+      toast.error(t("bankVerification.mobileInvalid"));
       return false;
     }
     if (!submitted) {
       if (!bankProof) {
-        toast.error("Bank proof document is required.");
+        toast.error(t("bankVerification.bankProofRequired"));
         return false;
       }
       if (!panCard) {
-        toast.error("PAN card document is required.");
+        toast.error(t("bankVerification.panCardRequired"));
         return false;
       }
     } else {
       if (!bankProof && !bankProofPreview) {
-        toast.error("Bank proof document is required.");
+        toast.error(t("bankVerification.bankProofRequired"));
         return false;
       }
       if (!panCard && !panCardPreview) {
-        toast.error("PAN card document is required.");
+        toast.error(t("bankVerification.panCardRequired"));
         return false;
       }
     }
     if (!form.agreed) {
-      toast.error("Please confirm all details are correct.");
+      toast.error(t("bankVerification.agreementRequired"));
       return false;
     }
     return true;
@@ -283,16 +251,7 @@ export default function TutorVerificationPage() {
   // ---------- Submit / Update ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log("Submit clicked");
-
-    const isValid = validateForm();
-    console.log("Validation:", isValid);
-    if (!isValid) {
-      console.log("Stopped because validation failed");
-      return;
-    }
-    console.log("Validation passed");
+    if (!validateForm()) return;
 
     setSaving(true);
     const formData = new FormData();
@@ -313,28 +272,65 @@ export default function TutorVerificationPage() {
     try {
       if (!submitted) {
         await submitTutorBankVerification(formData);
-        toast.success("Verification submitted successfully!");
+        toast.success(t("bankVerification.submitted"));
       } else {
         await updateTutorBankVerification(formData);
-        toast.success("Verification updated successfully!");
+        toast.success(t("bankVerification.updated"));
       }
       setTimeout(async () => {
         await fetchVerification();
         router.replace("/tutor/wallet");
       }, 2000);
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Something went wrong";
+      const msg = err?.response?.data?.error || err?.message || t("bankVerification.error");
       toast.error(msg);
       setSaving(false);
     }
   };
 
-  // ---------- Cancel button handler ----------
   const handleCancelEdit = () => {
     setEditing(false);
     setBankProof(null);
     setPanCard(null);
     fetchVerification();
+  };
+
+  // ---------- Status helpers ----------
+  const statusBadge = (status: string) => {
+    const map: Record<string, string> = {
+      pending: "bg-amber-400/20 text-amber-300 border-amber-400/40",
+      under_review: "bg-sky-400/20 text-sky-300 border-sky-400/40",
+      approved: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
+      rejected: "bg-rose-400/20 text-rose-300 border-rose-400/40",
+    };
+    return map[status] || "bg-gray-400/20 text-gray-300 border-gray-400/40";
+  };
+
+  const statusIcons: Record<string, string> = {
+    pending: "⏳",
+    under_review: "🔍",
+    approved: "✅",
+    rejected: "❌",
+  };
+
+  const getStatusTitle = (s: string) => {
+    const keys: Record<string, string> = {
+      pending: "bankVerification.pendingTitle",
+      under_review: "bankVerification.underReviewTitle",
+      approved: "bankVerification.approvedTitle",
+      rejected: "bankVerification.rejectedTitle",
+    };
+    return t(keys[s] || s);
+  };
+
+  const getStatusDesc = (s: string) => {
+    const keys: Record<string, string> = {
+      pending: "bankVerification.pendingDesc",
+      under_review: "bankVerification.underReviewDesc",
+      approved: "bankVerification.approvedDesc",
+      rejected: "bankVerification.rejectedDesc",
+    };
+    return t(keys[s] || "");
   };
 
   // ---------- Loading ----------
@@ -363,7 +359,7 @@ export default function TutorVerificationPage() {
           onClick={() => router.push("/tutor/wallet")}
           className="mb-6 flex items-center gap-2 text-violet-300 hover:text-violet-200 font-medium transition"
         >
-          ← Back to Wallet
+          ← {t("bankVerification.backToWallet")}
         </button>
 
         <motion.div
@@ -372,30 +368,26 @@ export default function TutorVerificationPage() {
           transition={{ duration: 0.3 }}
         >
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mb-2 flex items-center gap-2">
-            🏦 Bank Verification
+            🏦 {t("bankVerification.title")}
           </h1>
-          <p className="text-white/70 mb-6">
-            Verify your bank account to enable withdrawals
-          </p>
+          <p className="text-white/70 mb-6">{t("bankVerification.subtitle")}</p>
 
           {/* Status Card */}
           {submitted && (
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
-              className={`mb-6 p-5 rounded-2xl border backdrop-blur-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${statusBadge(
-                status
-              )}`}
+              className={`mb-6 p-5 rounded-2xl border backdrop-blur-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${statusBadge(status)}`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-3xl">{statusIcons[status]}</span>
                 <div>
-                  <p className="font-bold text-lg">
-                    {statusMessages[status]?.title || status.replace("_", " ")}
-                  </p>
-                  <p className="text-sm opacity-80">{statusMessages[status]?.description}</p>
+                  <p className="font-bold text-lg">{getStatusTitle(status)}</p>
+                  <p className="text-sm opacity-80">{getStatusDesc(status)}</p>
                   {rejectionReason && status === "rejected" && (
-                    <p className="text-sm text-rose-300 mt-1">Reason: {rejectionReason}</p>
+                    <p className="text-sm text-rose-300 mt-1">
+                      {t("bankVerification.reason")}: {rejectionReason}
+                    </p>
                   )}
                 </div>
               </div>
@@ -404,7 +396,9 @@ export default function TutorVerificationPage() {
                   onClick={() => setEditing(true)}
                   className="px-5 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-lg font-semibold text-white hover:bg-white/20 transition"
                 >
-                  {status === "rejected" ? "Edit & Resubmit" : "View / Edit Details"}
+                  {status === "rejected"
+                    ? t("bankVerification.editResubmit")
+                    : t("bankVerification.viewEdit")}
                 </button>
               )}
             </motion.div>
@@ -417,46 +411,46 @@ export default function TutorVerificationPage() {
               animate={{ opacity: 1 }}
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl mb-6"
             >
-              <h2 className="text-lg font-bold text-white mb-4">Verified Details</h2>
+              <h2 className="text-lg font-bold text-white mb-4">
+                {t("bankVerification.verifiedDetails")}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-white/50">Account Holder</span>
+                  <span className="text-white/50">{t("bankVerification.holderName")}</span>
                   <p className="font-medium text-white">{form.account_holder_name}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">Account Number</span>
+                  <span className="text-white/50">{t("bankVerification.accountNumber")}</span>
                   <p className="font-medium text-white">{maskAccount(form.account_number)}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">Bank</span>
+                  <span className="text-white/50">{t("bankVerification.bank")}</span>
                   <p className="font-medium text-white">{form.bank_name}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">Branch</span>
+                  <span className="text-white/50">{t("bankVerification.branch")}</span>
                   <p className="font-medium text-white">{form.branch_name}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">IFSC</span>
+                  <span className="text-white/50">{t("bankVerification.ifsc")}</span>
                   <p className="font-medium text-white">{form.ifsc_code}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">PAN</span>
+                  <span className="text-white/50">{t("bankVerification.pan")}</span>
                   <p className="font-medium text-white">{maskPAN(form.pan_number)}</p>
                 </div>
                 <div>
-                  <span className="text-white/50">Mobile</span>
+                  <span className="text-white/50">{t("bankVerification.mobile")}</span>
                   <p className="font-medium text-white">{form.mobile_number}</p>
                 </div>
                 {form.aadhaar_number && (
                   <div>
-                    <span className="text-white/50">Aadhaar</span>
+                    <span className="text-white/50">{t("bankVerification.aadhaar")}</span>
                     <p className="font-medium text-white">{maskAadhaar(form.aadhaar_number)}</p>
                   </div>
                 )}
               </div>
-              <p className="mt-4 text-white/60 text-sm">
-                ✅ Your bank verification is complete. You can now withdraw funds.
-              </p>
+              <p className="mt-4 text-white/60 text-sm">{t("bankVerification.verifiedMessage")}</p>
             </motion.div>
           )}
 
@@ -470,17 +464,19 @@ export default function TutorVerificationPage() {
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
             >
               <h2 className="text-xl font-bold text-white mb-4">
-                {submitted ? "Update Verification" : "Submit Verification"}
+                {submitted
+                  ? t("bankVerification.updateVerification")
+                  : t("bankVerification.submitVerification")}
               </h2>
 
               {/* Personal Details */}
               <h3 className="text-base font-semibold text-violet-300 mt-2 mb-3">
-                👤 Personal Details
+                {t("bankVerification.personalDetails")}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Account Holder Name *
+                    {t("bankVerification.holderName")} *
                   </label>
                   <input
                     type="text"
@@ -493,7 +489,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Mobile Number *
+                    {t("bankVerification.mobile")} *
                   </label>
                   <input
                     type="tel"
@@ -509,7 +505,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    PAN Number *
+                    {t("bankVerification.pan")} *
                   </label>
                   <input
                     type="text"
@@ -525,7 +521,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Aadhaar Number
+                    {t("bankVerification.aadhaar")}
                   </label>
                   <input
                     type="text"
@@ -542,12 +538,12 @@ export default function TutorVerificationPage() {
 
               {/* Bank Details */}
               <h3 className="text-base font-semibold text-violet-300 mt-6 mb-3">
-                🏦 Bank Details
+                {t("bankVerification.bankDetails")}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Account Number *
+                    {t("bankVerification.accountNumber")} *
                   </label>
                   <input
                     type="text"
@@ -562,7 +558,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Confirm Account Number *
+                    {t("bankVerification.confirmAccount")} *
                   </label>
                   <input
                     type="text"
@@ -583,12 +579,14 @@ export default function TutorVerificationPage() {
                   {form.account_number &&
                     form.confirm_account_number &&
                     form.account_number !== form.confirm_account_number && (
-                      <p className="text-xs text-rose-400 mt-1">Account numbers do not match</p>
+                      <p className="text-xs text-rose-400 mt-1">
+                        {t("bankVerification.accountMismatch")}
+                      </p>
                     )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    IFSC Code *
+                    {t("bankVerification.ifsc")} *
                   </label>
                   <input
                     type="text"
@@ -604,7 +602,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Bank Name *
+                    {t("bankVerification.bankName")} *
                   </label>
                   <input
                     type="text"
@@ -617,7 +615,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Branch Name *
+                    {t("bankVerification.branch")} *
                   </label>
                   <input
                     type="text"
@@ -630,7 +628,7 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Account Type *
+                    {t("bankVerification.accountType")} *
                   </label>
                   <select
                     value={form.account_type}
@@ -638,24 +636,28 @@ export default function TutorVerificationPage() {
                     disabled={saving}
                     className="w-full bg-gray-900/60 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none disabled:opacity-50 appearance-none cursor-pointer"
                   >
-                    <option value="savings" className="bg-gray-900">Savings</option>
-                    <option value="current" className="bg-gray-900">Current</option>
+                    <option value="savings" className="bg-gray-900">
+                      {t("bankVerification.savings")}
+                    </option>
+                    <option value="current" className="bg-gray-900">
+                      {t("bankVerification.current")}
+                    </option>
                   </select>
                 </div>
               </div>
 
               {/* Documents */}
               <h3 className="text-base font-semibold text-violet-300 mt-6 mb-3">
-                📄 Documents
+                {t("bankVerification.documents")}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    Bank Proof (Passbook / Statement) *
+                    {t("bankVerification.bankProof")} *
                   </label>
-                  <p className="text-xs text-white/50 mb-1">JPG, PNG, WEBP – Max 5MB</p>
+                  <p className="text-xs text-white/50 mb-1">{t("bankVerification.fileHint")}</p>
                   <label className="cursor-pointer inline-block bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 py-2 px-4 rounded-xl text-sm font-semibold transition border border-violet-400/30">
-                    Choose File
+                    {t("bankVerification.chooseFile")}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -675,11 +677,11 @@ export default function TutorVerificationPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-1">
-                    PAN Card *
+                    {t("bankVerification.panCard")} *
                   </label>
-                  <p className="text-xs text-white/50 mb-1">JPG, PNG, WEBP – Max 5MB</p>
+                  <p className="text-xs text-white/50 mb-1">{t("bankVerification.fileHint")}</p>
                   <label className="cursor-pointer inline-block bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 py-2 px-4 rounded-xl text-sm font-semibold transition border border-violet-400/30">
-                    Choose File
+                    {t("bankVerification.chooseFile")}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
@@ -710,7 +712,7 @@ export default function TutorVerificationPage() {
                   className="mt-0.5 h-4 w-4 rounded border-white/30 bg-transparent text-violet-500 focus:ring-violet-400"
                 />
                 <label htmlFor="agreed" className="text-sm text-white/70">
-                  I confirm that all provided details and documents are correct and I agree to the verification process.
+                  {t("bankVerification.agreement")}
                 </label>
               </div>
 
@@ -723,7 +725,7 @@ export default function TutorVerificationPage() {
                     disabled={saving}
                     className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition disabled:opacity-50 border border-white/20"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 )}
                 <button
@@ -731,7 +733,11 @@ export default function TutorVerificationPage() {
                   disabled={saving}
                   className="px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-medium rounded-xl transition disabled:opacity-70 flex items-center gap-2 shadow-lg shadow-violet-500/25"
                 >
-                  {saving ? "Saving..." : submitted ? "Update" : "Submit"}
+                  {saving
+                    ? t("bankVerification.saving")
+                    : submitted
+                    ? t("bankVerification.update")
+                    : t("bankVerification.submit")}
                 </button>
               </div>
             </motion.form>
@@ -739,7 +745,7 @@ export default function TutorVerificationPage() {
 
           {/* Security Note */}
           <p className="text-center text-xs text-white/40 mt-6">
-            🔒 Your bank details are securely stored and used only for processing withdrawals.
+            {t("bankVerification.securityNote")}
           </p>
         </motion.div>
       </div>

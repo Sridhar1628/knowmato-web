@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getTutorPoolDoubts, AcceptPoolDoubt } from "@/services/v1Service";
 import { subscribeSocket } from "@/services/socketEventBus";
 import { SocketEvents } from "@/services/versionSocketEvents";
+import { useTranslation } from "react-i18next"; // ✅
 
 import {
   tutorPoolCache,
@@ -39,18 +40,20 @@ interface Doubt {
   expires_in: number;
 }
 
-const categories = [
-  "All",
-  "Python",
-  "JavaScript",
-  "Java",
-  "C++",
-  "Data Structures",
-  "React",
-  "Other",
-];
+// Category translation map
+const CATEGORY_KEYS: Record<string, string> = {
+  All: "common.all",
+  Other: "common.other",
+  Python: "Python",
+  JavaScript: "JavaScript",
+  Java: "Java",
+  "C++": "C++",
+  "Data Structures": "Data Structures",
+  React: "React",
+};
 
 export default function TutorDoubtsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [, forceUpdate] = useState({});
 
@@ -82,7 +85,7 @@ export default function TutorDoubtsPage() {
       setTutorPool(open, assigned);
     } catch (err) {
       console.error("❌ Fetch pool doubts error:", err);
-      alert("Failed to load available doubts.");
+      alert(t("availableDoubts.loadError"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,7 +95,7 @@ export default function TutorDoubtsPage() {
   // ---------- Accept doubt ----------
   const handleAccept = async (doubtId: number, title: string) => {
     const confirmed = window.confirm(
-      `Are you sure you want to accept "${title}"?`
+      t("availableDoubts.acceptMessage", { title })
     );
     if (!confirmed) return;
 
@@ -102,10 +105,10 @@ export default function TutorDoubtsPage() {
       if (res?.session_id) {
         acceptPoolDoubt(doubtId, res.session_id);
       }
-      alert("Your session is being created...");
+      alert(t("availableDoubts.sessionCreating"));
     } catch (error) {
       console.error("Accept error:", error);
-      alert("Failed to accept doubt. Please try again.");
+      alert(t("availableDoubts.acceptError"));
     } finally {
       setAcceptingId(null);
     }
@@ -182,10 +185,14 @@ export default function TutorDoubtsPage() {
     const now = new Date();
     const created = new Date(dateStr);
     const diffMin = Math.floor((now.getTime() - created.getTime()) / 60000);
-    if (diffMin < 1) return "Just now";
-    if (diffMin < 60) return `${diffMin} min ago`;
+    if (diffMin < 1) return t("availableDoubts.justNow");
+    if (diffMin < 60) return t("availableDoubts.minAgo", { count: diffMin });
     const hrs = Math.floor(diffMin / 60);
-    return `${hrs} hr ago`;
+    return t("availableDoubts.hrAgo", { count: hrs });
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    return CATEGORY_KEYS[cat] ? t(CATEGORY_KEYS[cat]) : cat;
   };
 
   const isVideo = (item: Doubt) =>
@@ -232,7 +239,9 @@ export default function TutorDoubtsPage() {
                 : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30"
             }`}
           >
-            {video ? "📹 Live Video" : "💬 Text / Chat"}
+            {video
+              ? `📹 ${t("availableDoubts.liveVideo")}`
+              : `💬 ${t("availableDoubts.textChat")}`}
           </span>
           <span className="text-xs text-white/50">
             {formatTimeAgo(item.created_at)}
@@ -251,13 +260,15 @@ export default function TutorDoubtsPage() {
             {item.category}
           </span>
           <span className="bg-white/10 text-white/80 px-2 py-1 rounded-lg text-xs font-semibold border border-white/10">
-            {item.mode === "specific" ? "Specific" : "General"}
+            {item.mode === "specific"
+              ? t("availableDoubts.specific")
+              : t("availableDoubts.general")}
           </span>
         </div>
 
         {/* Price */}
         <div className="flex items-center gap-1 mb-4">
-          <span className="text-white/50 text-sm">Budget:</span>
+          <span className="text-white/50 text-sm">{t("availableDoubts.budgetLabel")}</span>
           <span className="text-xl font-extrabold bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
             ₹{item.price}
           </span>
@@ -268,10 +279,10 @@ export default function TutorDoubtsPage() {
           {activeTab === "new" ? (
             <>
               <button
-                onClick={() => alert("Reject feature coming soon!")}
+                onClick={() => alert(t("availableDoubts.rejectComingSoon"))}
                 className="flex-1 bg-white/10 border border-white/20 text-white/70 py-3 rounded-xl font-semibold hover:bg-white/20 transition"
               >
-                Reject
+                {t("availableDoubts.reject")}
               </button>
               <button
                 disabled={isExpired || acceptingId === item.doubt_id}
@@ -287,10 +298,10 @@ export default function TutorDoubtsPage() {
                 }`}
               >
                 {isExpired
-                  ? "Expired"
+                  ? t("availableDoubts.expired")
                   : acceptingId === item.doubt_id
-                  ? "Accepting..."
-                  : "Accept"}
+                  ? t("availableDoubts.accepting")
+                  : t("availableDoubts.accept")}
               </button>
             </>
           ) : (
@@ -305,7 +316,7 @@ export default function TutorDoubtsPage() {
               }}
               className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl font-semibold hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-500/25 transition"
             >
-              🚀 Join Session
+              🚀 {t("availableDoubts.joinSession")}
             </button>
           )}
         </div>
@@ -313,7 +324,9 @@ export default function TutorDoubtsPage() {
         {/* Timer (new tab only) */}
         {activeTab === "new" && (
           <div className="mt-3 text-center text-xs text-rose-400">
-            ⏰ Expires in 00:{String(remaining).padStart(2, "0")}
+            ⏰ {t("availableDoubts.expiresInTime", {
+              time: `00:${String(remaining).padStart(2, "0")}`,
+            })}
           </div>
         )}
       </motion.div>
@@ -326,7 +339,7 @@ export default function TutorDoubtsPage() {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-12 h-12 border-4 border-violet-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-white/70">Loading doubts...</p>
+          <p className="text-white/70">{t("availableDoubts.loading")}</p>
         </div>
       </div>
     );
@@ -344,7 +357,7 @@ export default function TutorDoubtsPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-            Doubts for You
+            {t("availableDoubts.title")}
           </h1>
           <button
             onClick={onRefresh}
@@ -371,13 +384,13 @@ export default function TutorDoubtsPage() {
         <div className="mb-6 space-y-3">
           <input
             type="text"
-            placeholder="Search by title..."
+            placeholder={t("availableDoubts.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/5 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
           />
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.map((cat) => (
+            {Object.keys(CATEGORY_KEYS).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
@@ -387,7 +400,7 @@ export default function TutorDoubtsPage() {
                     : "bg-white/5 border border-white/10 text-white/70 hover:bg-white/10"
                 }`}
               >
-                {cat}
+                {getCategoryLabel(cat)}
               </button>
             ))}
           </div>
@@ -403,7 +416,7 @@ export default function TutorDoubtsPage() {
                 : "text-white/60 hover:text-white"
             }`}
           >
-            New ({filteredDoubts.length})
+            {t("availableDoubts.new")} ({filteredDoubts.length})
           </button>
           <button
             onClick={() => setActiveTab("accepted")}
@@ -413,7 +426,7 @@ export default function TutorDoubtsPage() {
                 : "text-white/60 hover:text-white"
             }`}
           >
-            Accepted ({tutorPoolCache.acceptedDoubts.length})
+            {t("availableDoubts.accepted")} ({tutorPoolCache.acceptedDoubts.length})
           </button>
         </div>
 
@@ -428,7 +441,7 @@ export default function TutorDoubtsPage() {
                 exit={{ opacity: 0 }}
                 className="text-center py-16 text-white/50"
               >
-                No doubts available right now.
+                {t("availableDoubts.noDoubts")}
               </motion.div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -443,7 +456,7 @@ export default function TutorDoubtsPage() {
               exit={{ opacity: 0 }}
               className="text-center py-16 text-white/50"
             >
-              You haven't accepted any doubts yet.
+              {t("availableDoubts.noAccepted")}
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

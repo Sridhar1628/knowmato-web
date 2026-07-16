@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next"; // ✅
 
-// ---------- Services ----------
 import {
   getTransactionHistory,
   getMyWithdrawals,
@@ -14,10 +14,9 @@ import {
   Transaction,
   Withdrawal,
   TransactionFilters,
-  getMyWallet
+  getMyWallet,
 } from "@/services/v1Service";
 
-// ---------- Types ----------
 interface WalletInfo {
   real_balance: number;
   bonus_balance: number;
@@ -37,7 +36,7 @@ interface VerificationStatus {
   rejection_reason?: string;
 }
 
-// ---------- Helpers ----------
+// ---------- Helpers (still static, only text is translated) ----------
 const statusBadgeClass = (status: string) => {
   const map: Record<string, string> = {
     pending: "bg-amber-400/20 text-amber-300 border-amber-400/40",
@@ -60,6 +59,7 @@ const statusIcons: Record<string, string> = {
 };
 
 export default function TutorWalletPage() {
+  const { t } = useTranslation(); // ✅
   const router = useRouter();
 
   // ===== WALLET & TRANSACTIONS =====
@@ -113,12 +113,12 @@ export default function TutorWalletPage() {
         setTxPrev(res?.previous || null);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Failed to load transactions";
+      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.txLoadError");
       toast.error(msg);
     } finally {
       setTxLoading(false);
     }
-  }, [txFilters, txPage, txSearch, txDateFrom, txDateTo]);
+  }, [txFilters, txPage, txSearch, txDateFrom, txDateTo, t]);
 
   const fetchWithdrawals = useCallback(async () => {
     setWdLoading(true);
@@ -126,12 +126,12 @@ export default function TutorWalletPage() {
       const res = await getMyWithdrawals();
       setWithdrawals(res?.data?.data || res?.data || []);
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Failed to load withdrawals";
+      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.wdLoadError");
       toast.error(msg);
     } finally {
       setWdLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchVerification = useCallback(async () => {
     setVerifLoading(true);
@@ -144,12 +144,12 @@ export default function TutorWalletPage() {
         rejection_reason: res.data?.rejection_reason,
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Failed to load verification";
+      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.verifLoadError");
       toast.error(msg);
     } finally {
       setVerifLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchWallet = useCallback(async () => {
     try {
@@ -164,10 +164,10 @@ export default function TutorWalletPage() {
         });
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Failed to load wallet";
+      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.walletLoadError");
       toast.error(msg);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { fetchWallet(); }, [fetchWallet]);
   useEffect(() => { fetchVerification(); }, [fetchVerification]);
@@ -178,11 +178,13 @@ export default function TutorWalletPage() {
   const validateWithdraw = (): boolean => {
     const amount = parseFloat(withdrawAmount);
     if (!withdrawAmount || isNaN(amount) || amount <= 0) {
-      setWithdrawError("Please enter a valid amount greater than 0.");
+      setWithdrawError(t("tutorWallet.enterValidAmount"));
       return false;
     }
     if (wallet && amount > wallet.real_balance) {
-      setWithdrawError(`Insufficient real balance. Available: ₹${wallet.real_balance.toFixed(2)}`);
+      setWithdrawError(t("tutorWallet.insufficientBalance", {
+        balance: wallet.real_balance.toFixed(2),
+      }));
       return false;
     }
     setWithdrawError(null);
@@ -196,14 +198,14 @@ export default function TutorWalletPage() {
     setWithdrawError(null);
     try {
       await createWithdrawal({ amount });
-      toast.success("Withdrawal request submitted!");
+      toast.success(t("tutorWallet.withdrawSuccess"));
       setShowWithdrawModal(false);
       setWithdrawAmount("");
       setWithdrawError(null);
       await fetchWithdrawals();
       await fetchWallet();
     } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || "Withdrawal failed";
+      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.withdrawFailed");
       toast.error(msg);
       setWithdrawError(msg);
     } finally {
@@ -215,6 +217,34 @@ export default function TutorWalletPage() {
     setShowWithdrawModal(false);
     setWithdrawAmount("");
     setWithdrawError(null);
+  };
+
+  // ===== TRANSLATED HELPERS =====
+  const getVerificationStatusText = () => {
+    if (!verification) return "";
+    if (verification.verified) return t("tutorWallet.verification.bankVerified");
+    if (verification.status === "rejected") return t("tutorWallet.verification.rejected");
+    if (verification.submitted) return t("tutorWallet.verification.underReview");
+    return t("tutorWallet.verification.required");
+  };
+
+  const getVerificationButtonText = () => {
+    if (!verification) return "";
+    if (verification.status === "rejected") return t("tutorWallet.verification.update");
+    if (verification.submitted) return t("tutorWallet.verification.view");
+    return t("tutorWallet.verification.go");
+  };
+
+  const getWithdrawalStatusText = (status: string) => {
+    const keys: Record<string, string> = {
+      pending: "tutorWallet.withdrawal.status.pending",
+      under_review: "tutorWallet.withdrawal.status.under_review",
+      approved: "tutorWallet.withdrawal.status.approved",
+      rejected: "tutorWallet.withdrawal.status.rejected",
+      processing: "tutorWallet.withdrawal.status.processing",
+      completed: "tutorWallet.withdrawal.status.completed",
+    };
+    return t(keys[status] || status);
   };
 
   // ===== RENDER =====
@@ -230,10 +260,10 @@ export default function TutorWalletPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 flex items-center gap-2">
-              <span className="text-4xl">💰</span> My Wallet
+              <span className="text-4xl">💰</span> {t("tutorWallet.title")}
             </h1>
             <p className="text-white/70 mt-1 font-medium">
-              Manage your earnings, withdrawals & verification
+              {t("tutorWallet.subtitle")}
             </p>
           </div>
         </div>
@@ -266,17 +296,11 @@ export default function TutorWalletPage() {
                 </span>
                 <div>
                   <p className="font-bold text-white">
-                    {verification?.verified
-                      ? "Bank Verified"
-                      : verification?.status === "rejected"
-                      ? "Verification Rejected"
-                      : verification?.submitted
-                      ? "Under Review"
-                      : "Bank Verification Required"}
+                    {getVerificationStatusText()}
                   </p>
                   {verification?.rejection_reason && (
                     <p className="text-sm text-rose-300 mt-1 font-medium">
-                      Reason: {verification.rejection_reason}
+                      {t("tutorWallet.verification.reason")}: {verification.rejection_reason}
                     </p>
                   )}
                 </div>
@@ -287,7 +311,7 @@ export default function TutorWalletPage() {
                     onClick={() => setShowWithdrawModal(true)}
                     className="px-6 py-2.5 bg-gradient-to-r from-teal-400 to-emerald-400 text-white font-bold rounded-xl shadow-lg hover:from-teal-500 hover:to-emerald-500 transition"
                   >
-                    Withdraw ₹
+                    {t("tutorWallet.withdrawButton")}
                   </button>
                 ) : (
                   <button
@@ -306,11 +330,7 @@ export default function TutorWalletPage() {
                         : "bg-gradient-to-r from-violet-400 to-purple-400 hover:from-violet-500 hover:to-purple-500"
                     }`}
                   >
-                    {verification?.status === "rejected"
-                      ? "Update Verification"
-                      : verification?.submitted
-                      ? "View Verification"
-                      : "Go to Verification"}
+                    {getVerificationButtonText()}
                   </button>
                 )}
               </div>
@@ -321,11 +341,11 @@ export default function TutorWalletPage() {
         {/* WALLET SUMMARY */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
-            { label: "Real Balance", value: wallet?.real_balance?.toFixed(2) ?? "0.00", gradient: "from-teal-400 to-emerald-400", border: "border-teal-400/30" },
-            { label: "Total Balance", value: wallet?.total_balance?.toFixed(2) ?? "0.00", gradient: "from-emerald-400 to-green-400", border: "border-emerald-400/30" },
-            { label: "Pending Withdrawals", value: pendingWithdrawalsTotal.toFixed(2), gradient: "from-amber-400 to-yellow-400", border: "border-amber-400/30" },
-            { label: "Lifetime Earnings", value: lifetimeEarnings.toFixed(2), gradient: "from-violet-400 to-purple-400", border: "border-violet-400/30" },
-            { label: "Pending Earnings", value: wallet?.earnings?.pending_earnings?.toFixed(2) ?? "0.00", gradient: "from-sky-400 to-cyan-400", border: "border-sky-400/30" },
+            { label: t("tutorWallet.realBalance"), value: wallet?.real_balance?.toFixed(2) ?? "0.00", gradient: "from-teal-400 to-emerald-400", border: "border-teal-400/30" },
+            { label: t("tutorWallet.totalBalance"), value: wallet?.total_balance?.toFixed(2) ?? "0.00", gradient: "from-emerald-400 to-green-400", border: "border-emerald-400/30" },
+            { label: t("tutorWallet.pendingWithdrawals"), value: pendingWithdrawalsTotal.toFixed(2), gradient: "from-amber-400 to-yellow-400", border: "border-amber-400/30" },
+            { label: t("tutorWallet.lifetimeEarnings"), value: lifetimeEarnings.toFixed(2), gradient: "from-violet-400 to-purple-400", border: "border-violet-400/30" },
+            { label: t("tutorWallet.pendingEarnings"), value: wallet?.earnings?.pending_earnings?.toFixed(2) ?? "0.00", gradient: "from-sky-400 to-cyan-400", border: "border-sky-400/30" },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -345,13 +365,13 @@ export default function TutorWalletPage() {
           {/* TRANSACTIONS */}
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 shadow-xl">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              📊 Transaction History
+              📊 {t("tutorWallet.txHistory")}
             </h2>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t("tutorWallet.searchPlaceholder")}
                 value={txSearch}
                 onChange={(e) => setTxSearch(e.target.value)}
                 className="flex-1 bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white placeholder-white/40 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
@@ -375,9 +395,9 @@ export default function TutorWalletPage() {
                 }
                 className="bg-gray-900/60 border-2 border-white/20 rounded-xl px-4 py-2.5 text-sm font-medium text-white outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 transition"
               >
-                <option value="" className="bg-gray-900">All</option>
-                <option value="credit" className="bg-gray-900">Credit</option>
-                <option value="debit" className="bg-gray-900">Debit</option>
+                <option value="" className="bg-gray-900">{t("common.all")}</option>
+                <option value="credit" className="bg-gray-900">{t("tutorWallet.credit")}</option>
+                <option value="debit" className="bg-gray-900">{t("tutorWallet.debit")}</option>
               </select>
             </div>
 
@@ -388,7 +408,11 @@ export default function TutorWalletPage() {
                 ))}
               </div>
             ) : transactions.length === 0 ? (
-              <EmptyState icon="📊" title="No transactions yet" description="Once you start earning or spending, your transactions will appear here." />
+              <EmptyState
+                icon="📊"
+                title={t("tutorWallet.noTransactions")}
+                description={t("tutorWallet.noTransactionsDesc")}
+              />
             ) : (
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {transactions.map((tx) => (
@@ -418,15 +442,17 @@ export default function TutorWalletPage() {
                 onClick={() => setTxPage((p) => p - 1)}
                 className="px-3 py-1 bg-white/10 text-white/80 rounded-lg font-medium hover:bg-white/20 disabled:opacity-40"
               >
-                Prev
+                {t("common.prev")}
               </button>
-              <span className="text-sm self-center font-medium text-white/60">Page {txPage}</span>
+              <span className="text-sm self-center font-medium text-white/60">
+                {t("common.page", { page: txPage })}
+              </span>
               <button
                 disabled={!txNext}
                 onClick={() => setTxPage((p) => p + 1)}
                 className="px-3 py-1 bg-white/10 text-white/80 rounded-lg font-medium hover:bg-white/20 disabled:opacity-40"
               >
-                Next
+                {t("common.next")}
               </button>
             </div>
           </div>
@@ -434,7 +460,7 @@ export default function TutorWalletPage() {
           {/* WITHDRAWALS */}
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-5 border border-white/10 shadow-xl">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              🏦 Withdrawal Requests
+              🏦 {t("tutorWallet.withdrawalsTitle")}
             </h2>
 
             {wdLoading ? (
@@ -444,7 +470,11 @@ export default function TutorWalletPage() {
                 ))}
               </div>
             ) : withdrawals.length === 0 ? (
-              <EmptyState icon="🏦" title="No withdrawal requests" description="Once you request a withdrawal, it will show up here." />
+              <EmptyState
+                icon="🏦"
+                title={t("tutorWallet.noWithdrawals")}
+                description={t("tutorWallet.noWithdrawalsDesc")}
+              />
             ) : (
               <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
                 {withdrawals.map((wd) => (
@@ -455,21 +485,21 @@ export default function TutorWalletPage() {
                     <div>
                       <p className="font-bold text-white">₹{wd.amount.toFixed(2)}</p>
                       <p className="text-xs text-white/50">
-                        Requested: {new Date(wd.created_at).toLocaleString()}
+                        {t("tutorWallet.withdrawal.requested")}: {new Date(wd.created_at).toLocaleString()}
                       </p>
                       {wd.processed_at && (
                         <p className="text-xs text-white/50">
-                          Processed: {new Date(wd.processed_at).toLocaleString()}
+                          {t("tutorWallet.withdrawal.processed")}: {new Date(wd.processed_at).toLocaleString()}
                         </p>
                       )}
                       {wd.status === "rejected" && wd.admin_notes && (
                         <p className="text-xs text-rose-400 mt-1 font-medium">
-                          Reason: {wd.admin_notes}
+                          {t("tutorWallet.withdrawal.reason")}: {wd.admin_notes}
                         </p>
                       )}
                     </div>
                     <span className={`self-start px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusBadgeClass(wd.status)}`}>
-                      {statusIcons[wd.status]} {wd.status}
+                      {statusIcons[wd.status]} {getWithdrawalStatusText(wd.status)}
                     </span>
                   </div>
                 ))}
@@ -494,20 +524,20 @@ export default function TutorWalletPage() {
               exit={{ scale: 0.95 }}
               className="bg-gradient-to-br from-[#1a1535] to-[#0f0c29] border border-white/10 rounded-3xl p-6 w-full max-w-md shadow-2xl"
             >
-              <h2 className="text-2xl font-bold text-white mb-1">Withdraw Funds</h2>
+              <h2 className="text-2xl font-bold text-white mb-1">{t("tutorWallet.withdrawModalTitle")}</h2>
               <p className="text-sm text-white/70 mb-4">
-                Available (Real Balance):{" "}
+                {t("tutorWallet.withdrawAvailable")}{" "}
                 <span className="font-bold text-teal-400">
                   ₹{wallet?.real_balance?.toFixed(2) ?? "0.00"}
                 </span>
               </p>
 
               <label className="block text-sm font-semibold text-white/80 mb-1">
-                Amount to withdraw
+                {t("tutorWallet.withdrawAmountLabel")}
               </label>
               <input
                 type="number"
-                placeholder="Enter amount"
+                placeholder={t("tutorWallet.withdrawAmountPlaceholder")}
                 value={withdrawAmount}
                 onChange={(e) => {
                   setWithdrawAmount(e.target.value);
@@ -527,14 +557,14 @@ export default function TutorWalletPage() {
                   onClick={handleCloseModal}
                   className="flex-1 py-3 bg-white/10 border border-white/20 text-white/80 rounded-xl font-bold hover:bg-white/20 transition"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={handleWithdraw}
                   disabled={withdrawing}
                   className="flex-1 py-3 bg-gradient-to-r from-teal-400 to-emerald-400 text-white rounded-xl font-bold shadow-lg hover:from-teal-500 hover:to-emerald-500 disabled:opacity-70 disabled:cursor-not-allowed transition"
                 >
-                  {withdrawing ? "Submitting..." : "Withdraw"}
+                  {withdrawing ? t("tutorWallet.submitting") : t("tutorWallet.withdrawButton")}
                 </button>
               </div>
             </motion.div>
@@ -545,7 +575,7 @@ export default function TutorWalletPage() {
   );
 }
 
-// ---------- Empty State ----------
+// ---------- Empty State (still present, but its props are now translated) ----------
 const EmptyState = ({
   icon,
   title,

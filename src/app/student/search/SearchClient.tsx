@@ -7,6 +7,7 @@ import {
   getAvailableTutors,
 } from '@/services/v1Service';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next'; // ✅ added
 
 interface SearchDoubt {
   doubt_id: number;
@@ -29,6 +30,7 @@ interface SearchTutor {
 }
 
 export default function SearchPage() {
+  const { t } = useTranslation(); // ✅ added
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q')?.trim() || '';
@@ -83,11 +85,11 @@ export default function SearchPage() {
       setTutors(filteredTutors);
     } catch (error) {
       console.error('Search error:', error);
-      toast.error('Failed to load search results');
+      toast.error(t('search.loadError')); // ✅ translated
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, t]);
 
   useEffect(() => {
     fetchResults();
@@ -104,12 +106,12 @@ export default function SearchPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-            🔍 Search Results
+            🔍 {t('search.title')}
           </h1>
           <p className="mt-2 text-white/70">
-            Search Query:
+            {t('search.queryLabel')}
             <span className="ml-2 font-semibold text-violet-300">
-              {query || 'None'}
+              {query || t('search.noQuery')}
             </span>
           </p>
         </div>
@@ -127,13 +129,13 @@ export default function SearchPage() {
             {/* Doubts */}
             <div className="mb-10">
               <h2 className="mb-4 text-xl font-bold text-white">
-                📚 My Doubts
+                📚 {t('myDoubts.title')}
                 <span className="ml-2 text-sm text-white/50">({doubts.length})</span>
               </h2>
 
               {doubts.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-md p-6 text-center">
-                  <p className="text-white/50">No matching doubts found.</p>
+                  <p className="text-white/50">{t('search.noMatchingDoubts')}</p>
                 </div>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -150,7 +152,8 @@ export default function SearchPage() {
                           {doubt.title}
                         </h3>
                         <span className="rounded-full bg-violet-400/20 px-2 py-1 text-xs font-medium text-violet-300 border border-violet-400/30">
-                          {doubt.status}
+                          {/* Translate status */}
+                          {t(`doubtDetails.${doubt.status}`, doubt.status)}
                         </span>
                       </div>
                       <p className="mt-3 text-sm text-white/50">{doubt.category}</p>
@@ -163,13 +166,13 @@ export default function SearchPage() {
             {/* Tutors */}
             <div>
               <h2 className="mb-4 text-xl font-bold text-white">
-                👨‍🏫 Tutors
+                👨‍🏫 {t('search.tutorsSection')}
                 <span className="ml-2 text-sm text-white/50">({tutors.length})</span>
               </h2>
 
               {tutors.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-md p-6 text-center">
-                  <p className="text-white/50">No matching tutors found.</p>
+                  <p className="text-white/50">{t('search.noMatchingTutors')}</p>
                 </div>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -191,21 +194,21 @@ export default function SearchPage() {
                               tutor.is_online ? 'text-emerald-400' : 'text-rose-400'
                             }`}
                           >
-                            {tutor.is_online ? '🟢 Online' : '🔴 Offline'}
+                            {tutor.is_online ? t('search.onlineBadge') : t('search.offlineBadge')}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 mb-2">
-                        {tutor.is_verified && <span>✅</span>}
-                        {tutor.is_top_tutor && <span>⭐</span>}
+                        {tutor.is_verified && <span title={t('studentHome.verified')}>✅</span>}
+                        {tutor.is_top_tutor && <span title={t('studentHome.topTutor')}>⭐</span>}
                       </div>
 
                       <p className="mt-2 text-sm text-white/50">{tutor.skills}</p>
                       <p className="mt-2 text-xs text-white/40">
                         ⭐ {tutor.average_rating}
                         {' • '}
-                        {tutor.total_reviews} reviews
+                        {t('search.reviews', { count: tutor.total_reviews })}
                       </p>
 
                       <button
@@ -223,7 +226,7 @@ export default function SearchPage() {
                             : 'cursor-not-allowed bg-white/10 text-white/40 border border-white/10'
                         }`}
                       >
-                        {tutor.is_online ? '🚀 Request This Tutor' : '🔴 Tutor Offline'}
+                        {tutor.is_online ? t('search.requestTutor') : t('search.tutorOffline')}
                       </button>
                     </div>
                   ))}

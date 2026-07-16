@@ -49,17 +49,11 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
   console.log("🏠 StudentLayoutContent rendered");
 
   useEffect(() => {
-
     console.log("🚀 Restore effect started");
-
     const restoreMatching = async () => {
-
       try {
-
         console.log("① Calling API");
-
         const res = await getActiveMatching();
-
         console.log("② API Response:", res);
 
         if (!res.has_matching) {
@@ -68,7 +62,6 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
         }
 
         console.log("③ Dispatch startMatching");
-
         dispatch(
           startMatching({
             doubtId: res.doubt_id,
@@ -82,35 +75,23 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
         console.log("④ Redux after dispatch:", store.getState().matching);
 
         if (res.status === "decision") {
-
           console.log("⑤ Setting decision state");
-
           dispatch(setDecisionState());
-
           console.log("⑥ Redux after decision:", store.getState().matching);
         }
 
         if (!isMatchingTimerRunning()) {
-
           console.log("⑦ Starting timer");
-
           startMatchingTimer();
         }
 
         console.log("✅ Restore complete");
-
       } catch (err) {
-
         console.error("❌ Restore failed:", err);
-
       }
-
     };
-
     restoreMatching();
-
   }, []);
-
 
   // --- Search and debounce ---
   useEffect(() => {
@@ -260,7 +241,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white shadow-sm transition-all duration-300 hover:scale-105 hover:border-violet-400/40 hover:text-violet-300 hover:shadow-lg"
-            aria-label="Open sidebar"
+            aria-label={t('common.openSidebar')}
           >
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -287,15 +268,14 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t('studentHome.searchPlaceholder') || "Search tutors, doubts or topics..."}
+              placeholder={t('studentHome.searchPlaceholder')}
               className="relative w-full rounded-2xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-xl py-3.5 pl-12 pr-20 text-sm font-medium text-white placeholder-white/40 shadow-sm transition-all duration-300 outline-none hover:border-violet-400/40 hover:shadow-md focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 focus:shadow-[0_0_40px_rgba(167,139,250,0.2)]"
             />
           </div>
         </div>
 
-        {/* Right: wallet + profile */}
+        {/* Right: profile */}
         <div className="flex items-center gap-4">
-
           <button
             onClick={() => router.push('/student/profile')}
             className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md px-3 py-2 shadow-sm transition-all duration-300 hover:border-violet-400/40 hover:shadow-lg"
@@ -304,7 +284,7 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
               {cachedName.charAt(0).toUpperCase()}
             </span>
             <span className="hidden sm:inline text-sm font-semibold text-white/90">
-              {cachedName || 'Student'}
+              {cachedName || t('common.student')}
             </span>
           </button>
         </div>

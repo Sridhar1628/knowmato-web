@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { getTutorProfile, updateTutorProfile } from "@/services/v1Service";
+import { useTranslation } from "react-i18next"; // ✅ added
 
 // ---------- Types (matching real API) ----------
 interface TutorProfileData {
@@ -127,6 +128,7 @@ const ProfileSkeleton = () => (
 );
 
 export default function TutorProfilePage() {
+  const { t } = useTranslation(); // ✅
   const [profile, setProfile] = useState<TutorProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -141,13 +143,13 @@ export default function TutorProfilePage() {
         const res = await getTutorProfile();
         setProfile(res.data);
       } catch (err: any) {
-        toast.error("Failed to load profile");
+        toast.error(t("tutorProfile.loadError"));
       } finally {
         setLoading(false);
       }
     };
     fetch();
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,9 +176,9 @@ export default function TutorProfilePage() {
 
     try {
       await updateTutorProfile(formData);
-      toast.success("Profile updated successfully");
+      toast.success(t("tutorProfile.updateSuccess"));
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Update failed");
+      toast.error(err?.response?.data?.error || t("tutorProfile.updateFailed"));
     } finally {
       setSaving(false);
     }
@@ -198,7 +200,7 @@ export default function TutorProfilePage() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center text-white/70">
-        Profile not found.
+        {t("tutorProfile.notFound")}
       </div>
     );
   }
@@ -227,18 +229,18 @@ export default function TutorProfilePage() {
                 <h1 className="text-2xl font-extrabold text-white">
                   {displayName}
                 </h1>
-                <p className="text-white/50">Tutor ID: {profile.id}</p>
+                <p className="text-white/50">{t("tutorProfile.tutorId", { id: profile.id })}</p>
                 <div className="flex gap-2 mt-2 justify-center sm:justify-start flex-wrap">
                   {profile.is_verified && (
                     <span className="px-2 py-0.5 bg-emerald-400/20 text-emerald-300 rounded-full text-xs font-semibold border border-emerald-400/30">
-                      ✅ Verified
+                      {t("studentHome.verified")}
                     </span>
                   )}
                   <span className="px-2 py-0.5 bg-amber-400/20 text-amber-300 rounded-full text-xs font-semibold border border-amber-400/30">
-                    ⭐ {profile.average_rating.toFixed(1)}
+                    {t("tutorProfile.ratingBadge", { rating: profile.average_rating.toFixed(1) })}
                   </span>
                   <span className="px-2 py-0.5 bg-sky-400/20 text-sky-300 rounded-full text-xs font-semibold border border-sky-400/30">
-                    📝 {profile.total_reviews} reviews
+                    {t("tutorProfile.reviewsBadge", { reviews: profile.total_reviews })}
                   </span>
                 </div>
               </div>
@@ -247,27 +249,39 @@ export default function TutorProfilePage() {
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card label="Average Rating" value={`⭐ ${profile.average_rating.toFixed(1)}`} />
-            <Card label="Total Reviews" value={`📝 ${profile.total_reviews}`} />
-            <Card label="Verified" value={profile.is_verified ? "✅ Yes" : "❌ No"} />
-            <Card label="Online" value={profile.is_online ? "🟢 Online" : "⚫ Offline"} />
+            <Card
+              label={t("tutorProfile.label.averageRating")}
+              value={`⭐ ${profile.average_rating.toFixed(1)}`}
+            />
+            <Card
+              label={t("tutorProfile.label.totalReviews")}
+              value={`📝 ${profile.total_reviews}`}
+            />
+            <Card
+              label={t("tutorProfile.label.verified")}
+              value={profile.is_verified ? t("tutorProfile.verifiedYes") : t("tutorProfile.verifiedNo")}
+            />
+            <Card
+              label={t("tutorProfile.label.online")}
+              value={profile.is_online ? t("tutorProfile.onlineStatus") : t("tutorProfile.offlineStatus")}
+            />
           </div>
 
           {/* Personal Information */}
-          <Section title="Personal Information">
+          <Section title={t("tutorProfile.section.personalInfo")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Phone Number"
+                label={t("tutorProfile.field.phoneNumber")}
                 value={profile.phone_number}
                 onChange={(v) => setProfile({ ...profile, phone_number: v })}
               />
               <Field
-                label="City / State"
+                label={t("tutorProfile.field.cityState")}
                 value={profile.city_state}
                 onChange={(v) => setProfile({ ...profile, city_state: v })}
               />
               <Field
-                label="LinkedIn Profile"
+                label={t("tutorProfile.field.linkedin")}
                 value={profile.linkedin_profile}
                 onChange={(v) => setProfile({ ...profile, linkedin_profile: v })}
               />
@@ -275,41 +289,41 @@ export default function TutorProfilePage() {
           </Section>
 
           {/* About Me */}
-          <Section title="About Me">
+          <Section title={t("tutorProfile.section.aboutMe")}>
             <textarea
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
-              placeholder="Write a short bio..."
+              placeholder={t("tutorProfile.placeholder.bio")}
               value={profile.bio}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
             />
             <textarea
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] mt-3 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
-              placeholder="Professional summary..."
+              placeholder={t("tutorProfile.placeholder.professionalSummary")}
               value={profile.professional_summary}
               onChange={(e) => setProfile({ ...profile, professional_summary: e.target.value })}
             />
           </Section>
 
           {/* Education */}
-          <Section title="Education">
+          <Section title={t("tutorProfile.section.education")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Highest Qualification"
+                label={t("tutorProfile.field.highestQualification")}
                 value={profile.highest_qualification}
                 onChange={(v) => setProfile({ ...profile, highest_qualification: v })}
               />
               <Field
-                label="Degree"
+                label={t("tutorProfile.field.degree")}
                 value={profile.degree}
                 onChange={(v) => setProfile({ ...profile, degree: v })}
               />
               <Field
-                label="College Name"
+                label={t("tutorProfile.field.collegeName")}
                 value={profile.college_name}
                 onChange={(v) => setProfile({ ...profile, college_name: v })}
               />
               <Field
-                label="Year of Completion"
+                label={t("tutorProfile.field.yearOfCompletion")}
                 value={profile.year_of_completion ? String(profile.year_of_completion) : ""}
                 onChange={(v) =>
                   setProfile({ ...profile, year_of_completion: v ? parseInt(v) : null })
@@ -320,31 +334,31 @@ export default function TutorProfilePage() {
           </Section>
 
           {/* Professional */}
-          <Section title="Professional Information">
+          <Section title={t("tutorProfile.section.professionalInfo")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label="Skills"
+                label={t("tutorProfile.field.skills")}
                 value={profile.skills}
                 onChange={(v) => setProfile({ ...profile, skills: v })}
               />
               <Field
-                label="Experience (years)"
+                label={t("tutorProfile.field.experienceYears")}
                 value={String(profile.experience)}
                 onChange={(v) => setProfile({ ...profile, experience: parseInt(v) || 0 })}
                 type="number"
               />
               <Field
-                label="Expertise Level"
+                label={t("tutorProfile.field.expertiseLevel")}
                 value={profile.expertise_level}
                 onChange={(v) => setProfile({ ...profile, expertise_level: v })}
               />
               <Field
-                label="Current Status"
+                label={t("tutorProfile.field.currentStatus")}
                 value={profile.current_status}
                 onChange={(v) => setProfile({ ...profile, current_status: v })}
               />
               <Field
-                label="Organization"
+                label={t("tutorProfile.field.organization")}
                 value={profile.organization}
                 onChange={(v) => setProfile({ ...profile, organization: v })}
               />
@@ -352,25 +366,25 @@ export default function TutorProfilePage() {
           </Section>
 
           {/* Mentor Subjects */}
-          <Section title="Mentor Subjects">
+          <Section title={t("tutorProfile.section.mentorSubjects")}>
             <ChipInput
               items={profile.mentor_subjects}
               onChange={(items) => setProfile({ ...profile, mentor_subjects: items })}
-              placeholder="Add subject..."
+              placeholder={t("tutorProfile.placeholder.addSubject")}
             />
           </Section>
 
           {/* Languages */}
-          <Section title="Languages">
+          <Section title={t("tutorProfile.section.languages")}>
             <ChipInput
               items={profile.mentor_languages}
               onChange={(items) => setProfile({ ...profile, mentor_languages: items })}
-              placeholder="Add language..."
+              placeholder={t("tutorProfile.placeholder.addLanguage")}
             />
           </Section>
 
           {/* Resume */}
-          <Section title="Resume">
+          <Section title={t("tutorProfile.section.resume")}>
             <div className="space-y-2">
               {profile.resume && (
                 <a
@@ -379,7 +393,7 @@ export default function TutorProfilePage() {
                   rel="noreferrer"
                   className="text-violet-300 underline text-sm hover:text-violet-200"
                 >
-                  View Current Resume
+                  {t("tutorProfile.viewResume")}
                 </a>
               )}
               <input
@@ -390,7 +404,9 @@ export default function TutorProfilePage() {
                 className="block w-full text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-violet-500/20 file:text-violet-300 file:font-semibold hover:file:bg-violet-500/30 file:transition"
               />
               {resumeFile && (
-                <p className="text-xs text-white/50">New file: {resumeFile.name}</p>
+                <p className="text-xs text-white/50">
+                  {t("tutorProfile.newFile", { name: resumeFile.name })}
+                </p>
               )}
             </div>
           </Section>
@@ -404,7 +420,7 @@ export default function TutorProfilePage() {
               whileTap={{ scale: 0.98 }}
               className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-xl transition disabled:opacity-60 flex items-center gap-2"
             >
-              {saving ? "Saving..." : "Save Profile"}
+              {saving ? t("tutorProfile.saving") : t("tutorProfile.saveProfile")}
             </motion.button>
           </div>
         </motion.form>
