@@ -75,8 +75,7 @@ export function AuthProvider({
       // Support BOTH response formats
       // -----------------------------
       const profile =
-        res?.user ??
-        res?.data ??
+        res?.data?.user ??
         null;
 
       if (!profile) {

@@ -76,7 +76,7 @@ function PostDoubtContent() {
 
   // Credit info state
   const [doubtCredits, setDoubtCredits] = useState<number>(0);
-  const [doubtCreditCost, setDoubtCreditCost] = useState<number>(1);
+  const [doubtCreditCost, setDoubtCreditCost] = useState<number>(5);
   const [loadingCredits, setLoadingCredits] = useState(true);
 
   useEffect(() => {

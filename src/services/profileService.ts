@@ -6,11 +6,23 @@ export const getProfileByRole = async (
   role: string
 ) => {
   switch (role) {
-    case "student":
-      return await getProfile();
+    case "student": {
+        const profile = await getProfile();
 
-    case "tutor":
-      return await getTutorProfile();
+        return {
+            success: profile.success,
+            user: profile.data.user,
+        };
+    }
+
+    case "tutor": {
+        const profile = await getTutorProfile();
+
+        return {
+            success: profile.success,
+            user: profile.data,
+        };
+    }
 
     case "company": {
         const profile = await getCompanyProfile();

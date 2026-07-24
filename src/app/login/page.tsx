@@ -66,8 +66,6 @@ export default function LoginPage() {
 
         saveTokens(res.access, res.refresh);
 
-        await refreshAuth();
-
         dispatch(
           loginSuccess({
             access: res.access,
@@ -75,6 +73,8 @@ export default function LoginPage() {
             user: profile.user,
           })
         );
+
+        await refreshAuth();
 
         const roleRoutes: Record<string, string> = {
           student: '/student/dashboard',

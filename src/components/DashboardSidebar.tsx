@@ -71,8 +71,6 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
     { icon: '❓', label: t('sidebar.askDoubt'), href: '/student/post-doubt' },
     { icon: '📋', label: t('sidebar.myDoubts'), href: '/student/my-doubts' },
     { icon: '📰', label: t('currentAffairs.title'), href: '/student/current-affairs' },
-    { icon: '💰', label: t('sidebar.wallet'), href: '/student/wallet' },
-    { icon: '🏆', label: t('leaderboard.title'), href: '/student/leaderboard' },
     { icon: '🧑‍🎓', label: t('studentProfile.myProfile'), href: '/student/profile' },
     {
       icon: '✨',

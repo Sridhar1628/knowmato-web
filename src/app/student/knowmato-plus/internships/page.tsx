@@ -51,8 +51,17 @@ export default function InternshipsPage() {
           getInternships(),
           getMyInternshipApplications(),
         ]);
-        setInternships(internshipsData);
-        setApplications(myApps);
+
+        // Safely extract arrays from possible API envelope objects
+        const internshipArray = Array.isArray(internshipsData)
+          ? internshipsData
+          : internshipsData?.data ?? internshipsData?.results ?? [];
+        const applicationsArray = Array.isArray(myApps)
+          ? myApps
+          : myApps?.data ?? myApps?.applications ?? myApps?.results ?? [];
+
+        setInternships(internshipArray);
+        setApplications(applicationsArray);
       } catch (err: any) {
         setError(err?.response?.data?.detail || err?.message || t('internships.loadError'));
         console.error(err);
@@ -105,7 +114,11 @@ export default function InternshipsPage() {
         setApplications((prev) => [...prev, result.data]);
       } else {
         const updatedApps = await getMyInternshipApplications();
-        setApplications(updatedApps);
+        // Apply the same extraction logic when refreshing the list
+        const updatedArray = Array.isArray(updatedApps)
+          ? updatedApps
+          : updatedApps?.data ?? updatedApps?.applications ?? updatedApps?.results ?? [];
+        setApplications(updatedArray);
       }
       setApplyMessage({
         type: 'success',

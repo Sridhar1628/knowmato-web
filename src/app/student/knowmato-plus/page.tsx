@@ -38,7 +38,7 @@ export default function KnowmatoPlusCoursesPage() {
 
         const [coursesData, balanceRes] = await Promise.all([
           getCourses(),
-          getBalanceByCategory("courses").catch(() => ({ data: { balance: 0 } })),
+          getBalanceByCategory("course").catch(() => ({ data: { balance: 0 } })),
         ]);
 
         setCourses(coursesData);
