@@ -950,6 +950,7 @@
     "myCourses": "என் பாடங்கள்",
     "internships": "இன்டர்ன்ஷிப்கள்",
     "jobOpenings": "வேலை வாய்ப்புகள்",
+    "backToKnowmato": "நோமாடோ",
     "tests": "சோதனைகள்",
     "enableKnowmatoPlus": "✨ Knowmato+",
     "knowmato": "📚 நோமாடோ",
@@ -964,7 +965,46 @@
     "enableNow": "இப்போது செயல்படுத்து",
     "switchToKnowmato": "📚 நோமாடோ",
     "switchToKnowmatoPlus": "✨ நோமாடோ+",
-    "assessments": "மதிப்பீடுகள்"
+    "assessments": "மதிப்பீடுகள்",
+    "welcomeBack": "வருக, {{name}}!",
+    "heroSubtitle": "உங்கள் கற்றல் பயணத்தைத் தொடரவும், புதிய வாய்ப்புகளை ஆராயவும்.",
+    "browseCourses": "பாடத்திட்டங்களை உலாவுக",
+    "findJobs": "வேலைகளைக் கண்டறிக",
+    "enrolledCourses": "சேர்ந்த பாடத்திட்டங்கள்",
+    "completed": "முடித்தவை",
+    "certificates": "சான்றிதழ்கள்",
+    "wishlist": "விருப்பப்பட்டியல்",
+    "continueLearning": "கற்றலைத் தொடரவும்",
+    "active": "செயலில்",
+    "noEnrollments": "நீங்கள் இதுவரை எந்த பாடத்திட்டத்திலும் சேரவில்லை.",
+    "exploreCourses": "பாடத்திட்டங்களை ஆராய்க",
+    "quizPerformance": "வினாடி வினா செயல்திறன்",
+    "passed": "தேர்ச்சி",
+    "avgScore": "சராசரி மதிப்பெண்",
+    "quizzesPassed": "தேர்ச்சி பெற்ற வினாடி வினாக்கள்",
+    "noQuizAttempts": "இதுவரை வினாடி வினா முயற்சிகள் இல்லை.",
+    "attempt": "முயற்சி",
+    "jobApplications": "வேலை விண்ணப்பங்கள்",
+    "total": "மொத்தம்",
+    "shortlisted": "குறுந்தேர்வு",
+    "interviews": "நேர்காணல்கள்",
+    "noJobApps": "இதுவரை வேலை விண்ணப்பங்கள் இல்லை.",
+    "viewAllJobs": "அனைத்து விண்ணப்பங்களையும் பார்க்க",
+    "internshipApplications": "இன்டர்ன்ஷிப் விண்ணப்பங்கள்",
+    "noInternshipApps": "இதுவரை இன்டர்ன்ஷிப் விண்ணப்பங்கள் இல்லை.",
+    "viewAllInternships": "அனைத்து விண்ணப்பங்களையும் பார்க்க",
+    "latestAnnouncements": "சமீபத்திய அறிவிப்புகள்",
+    "recommendedForYou": "உங்களுக்குப் பரிந்துரைக்கப்பட்டவை",
+    "students": "மாணவர்கள்",
+    "free": "இலவசம்",
+    "allCourses": "அனைத்து பாடத்திட்டங்கள்",
+    "allJobs": "அனைத்து வேலைகள்",
+    "allInternships": "அனைத்து இன்டர்ன்ஷிப்கள்",
+    "myCertificates": "எனது சான்றிதழ்கள்",
+    "myWishlist": "எனது விருப்பப்பட்டியல்",
+    "dashboard": "டாஷ்போர்டு",
+    "leaderboard": "முன்னணியில்",
+    "settings": "அமைப்புகள்"
   },
   "credits": {
     "title": "என் கிரெடிட்கள்",
@@ -2369,5 +2409,14 @@
       "completed": "முடிக்கப்பட்டது"
     }
   }
-}
+},
+"enrollment": {
+    "status": {
+      "active": "செயலில்",
+      "completed": "முடிக்கப்பட்டது",
+      "cancelled": "ரத்து செய்யப்பட்டது",
+      "expired": "காலாவதியானது"
+    }
+  }
+
 }

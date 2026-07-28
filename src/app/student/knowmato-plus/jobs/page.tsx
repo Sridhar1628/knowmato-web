@@ -47,12 +47,17 @@ export default function JobsPage() {
       try {
         setLoading(true);
         setError(null);
-        const [jobsData, appsData] = await Promise.all([
+        const [jobsRes, appsRes] = await Promise.all([
           getJobs(),
           getMyJobApplications(),
         ]);
-        setJobs(jobsData);
-        setApplications(appsData);
+
+        // 🔥 Safely extract arrays from possible wrapped responses
+        const jobsData = jobsRes?.data ?? jobsRes;
+        const appsData = appsRes?.data ?? appsRes;
+
+        setJobs(Array.isArray(jobsData) ? jobsData : []);
+        setApplications(Array.isArray(appsData) ? appsData : []);
       } catch (err: any) {
         setError(err?.response?.data?.detail || err?.message || t('jobs.loadError'));
         console.error(err);
@@ -105,7 +110,8 @@ export default function JobsPage() {
         setApplications((prev) => [...prev, result.data]);
       } else {
         const updatedApps = await getMyJobApplications();
-        setApplications(updatedApps);
+        const appsData = updatedApps?.data ?? updatedApps;
+        setApplications(Array.isArray(appsData) ? appsData : []);
       }
       setApplyMessage({
         type: 'success',
@@ -164,7 +170,6 @@ export default function JobsPage() {
   };
 
   const translateExperienceLevel = (level: string) => {
-    // Map any experience levels that might appear (adjust as needed)
     const keyMap: Record<string, string> = {
       entry: 'jobs.experience.entry',
       mid: 'jobs.experience.mid',
@@ -322,6 +327,7 @@ export default function JobsPage() {
         {!loading && !error && filteredJobs.length > 0 && (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredJobs.map((job) => {
+              // ✅ applications is now guaranteed to be an array, so .find works
               const application = applications.find((app) => app.job === job.id);
               return (
                 <div

@@ -1,27 +1,29 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/app/admin/AdminLayout';
+import toast from 'react-hot-toast';
 import {
-  getAssignments,
-  Assignment,
-  updateAssignmentExpiry,
-} from "@/services/assessmentService";
+  getAdminAssignmentDetail,
+  updateAdminAssignment,
+  AdminAssignmentDetail,
+} from '@/services/assessmentService';
 
 export default function EditAssignmentPage() {
   const router = useRouter();
   const params = useParams();
   const assignmentId = Number(params.id);
 
-  const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [assignment, setAssignment] = useState<AdminAssignmentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    date_of_expiry: "",
-    time: "",
-    status: "",
+    batch: '',
+    total_marks: '',
+    date_of_expiry: '',
+    time: '',
+    status: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -31,22 +33,23 @@ export default function EditAssignmentPage() {
 
     const fetchAssignment = async () => {
       try {
-        const all = await getAssignments();
-        const found = all.find((a) => a.id === assignmentId);
-        if (!found) {
-          toast.error("Assignment not found");
-          router.push("/admin/assessment/assignments");
+        const data = await getAdminAssignmentDetail(assignmentId);
+        if (!data || !data.id) {
+          toast.error('Assignment not found');
+          router.push('/admin/assessment/assignments');
           return;
         }
-        setAssignment(found);
-        // pre‑fill form
+        setAssignment(data);
         setFormData({
-          date_of_expiry: found.date_of_expiry || "",
-          time: found.time || "",
-          status: found.status || "",
+          batch: data.batch?.toString() ?? '',
+          total_marks: data.total_marks ?? '',
+          date_of_expiry: data.date_of_expiry ?? '',
+          time: data.time ?? '',
+          status: data.status ?? '',
         });
       } catch (err) {
-        toast.error("Failed to load assignment");
+        toast.error('Failed to load assignment');
+        router.push('/admin/assessment/assignments');
       } finally {
         setLoading(false);
       }
@@ -67,17 +70,23 @@ export default function EditAssignmentPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.date_of_expiry) {
-      toast.error("Expiry date is required");
+      toast.error('Expiry date is required');
       return;
     }
 
     setSubmitting(true);
     try {
-      await updateAssignmentExpiry(assignmentId, formData);
-      toast.success("Assignment updated!");
-      router.push("/admin/assessment/assignments");
+      await updateAdminAssignment(assignmentId, {
+        batch: formData.batch ? Number(formData.batch) : undefined,
+        total_marks: formData.total_marks || undefined,
+        date_of_expiry: formData.date_of_expiry,
+        time: formData.time,
+        status: formData.status,
+      });
+      toast.success('Assignment updated!');
+      router.push('/admin/assessment/assignments');
     } catch (err: any) {
-      toast.error(err?.message || "Update failed");
+      toast.error(err?.message || 'Update failed');
     } finally {
       setSubmitting(false);
     }
@@ -97,24 +106,22 @@ export default function EditAssignmentPage() {
     );
   }
 
-  if (!assignment) return null; // redirected
+  if (!assignment) return null;
 
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
-        {/* Background blobs */}
         <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
         <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
         <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
-          {/* Page header */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <button
-              onClick={() => router.push("/admin/assessment/assignments")}
+              onClick={() => router.push('/admin/assessment/assignments')}
               className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200"
             >
               ← Back to Assignments
@@ -123,11 +130,10 @@ export default function EditAssignmentPage() {
               ✏️ Edit Assignment #{assignment.id}
             </h1>
             <p className="text-white/70 mb-8">
-              Update expiry date, time, or status.
+              Update batch, score, expiry date, time, or status.
             </p>
           </motion.div>
 
-          {/* Edit form */}
           <motion.form
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -135,29 +141,33 @@ export default function EditAssignmentPage() {
             onSubmit={handleSubmit}
             className="space-y-6 bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
           >
-            {/* Batch (read‑only) */}
+            {/* Batch */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-1">
-                Batch
+                Batch ID
               </label>
               <input
                 type="text"
-                value={assignment.batch}
-                disabled
-                className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white/60 cursor-not-allowed"
+                name="batch"
+                value={formData.batch}
+                onChange={handleChange}
+                placeholder="e.g. 1"
+                className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/50 transition"
               />
             </div>
 
-            {/* Total Score (read‑only) */}
+            {/* Total Score */}
             <div>
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Total Score
               </label>
               <input
                 type="text"
-                value={assignment.total_score || "N/A"}
-                disabled
-                className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white/60 cursor-not-allowed"
+                name="total_marks"
+                value={formData.total_marks}
+                onChange={handleChange}
+                placeholder="e.g. 100"
+                className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/50 transition"
               />
             </div>
 
@@ -219,7 +229,7 @@ export default function EditAssignmentPage() {
                   Updating...
                 </>
               ) : (
-                "Update Assignment"
+                'Update Assignment'
               )}
             </button>
           </motion.form>

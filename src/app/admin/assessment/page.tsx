@@ -277,7 +277,7 @@ export default function AdminAssessmentDashboard() {
                           </span>
                         </div>
                         <p className="text-xs text-white/50">
-                          Total Score: {assignment.total_score || "N/A"} • Expiry:{" "}
+                          Total Score: {assignment.total_marks || "N/A"} • Expiry:{" "}
                           {new Date(assignment.date_of_expiry).toLocaleDateString()}
                           {assignment.time && ` at ${assignment.time}`}
                         </p>

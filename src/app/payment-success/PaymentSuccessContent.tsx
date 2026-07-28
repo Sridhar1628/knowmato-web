@@ -12,7 +12,8 @@ import { verifyCreditPayment } from "@/services/v1Service";
 // ---------------------------------------------------------------------------
 const REDIRECT_DELAY_MS = 2000;
 const FAILURE_REDIRECT_DELAY_MS = 1500;
-const APP_DEEPLINK = "knowMato://payment-success";
+const APP_DEEPLINK =
+    "knowmato://payment-success?status=success";
 const FROM_APP_STORAGE_KEY = "from_app";
 
 // ---------------------------------------------------------------------------
@@ -190,7 +191,11 @@ const PaymentSuccessPage: React.FC = () => {
 
         if (fromApp) {
           localStorage.removeItem(FROM_APP_STORAGE_KEY);
-          scheduleRedirect(APP_DEEPLINK, REDIRECT_DELAY_MS, true);
+          scheduleRedirect(
+              `knowmato://payment-success?status=success&order_id=${orderId}`,
+              REDIRECT_DELAY_MS,
+              true
+          );
         } else {
           scheduleRedirect("/student/credits", REDIRECT_DELAY_MS);
         }
@@ -266,7 +271,7 @@ const PaymentSuccessPage: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => router.push("/credits")}
+                onClick={() => router.push("/student/credits")}
                 className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold shadow-lg shadow-emerald-500/25 hover:from-emerald-600 hover:to-cyan-600 transition flex items-center justify-center gap-2"
               >
                 Go to Credits
@@ -302,7 +307,7 @@ const PaymentSuccessPage: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => router.push("/credits")}
+                onClick={() => router.push("/student/credits")}
                 className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-500/20 border border-rose-400/40 text-rose-300 font-bold hover:bg-rose-500/30 transition"
               >
                 Try Again

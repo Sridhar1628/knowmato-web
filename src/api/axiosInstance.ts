@@ -45,38 +45,9 @@ axiosInstance.interceptors.request.use(
       // Example:
       // ?token=xxxxx&from_app=true
       // ============================================
-      if (!token) {
 
-        const params =
-          new URLSearchParams(
-            window.location.search
-          );
 
-        const urlToken =
-          params.get("token");
-
-        if (urlToken) {
-
-          token = urlToken;
-
-          // ✅ Save using YOUR structure
-          localStorage.setItem(
-            "tokens",
-            JSON.stringify({
-              access: urlToken,
-              refresh: "",
-            })
-          );
-
-          // ✅ Remove token from URL
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname
-          );
-        }
-      }
-
+      
       // ============================================
       // 3. Attach Authorization header
       // ============================================

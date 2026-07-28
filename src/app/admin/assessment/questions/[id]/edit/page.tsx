@@ -1,57 +1,86 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/app/admin/AdminLayout';
+import toast from 'react-hot-toast';
 import {
-  getQuestionById,
-  Question,
-  updateQuestion, // <-- ADD THIS SERVICE (see below)
-  CreateQuestionPayload,
-  getAssignments,
-  Assignment,
-} from "@/services/assessmentService";
+  getAdminAssignments,
+  getAdminQuestionById,
+  updateAdminQuestion,
+  AdminAssignment,
+} from '@/services/assessmentService';
+
+// ---------- Local types for the form ----------
+interface QuestionForm {
+  question: string;
+  description: string;
+  level: string;
+  status: string;
+  assignment: number | undefined; // assignment ID or undefined
+}
 
 export default function EditQuestionPage() {
   const router = useRouter();
   const params = useParams();
   const questionId = Number(params.id);
 
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [formData, setFormData] = useState<CreateQuestionPayload>({
-    question: "",
-    description: "",
-    level: "Medium",
-    status: "Pending",
-    Assignment: undefined,
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [formData, setFormData] = useState<QuestionForm>({
+    question: '',
+    description: '',
+    level: 'Medium',
+    status: 'Pending',
+    assignment: undefined,
   });
-  const [loadingQuestion, setLoadingQuestion] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [question, allAssignments] = await Promise.all([
-          getQuestionById(questionId),
-          getAssignments(),
+        const [questionRes, assignmentsRes] = await Promise.all([
+          getAdminQuestionById(questionId),
+          getAdminAssignments(),
         ]);
-        setAssignments(allAssignments || []);
 
-        // Populate form
+        // Extract the actual question data (it might be wrapped in data)
+        // Use a safe runtime check so TypeScript won't complain if `data` isn't a property
+        let question: any = questionRes;
+        if (typeof questionRes === 'object' && questionRes !== null && 'data' in questionRes) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          question = (questionRes as any).data;
+        }
+
+        // Extract the assignments array (handle both direct array and { data: [...] })
+        let assignmentList: AdminAssignment[] = [];
+        if (Array.isArray(assignmentsRes)) {
+          assignmentList = assignmentsRes;
+        } else if (
+          assignmentsRes &&
+          typeof assignmentsRes === 'object' &&
+          'data' in assignmentsRes &&
+          Array.isArray((assignmentsRes as { data: unknown }).data)
+        ) {
+          assignmentList = (assignmentsRes as { data: AdminAssignment[] }).data;
+        }
+
+        setAssignments(assignmentList);
+
+        // Pre‑fill the form
         setFormData({
-          question: question.question || "",
-          description: question.description || "",
-          level: question.level || "Medium",
-          status: question.status || "Pending",
-          Assignment: question.Assignment ?? undefined,
+          question: question.question || '',
+          description: question.description || '',
+          level: question.level || 'Medium',
+          status: question.status || 'Pending',
+          assignment: question.assignment ?? undefined,
         });
       } catch (err) {
-        toast.error("Question not found");
-        router.push("/admin/assessment/questions");
+        toast.error('Question not found');
+        router.push('/admin/assessment/questions');
       } finally {
-        setLoadingQuestion(false);
+        setLoading(false);
       }
     };
 
@@ -64,7 +93,7 @@ export default function EditQuestionPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "Assignment" ? (value ? Number(value) : undefined) : value,
+      [name]: name === 'assignment' ? (value ? Number(value) : undefined) : value,
     }));
   };
 
@@ -72,23 +101,29 @@ export default function EditQuestionPage() {
     e.preventDefault();
 
     if (!formData.question.trim()) {
-      toast.error("Question text is required");
+      toast.error('Question text is required');
       return;
     }
 
     setSubmitting(true);
     try {
-      await updateQuestion(questionId, formData);
-      toast.success("Question updated!");
-      router.push("/admin/assessment/questions");
+      await updateAdminQuestion(questionId, {
+        question: formData.question,
+        description: formData.description,
+        level: formData.level,
+        status: formData.status,
+        assignment: formData.assignment,
+      });
+      toast.success('Question updated!');
+      router.push('/admin/assessment/questions');
     } catch (err: any) {
-      toast.error(err?.message || "Update failed");
+      toast.error(err?.message || 'Update failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loadingQuestion) {
+  if (loading) {
     return (
       <AdminLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
@@ -114,7 +149,7 @@ export default function EditQuestionPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <button
-              onClick={() => router.push("/admin/assessment/questions")}
+              onClick={() => router.push('/admin/assessment/questions')}
               className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200"
             >
               ← Back to Questions
@@ -138,12 +173,13 @@ export default function EditQuestionPage() {
                 Assignment
               </label>
               <select
-                name="Assignment"
-                value={formData.Assignment ?? ""}
+                name="assignment"
+                value={formData.assignment ?? ''}
                 onChange={handleChange}
                 className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/50 transition"
               >
                 <option value="">None (standalone)</option>
+                {/* ✅ assignments is guaranteed to be an array now */}
                 {assignments.map((a) => (
                   <option key={a.id} value={a.id}>
                     Assignment #{a.id} (Batch {a.batch})
@@ -227,7 +263,7 @@ export default function EditQuestionPage() {
                   Updating...
                 </>
               ) : (
-                "Update Question"
+                'Update Question'
               )}
             </button>
           </motion.form>

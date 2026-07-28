@@ -949,6 +949,7 @@
     "myCourses": "My Courses",
     "internships": "Internships",
     "jobOpenings": "Job Openings",
+    "backToKnowmato": "KnowMato",
     "tests": "Tests",
     "enableKnowmatoPlus": "✨ Knowmato+",
     "knowmato": "📚 Knowmato",
@@ -963,7 +964,46 @@
     "enableNow": "Enable Now",
     "switchToKnowmato": "📚 Knowmato",
     "switchToKnowmatoPlus": "✨ Knowmato+",
-    "assessments": "Assessments"
+    "assessments": "Assessments",
+    "welcomeBack": "Welcome back, {{name}}!",
+    "heroSubtitle": "Continue your learning journey and explore new opportunities.",
+    "browseCourses": "Browse Courses",
+    "findJobs": "Find Jobs",
+    "enrolledCourses": "Enrolled Courses",
+    "completed": "Completed",
+    "certificates": "Certificates",
+    "wishlist": "Wishlist",
+    "continueLearning": "Continue Learning",
+    "active": "active",
+    "noEnrollments": "You haven't enrolled in any courses yet.",
+    "exploreCourses": "Explore courses",
+    "quizPerformance": "Quiz Performance",
+    "passed": "passed",
+    "avgScore": "Avg. Score",
+    "quizzesPassed": "Quizzes Passed",
+    "noQuizAttempts": "No quiz attempts yet.",
+    "attempt": "Attempt",
+    "jobApplications": "Job Applications",
+    "total": "Total",
+    "shortlisted": "Shortlisted",
+    "interviews": "Interviews",
+    "noJobApps": "No job applications yet.",
+    "viewAllJobs": "View all applications",
+    "internshipApplications": "Internship Applications",
+    "noInternshipApps": "No internship applications yet.",
+    "viewAllInternships": "View all applications",
+    "latestAnnouncements": "Latest Announcements",
+    "recommendedForYou": "Recommended for You",
+    "students": "students",
+    "free": "Free",
+    "allCourses": "All Courses",
+    "allJobs": "All Jobs",
+    "allInternships": "All Internships",
+    "myCertificates": "My Certificates",
+    "myWishlist": "My Wishlist",
+    "dashboard": "Dashboard",
+    "leaderboard": "Leaderboard",
+    "settings": "Settings"
   },
   "credits": {
     "title": "My Credits",
@@ -2368,6 +2408,15 @@
       "completed": "Completed"
     }
   }
-}
+},
+"enrollment": {
+    "status": {
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    }
+  }
+
 }
 

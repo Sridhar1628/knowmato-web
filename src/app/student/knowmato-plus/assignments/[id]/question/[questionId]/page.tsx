@@ -1,27 +1,24 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Editor from '@monaco-editor/react';
-import { useTranslation } from 'react-i18next'; // ✅ added
+import { useTranslation } from 'react-i18next';
 
 import {
-  getQuestionById,
-  Question,
+  getAttemptDetails,
+  saveProgrammingCode,
+  getSavedProgrammingCode,
   compileCode,
   runTestCases,
+  getTestCases,
+  submitAssessment,
   CompileResponse,
   RunTestResponse,
-  getTestCases,
   TestCaseResponse,
-  getAssignmentDetails,
-  AssignmentDetails,
-  getAssignments,
-  Assignment,
 } from '@/services/assessmentService';
 
-// ---------- Supported languages ----------
 const LANGUAGE_OPTIONS = [
   { label: 'C', value: 'C' },
   { label: 'C++', value: 'cpp' },
@@ -31,129 +28,121 @@ const LANGUAGE_OPTIONS = [
 
 type Language = (typeof LANGUAGE_OPTIONS)[number]['value'];
 
-// ---------- Starter code templates ----------
 const STARTER_CODES: Record<Language, string> = {
-  C: `#include <stdio.h>
-
-int main() {
-    // Your code here
-    return 0;
-}`,
-  cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
-}`,
-  Java: `public class Main {
-    public static void main(String[] args) {
-        // Your code here
-    }
-}`,
-  python: `def solve():
-    # Your code here
-    pass
-
-solve()`,
+  C: `#include <stdio.h>\n\nint main() {\n    // Your code here\n    return 0;\n}`,
+  cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    // Your code here\n    return 0;\n}`,
+  Java: `public class Main {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}`,
+  python: `def solve():\n    # Your code here\n    pass\n\nsolve()`,
 };
 
-// ---------- LocalStorage helpers ----------
-const storageKey = (questionId: number, language: string) =>
-  `code_${questionId}_${language}`;
+const storageKey = (attemptId: number, questionId: number, language: string) =>
+  `attempt_${attemptId}_question_${questionId}_${language}`;
 
 export default function ProgrammingQuestionPage() {
-  const { t } = useTranslation(); // ✅ added
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useParams();
-  const assignmentId = Number(params.id);
+  const attemptId = Number(params.id);
   const questionId = Number(params.questionId);
 
-  // ─── Core data ────────────────────────────────────────
-  const [question, setQuestion] = useState<Question | null>(null);
+  // Core data
+  const [attempt, setAttempt] = useState<any>(null);
+  const [assignment, setAssignment] = useState<any>(null);
+  const [question, setQuestion] = useState<any>(null);
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [testCases, setTestCases] = useState<TestCaseResponse | null>(null);
-  const [assignmentDetails, setAssignmentDetails] = useState<AssignmentDetails | null>(null);
-  const [assignmentMeta, setAssignmentMeta] = useState<Assignment | null>(null);
 
-  // ─── Loading states ───────────────────────────────────
-  const [loadingQuestion, setLoadingQuestion] = useState(true);
-  const [loadingTestCases, setLoadingTestCases] = useState(true);
-  const [loadingAssignment, setLoadingAssignment] = useState(true);
+  // Loading
+  const [loading, setLoading] = useState(true);
 
-  // ─── Code editor ──────────────────────────────────────
+  // Code editor
   const [language, setLanguage] = useState<Language>('python');
   const [code, setCode] = useState('');
   const [customInput, setCustomInput] = useState('');
-  const [editorMounted, setEditorMounted] = useState(false);
+  const editorMounted = useRef(false);
+  const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // ─── Compile / Run results ────────────────────────────
+  // Compile / Run results
   const [compileOutput, setCompileOutput] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [testResults, setTestResults] = useState<RunTestResponse | null>(null);
   const [isRunningTests, setIsRunningTests] = useState(false);
 
-  // ─── Timer ────────────────────────────────────────────
+  // Timer
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
-  // ─── Progress & navigation ────────────────────────────
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const totalQuestions = assignmentDetails?.questions.length ?? 0;
+  // Question statuses: passed / failed / not_attempted
+  const [questionStatuses, setQuestionStatuses] = useState<Record<number, 'passed' | 'failed' | 'not_attempted'>>({});
 
-  // ──────────────────────────────────────────────────────
-  // Fetch everything needed
-  // ──────────────────────────────────────────────────────
+  // Fetch attempt details & saved code
   useEffect(() => {
-    if (!questionId || !assignmentId) return;
+    if (!attemptId || !questionId) return;
 
     const loadData = async () => {
       try {
-        const [qRes, tcRes, assignRes, allAssignments] = await Promise.all([
-          getQuestionById(questionId),
-          getTestCases(questionId),
-          getAssignmentDetails(assignmentId),
-          getAssignments(),
-        ]);
+        const res = await getAttemptDetails(attemptId);
+        const data = res?.data ?? res;
 
-        setQuestion(qRes);
-        setTestCases(tcRes);
+        setAttempt(data.attempt);
+        setAssignment(data.assignment);
+        const questions = data.programming_questions ?? [];
+        setAllQuestions(questions);
 
-        setAssignmentDetails(assignRes);
-        const idx = assignRes.questions.findIndex((q) => q.id === questionId);
-        setCurrentQuestionIndex(idx >= 0 ? idx : 0);
+        const current = questions.find((q: any) => q.id === questionId);
+        if (!current) {
+          toast.error(t('codeEditor.questionNotFound'));
+          router.push(`/student/knowmato-plus/assignments/${attemptId}`);
+          return;
+        }
+        setQuestion(current);
 
-        const meta = allAssignments.find((a) => a.id === assignmentId);
-        setAssignmentMeta(meta || null);
+        // Initialize question statuses
+        const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
+        questions.forEach((q: any) => (initial[q.id] = 'not_attempted'));
+        setQuestionStatuses(initial);
 
-        const savedCode = localStorage.getItem(storageKey(questionId, language));
-        if (savedCode) {
-          setCode(savedCode);
+        // Load test cases
+        try {
+          const tcRes = await getTestCases(questionId);
+          setTestCases(tcRes);
+        } catch (e) {
+          /* test cases optional */
+        }
+
+        // Load previously saved code
+        const savedCodeRes = await getSavedProgrammingCode(attemptId);
+        const savedCodes = savedCodeRes?.data ?? savedCodeRes;
+        const saved = Array.isArray(savedCodes)
+          ? savedCodes.find((sc: any) => sc.question_id === questionId)
+          : null;
+
+        if (saved?.code) {
+          setCode(saved.code);
+          if (saved.language) setLanguage(saved.language);
         } else {
-          setCode(STARTER_CODES[language]);
+          const local = localStorage.getItem(storageKey(attemptId, questionId, language));
+          setCode(local || STARTER_CODES[language]);
         }
       } catch (error) {
         toast.error(t('codeEditor.loadFailed'));
-        router.push(`/student/knowmato-plus/assignments/${assignmentId}`);
+        router.push(`/student/knowmato-plus/assignments/${attemptId}`);
       } finally {
-        setLoadingQuestion(false);
-        setLoadingTestCases(false);
-        setLoadingAssignment(false);
+        setLoading(false);
       }
     };
 
     loadData();
-  }, [questionId, assignmentId, t]);
+  }, [attemptId, questionId]);
 
-  // ──────────────────────────────────────────────────────
   // Timer logic
-  // ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!assignmentMeta || !assignmentMeta.date_of_expiry) return;
+    if (!assignment?.date_of_expiry) return;
 
     const calcRemaining = () => {
-      const expiryDate = new Date(assignmentMeta.date_of_expiry);
-      if (assignmentMeta.time) {
-        const [h, m] = assignmentMeta.time.split(':');
+      const expiryDate = new Date(assignment.date_of_expiry);
+      if (assignment.time) {
+        const [h, m] = assignment.time.split(':');
         expiryDate.setHours(Number(h), Number(m), 0, 0);
       }
       const now = new Date();
@@ -165,44 +154,48 @@ export default function ProgrammingQuestionPage() {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-      setTimeRemaining(timeStr);
+      setTimeRemaining(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
     };
 
     calcRemaining();
     const timer = setInterval(calcRemaining, 1000);
     return () => clearInterval(timer);
-  }, [assignmentMeta, t]);
+  }, [assignment, t]);
 
-  // ──────────────────────────────────────────────────────
-  // Persist code to localStorage (debounced)
-  // ──────────────────────────────────────────────────────
+  // Auto‑save code
+  const persistCode = useCallback(
+    (newCode: string, lang: Language) => {
+      localStorage.setItem(storageKey(attemptId, questionId, lang), newCode);
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = setTimeout(() => {
+        saveProgrammingCode(attemptId, {
+          question_id: questionId,
+          language: lang,
+          source_code: newCode,
+        }).catch(console.error);
+      }, 1000);
+    },
+    [attemptId, questionId]
+  );
+
   useEffect(() => {
-    if (!editorMounted) return;
-    const timeout = setTimeout(() => {
-      localStorage.setItem(storageKey(questionId, language), code);
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [code, language, questionId, editorMounted]);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, []);
 
-  // ──────────────────────────────────────────────────────
-  // Handle language change
-  // ──────────────────────────────────────────────────────
+  // Language change
   const handleLanguageChange = (newLang: Language) => {
     if (newLang === language) return;
-
     const currentStarter = STARTER_CODES[language];
     const newStarter = STARTER_CODES[newLang];
     if (code.trim() === '' || code === currentStarter) {
       setCode(newStarter);
     }
-
     setLanguage(newLang);
   };
 
-  // ──────────────────────────────────────────────────────
   // Compile & Run
-  // ──────────────────────────────────────────────────────
   const handleCompile = async () => {
     if (!code.trim()) {
       toast.error(t('codeEditor.pleaseWriteCode'));
@@ -217,11 +210,8 @@ export default function ProgrammingQuestionPage() {
         source_code: code,
         stdin: customInput || undefined,
       });
-      if (result.error) {
-        setCompileError(result.error);
-      } else {
-        setCompileOutput(result.output || t('codeEditor.noOutput'));
-      }
+      if (result.error) setCompileError(result.error);
+      else setCompileOutput(result.output || t('codeEditor.noOutput'));
     } catch (err: any) {
       setCompileError(err.message || t('codeEditor.compilationFailed'));
     } finally {
@@ -229,9 +219,6 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // ──────────────────────────────────────────────────────
-  // Run all test cases
-  // ──────────────────────────────────────────────────────
   const handleRunTests = async () => {
     if (!code.trim()) {
       toast.error(t('codeEditor.pleaseWriteCode'));
@@ -240,13 +227,22 @@ export default function ProgrammingQuestionPage() {
     setIsRunningTests(true);
     setTestResults(null);
     try {
-      const result: RunTestResponse = await runTestCases({
+      const response = await runTestCases({
         language,
         question_id: questionId,
         source_code: code,
         input_data: customInput || undefined,
       });
+      const result = response.data ?? response;
       setTestResults(result);
+
+      // Update question status based on all test cases passed
+      const allPassed = result.passed_cases === result.total_cases;
+      setQuestionStatuses((prev) => ({
+        ...prev,
+        [questionId]: allPassed ? 'passed' : 'failed',
+      }));
+
       toast.success(
         t('codeEditor.testsCompleted', {
           passed: result.passed_cases,
@@ -260,24 +256,40 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // ──────────────────────────────────────────────────────
-  // Next question navigation
-  // ──────────────────────────────────────────────────────
-  const goToNextQuestion = () => {
-    if (!assignmentDetails) return;
-    const nextIdx = currentQuestionIndex + 1;
-    if (nextIdx < assignmentDetails.questions.length) {
-      const nextId = assignmentDetails.questions[nextIdx].id;
-      router.push(`/student/knowmato-plus/assignments/${assignmentId}/question/${nextId}`);
-    } else {
-      router.push(`/student/knowmato-plus/assignments/${assignmentId}`);
+  // Submit attempt
+  const handleSubmitAttempt = async () => {
+    if (!window.confirm(t('codeEditor.submitConfirm', 'Submit your assessment?'))) return;
+    try {
+      await submitAssessment(attemptId);
+      toast.success(t('codeEditor.submitted'));
+      router.push(`/student/knowmato-plus/assignments/${attemptId}/result`);
+    } catch (err: any) {
+      toast.error(err?.message || t('codeEditor.submitFailed'));
     }
   };
 
-  // ──────────────────────────────────────────────────────
-  // Loading skeleton
-  // ──────────────────────────────────────────────────────
-  if (loadingQuestion || loadingTestCases || loadingAssignment) {
+  // Navigation
+  const currentIndex = allQuestions.findIndex((q) => q.id === questionId);
+  const goToQuestion = (id: number) => {
+      router.push(
+          `/student/knowmato-plus/assignments/${attemptId}/question/${id}`
+      );
+  };
+  const goToNext = () => {
+    const nextIdx = currentIndex + 1;
+    if (nextIdx < allQuestions.length) {
+      goToQuestion(allQuestions[nextIdx].id);
+    }
+  };
+  const goToPrev = () => {
+    const prevIdx = currentIndex - 1;
+    if (prevIdx >= 0) {
+      goToQuestion(allQuestions[prevIdx].id);
+    }
+  };
+
+  // Loading
+  if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="text-center">
@@ -292,64 +304,47 @@ export default function ProgrammingQuestionPage() {
 
   const sampleTestCases = testCases?.test_cases ?? [];
 
-  // ──────────────────────────────────────────────────────
-  // Main render
-  // ──────────────────────────────────────────────────────
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
+    <div className="relative min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex flex-col">
       {/* Background blobs */}
-      <div className="absolute -left-20 top-0 h-72 w-72 animate-blob rounded-full bg-purple-500/20 blur-3xl filter mix-blend-multiply" />
-      <div className="animation-delay-2000 absolute -right-20 top-0 h-72 w-72 animate-blob rounded-full bg-fuchsia-500/20 blur-3xl filter mix-blend-multiply" />
-      <div className="animation-delay-4000 absolute -bottom-20 left-40 h-72 w-72 animate-blob rounded-full bg-cyan-500/20 blur-3xl filter mix-blend-multiply" />
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -left-20 top-0 h-72 w-72 animate-blob rounded-full bg-purple-500/20 blur-3xl filter mix-blend-multiply" />
+        <div className="animation-delay-2000 absolute -right-20 top-0 h-72 w-72 animate-blob rounded-full bg-fuchsia-500/20 blur-3xl filter mix-blend-multiply" />
+        <div className="animation-delay-4000 absolute -bottom-20 left-40 h-72 w-72 animate-blob rounded-full bg-cyan-500/20 blur-3xl filter mix-blend-multiply" />
+      </div>
 
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        {/* Top bar: progress & timer */}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          {/* Back + progress */}
+      {/* Top bar */}
+      <div className="relative z-10 px-4 sm:px-6 py-3 bg-black/20 backdrop-blur-sm border-b border-white/10">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)}
+            className="text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
+          >
+            ← {t('codeEditor.backToAssignment')}
+          </button>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}`)}
-              className="text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
-            >
-              ← {t('codeEditor.backToAssignment')}
-            </button>
-            {totalQuestions > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-white/70">
-                  {t('codeEditor.questionProgress', {
-                    current: currentQuestionIndex + 1,
-                    total: totalQuestions,
-                  })}
-                </span>
-                <div className="h-2 w-28 rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all"
-                    style={{
-                      width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+            <button onClick={goToPrev} disabled={currentIndex === 0} className="text-white/70 disabled:opacity-30 text-lg">‹</button>
+            <span className="text-sm text-white/70">
+              {t('codeEditor.questionProgress', { current: currentIndex + 1, total: allQuestions.length })}
+            </span>
+            <button onClick={goToNext} disabled={currentIndex === allQuestions.length - 1} className="text-white/70 disabled:opacity-30 text-lg">›</button>
           </div>
-          {/* Timer */}
           {timeRemaining && (
-            <div
-              className={`rounded-full px-4 py-1 text-xs font-bold ${
-                timeRemaining === t('codeEditor.timeExpired')
-                  ? 'bg-red-400/20 text-red-300 border border-red-400/30'
-                  : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
-              }`}
-            >
-              {timeRemaining === t('codeEditor.timeExpired')
-                ? `⏰ ${t('codeEditor.timeExpired')}`
-                : `⏳ ${t('codeEditor.timeRemaining', { time: timeRemaining })}`}
+            <div className={`rounded-full px-3 py-1 text-xs font-bold ${
+              timeRemaining === t('codeEditor.timeExpired')
+                ? 'bg-red-400/20 text-red-300 border border-red-400/30'
+                : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+            }`}>
+              {timeRemaining === t('codeEditor.timeExpired') ? `⏰ ${t('codeEditor.timeExpired')}` : `⏳ ${timeRemaining}`}
             </div>
           )}
         </div>
+      </div>
 
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto relative z-10 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Question statement */}
-        <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full bg-violet-400/20 px-3 py-1 text-[10px] font-bold uppercase text-violet-300 border border-violet-400/30">
               {question.level}
@@ -366,18 +361,15 @@ export default function ProgrammingQuestionPage() {
           )}
         </div>
 
-        {/* Test Cases (sample) */}
-        {(testCases?.test_cases?.length ?? 0) > 0 && (
-          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
+        {/* Sample Test Cases */}
+        {sampleTestCases.length > 0 && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-3 text-sm font-bold text-white/80">
               📋 {t('codeEditor.sampleTestCases')}
             </h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {testCases?.test_cases?.map((tc) => (
-                <div
-                  key={tc.id}
-                  className="rounded-xl border border-white/10 bg-black/20 p-3"
-                >
+              {sampleTestCases.map((tc) => (
+                <div key={tc.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
                   <p className="text-xs text-violet-300 mb-1">{t('codeEditor.input')}:</p>
                   <pre className="text-xs text-white/80 whitespace-pre-wrap">{tc.input_data || '—'}</pre>
                   <p className="text-xs text-emerald-300 mt-2 mb-1">{t('codeEditor.expectedOutput')}:</p>
@@ -388,28 +380,46 @@ export default function ProgrammingQuestionPage() {
           </div>
         )}
 
-        {/* Language selector */}
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
-          <div className="flex gap-2">
-            {LANGUAGE_OPTIONS.map((lang) => (
-              <button
-                key={lang.value}
-                onClick={() => handleLanguageChange(lang.value)}
-                className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
-                  language === lang.value
-                    ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
-                    : 'border border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                {lang.label}
-              </button>
-            ))}
+        {/* Language selector + Compile/Run buttons */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
+            <div className="flex gap-2">
+              {LANGUAGE_OPTIONS.map((lang) => (
+                <button
+                  key={lang.value}
+                  onClick={() => handleLanguageChange(lang.value)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
+                    language === lang.value
+                      ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
+                      : 'border border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={handleCompile}
+              disabled={isCompiling}
+              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-50"
+            >
+              {isCompiling ? '...' : '▶️ ' + t('codeEditor.compileRun')}
+            </button>
+            <button
+              onClick={handleRunTests}
+              disabled={isRunningTests}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
+            >
+              {isRunningTests ? '...' : '🚀 ' + t('codeEditor.submitRunTests')}
+            </button>
           </div>
         </div>
 
-        {/* Monaco Editor with loading overlay */}
-        <div className="relative mb-4">
+        {/* Code Editor */}
+        <div className="relative">
           {isCompiling && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
               <div className="text-center">
@@ -423,8 +433,12 @@ export default function ProgrammingQuestionPage() {
             language={language === 'cpp' ? 'cpp' : language.toLowerCase()}
             value={code}
             theme="vs-dark"
-            onChange={(value) => setCode(value ?? '')}
-            onMount={() => setEditorMounted(true)}
+            onChange={(value) => {
+              const newCode = value ?? '';
+              setCode(newCode);
+              persistCode(newCode, language);
+            }}
+            onMount={() => { editorMounted.current = true; }}
             loading={
               <div className="flex h-full items-center justify-center text-white/50">
                 {t('codeEditor.loadingEditor')}
@@ -441,8 +455,8 @@ export default function ProgrammingQuestionPage() {
           />
         </div>
 
-        {/* Custom input (collapsible) */}
-        <div className="mb-6">
+        {/* Custom input */}
+        <div>
           <details className="group">
             <summary className="cursor-pointer text-sm font-semibold text-white/70 hover:text-white">
               ⚙️ {t('codeEditor.customInput')}
@@ -456,42 +470,9 @@ export default function ProgrammingQuestionPage() {
           </details>
         </div>
 
-        {/* Action buttons */}
-        <div className="mb-8 flex flex-wrap gap-3">
-          <button
-            onClick={handleCompile}
-            disabled={isCompiling}
-            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-white/10 hover:border-violet-400/40 disabled:opacity-50"
-          >
-            {isCompiling ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                {t('codeEditor.compiling')}
-              </>
-            ) : (
-              '▶️ ' + t('codeEditor.compileRun')
-            )}
-          </button>
-
-          <button
-            onClick={handleRunTests}
-            disabled={isRunningTests}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
-          >
-            {isRunningTests ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                {t('codeEditor.runningTests')}
-              </>
-            ) : (
-              '🚀 ' + t('codeEditor.submitRunTests')
-            )}
-          </button>
-        </div>
-
-        {/* Compilation output / error */}
+        {/* Compile output / error */}
         {(compileOutput !== null || compileError) && (
-          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-2 text-sm font-bold text-white">
               {compileError ? '❌ ' + t('codeEditor.compilationError') : '✅ ' + t('codeEditor.output')}
             </h3>
@@ -501,30 +482,23 @@ export default function ProgrammingQuestionPage() {
           </div>
         )}
 
-        {/* Detailed Test Results */}
+        {/* Test Results */}
         {testResults && (
-          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-4 text-lg font-bold text-white">📊 {t('codeEditor.testResults')}</h3>
-
-            {/* Individual test case results (if backend provides them) */}
-            {testResults.test_case_results ? (
+            {testResults.test_case_results && (
               <div className="mb-4 space-y-2">
                 {testResults.test_case_results.map((tcRes) => (
                   <div
                     key={tcRes.test_case_id}
                     className={`rounded-xl border p-3 ${
-                      tcRes.passed
-                        ? 'border-emerald-400/30 bg-emerald-400/10'
-                        : 'border-red-400/30 bg-red-400/10'
+                      tcRes.passed ? 'border-emerald-400/30 bg-emerald-400/10' : 'border-red-400/30 bg-red-400/10'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <span>{tcRes.passed ? '✅' : '❌'}</span>
                       <span className="text-sm font-semibold text-white">
                         {t('codeEditor.testCase')} {tcRes.test_case_id}
-                      </span>
-                      <span className="text-xs text-white/50">
-                        ({tcRes.passed ? t('codeEditor.passed') : t('codeEditor.wrongAnswer')})
                       </span>
                     </div>
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
@@ -544,9 +518,7 @@ export default function ProgrammingQuestionPage() {
                   </div>
                 ))}
               </div>
-            ) : null}
-
-            {/* Aggregate summary */}
+            )}
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="rounded-xl bg-white/5 p-4 text-center">
                 <p className="text-xs text-white/50">{t('codeEditor.passed')}</p>
@@ -575,20 +547,44 @@ export default function ProgrammingQuestionPage() {
                 </span>
               </div>
             </div>
-
-            {/* Next question button */}
-            {testResults.status === 'completed' && currentQuestionIndex < totalQuestions - 1 && (
-              <div className="mt-6 text-center">
-                <button
-                  onClick={goToNextQuestion}
-                  className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
-                >
-                  {t('codeEditor.nextQuestion')} →
-                </button>
-              </div>
-            )}
           </div>
         )}
+
+        {/* Pagination row */}
+        <div className="flex justify-center gap-2 flex-wrap pt-6">
+          {allQuestions.map((q, idx) => {
+            const status = questionStatuses[q.id] || 'not_attempted';
+            const isCurrent = q.id === questionId;
+            return (
+              <button
+                key={q.id}
+                onClick={() => goToQuestion(q.id)}
+                disabled={isCurrent}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition border-2 ${
+                  isCurrent ? 'border-white' : 'border-transparent'
+                } ${
+                  status === 'passed'
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : status === 'failed'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                }`}
+              >
+                {idx + 1}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Fixed submit bar */}
+      <div className="relative z-10 px-4 sm:px-6 py-4 bg-black/40 backdrop-blur-md border-t border-white/10">
+        <button
+          onClick={handleSubmitAttempt}
+          className="w-full max-w-md mx-auto block rounded-xl bg-gradient-to-r from-fuchsia-600 to-pink-600 py-3 text-base font-bold text-white shadow-lg hover:from-fuchsia-700 hover:to-pink-700 transition"
+        >
+          {t('codeEditor.submitAssessment', 'Submit Assessment')}
+        </button>
       </div>
     </div>
   );

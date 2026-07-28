@@ -64,7 +64,7 @@ export interface Assignment {
   time: string;
   date_of_expiry: string;
   batch: number;
-  total_score: string;
+  total_marks: string;
 }
 
 export interface CreateAssignmentPayload {
@@ -72,7 +72,7 @@ export interface CreateAssignmentPayload {
   time?: string;
   date_of_expiry?: string;
   batch: number;
-  total_score?: string;
+  total_marks?: string;
 }
 
 export const getAssignments = async (): Promise<
@@ -132,14 +132,15 @@ export interface AssignmentDetails {
   mcqs: MCQQuestion[];
 }
 
-export const getAssignmentDetails =
-  async (
-    assignmentId: number
-  ): Promise<AssignmentDetails> => {
-    return await apiGet(
-      `/assessment/assignments/${assignmentId}/details/`
-    );
-  };
+export const getAssignmentDetails = async (
+  assignmentId: number
+): Promise<AssignmentDetails> => {
+  const response = await apiGet(
+    `/assessment/assignments/${assignmentId}/details/`
+  );
+
+  return response.data;
+};
 
 /* ==========================================================
    QUESTIONS
@@ -587,4 +588,457 @@ export const getAdminMCQMarks = async (
   params?: { assignment_id?: number; user_search?: string }
 ): Promise<AdminMCQMark[]> => {
   return await apiGetWithParams("/assessment/admin/mcq-marks/", params);
+};
+
+
+
+
+
+
+
+
+/* ==========================================================
+   NEW ASSESSMENT ENGINE
+========================================================== */
+
+/* ============================
+   Attempt
+============================ */
+
+export interface StartAssessmentResponse {
+  id: number;
+  assignment: number;
+  attempt_number: number;
+  status: string;
+  started_at: string;
+  submitted_at: string | null;
+  mcq_score: number;
+  programming_score: number;
+  total_marks: number;
+  percentage: number;
+  is_passed: boolean;
+  is_locked: boolean;
+  resume: boolean;
+  is_new: boolean;
+}
+
+export const startAssessment = async (
+  assignmentId: number
+): Promise<StartAssessmentResponse> => {
+  return await apiPost(
+    `/assessment/assignments/${assignmentId}/start/`,
+    {}
+  );
+};
+
+export const getAttemptDetails = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/`
+  );
+};
+
+/* ============================
+   MCQ
+============================ */
+
+export interface SaveMCQAnswerPayload {
+  question_id: number;
+  selected_option_id: number;
+}
+
+export const saveMCQAnswer = async (
+  attemptId: number,
+  data: SaveMCQAnswerPayload
+) => {
+  return await apiPost(
+    `/assessment/attempts/${attemptId}/mcq/save/`,
+    data
+  );
+};
+
+export const getSavedMCQAnswers = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/mcq/answers/`
+  );
+};
+
+/* ============================
+   Programming
+============================ */
+
+export interface SaveProgrammingCodePayload {
+  question_id: number;
+  language: string;
+  source_code: string;
+}
+
+export const saveProgrammingCode = async (
+  attemptId: number,
+  data: SaveProgrammingCodePayload
+) => {
+  return await apiPost(
+    `/assessment/attempts/${attemptId}/programming/save/`,
+    data
+  );
+};
+
+export const getSavedProgrammingCode = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/programming/code/`
+  );
+};
+
+/* ============================
+   Submit
+============================ */
+
+export const submitAssessment = async (
+  attemptId: number
+) => {
+  return await apiPost(
+    `/assessment/attempts/${attemptId}/submit/`,
+    {}
+  );
+};
+
+/* ============================
+   Result
+============================ */
+
+export const getAssessmentResult = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/result/`
+  );
+};
+
+/* ============================
+   Review
+============================ */
+
+export const getAssessmentReview = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/review/`
+  );
+};
+
+export const getMCQReview = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/review/mcq/`
+  );
+};
+
+export const getProgrammingReview = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/review/programming/`
+  );
+};
+
+/* ============================
+   Analytics
+============================ */
+
+export const getAssessmentAnalytics = async (
+  attemptId: number
+) => {
+  return await apiGet(
+    `/assessment/attempts/${attemptId}/analytics/`
+  );
+};
+
+/* ============================
+   Student Dashboard
+============================ */
+
+export const getStudentDashboard = async () => {
+  return await apiGet(
+    "/assessment/student/dashboard/"
+  );
+};
+
+export const getQuizQuestions = async (quizId: number) => {
+  return await apiGet(`/assessment/quizzes/${quizId}/questions/`);
+};
+
+export interface AdminAssignment {
+  id: number;
+  status: string;
+  time: string | null;
+  date_of_expiry: string;
+  batch: number;
+  batch_name: string;
+  total_marks: string | null;
+}
+
+export const getAdminAssignments = async (): Promise<AdminAssignment[]> => {
+  return await apiGet('/assessment/admin/assignments/');
+};
+
+// ---------- Admin assignment detail ----------
+export interface AdminAssignmentDetail {
+  id: number;
+  status: string;
+  time: string | null;
+  date_of_expiry: string;
+  batch: number;
+  total_marks: string | null;
+  programming_questions: {
+    id: number;
+    question: string;
+    level: string;
+    status: string;
+    description: string | null;
+  }[];
+  mcq_quizzes: {
+    id: number;
+    title: string;
+    category: string;
+    subtype: string | null;
+    total_marks: number;
+    is_active: boolean;
+  }[];
+}
+
+export const getAdminAssignmentDetail = async (
+  assignmentId: number
+): Promise<AdminAssignmentDetail> => {
+  return await apiGet(`/assessment/admin/assignments/${assignmentId}/`);
+};
+
+// ---------- Admin: update assignment ----------
+export interface UpdateAssignmentPayload {
+  batch?: number;
+  total_marks?: string;
+  date_of_expiry: string;
+  time?: string;
+  status?: string;
+}
+
+export const updateAdminAssignment = async (
+  assignmentId: number,
+  payload: UpdateAssignmentPayload
+) => {
+  return await apiPut(`/assessment/admin/assignments/${assignmentId}/`, payload);
+};
+
+// ---------- Admin: create assignment ----------
+export interface CreateAdminAssignmentPayload {
+  batch: number;           // Batch ID (foreign key)
+  total_marks?: string;    // optional max score
+  date_of_expiry: string;  // YYYY-MM-DD
+  time?: string;           // HH:MM
+  status?: string;         // "Active" | "Expired"
+}
+
+export const createAdminAssignment = async (payload: CreateAdminAssignmentPayload) => {
+  return await apiPost('/assessment/admin/assignments/new/', payload);
+};
+
+// ---------- Admin: list attempts ----------
+export interface AdminAttemptSummary {
+  id: number;
+  assignment: number;        // assignment id
+  user: number;              // user id
+  programming_score: number;
+  mcq_score: number;
+  total_marks: number;
+  percentage: number;
+  status: string;            // "in_progress", "submitted", "expired"
+  submitted_at: string | null;
+  created_at: string;
+}
+
+export const getAdminAttempts = async (params?: {
+  assignment_id?: number;
+}): Promise<AdminAttemptSummary[]> => {
+  // Adjust the URL to your admin attempts list endpoint.
+  const query = params?.assignment_id
+    ? `?assignment_id=${params.assignment_id}`
+    : '';
+  return await apiGet(`/assessment/admin/attempts/${query}`);
+};
+
+// ---------- Admin: quizzes ----------
+export interface AdminQuizSummary {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  subtype: string | null;
+  assignment: number;          // assignment id
+  total_marks: number;
+  duration_minutes: number;
+  is_active: boolean;
+  question_count?: number;     // optional, add if backend provides it
+}
+
+export const getAdminQuizzes = async (): Promise<AdminQuizSummary[]> => {
+  return await apiGet('/assessment/admin/quizzes/');
+};
+
+// ---------- Admin quiz detail ----------
+export interface AdminQuizDetail {
+  id: number;
+  assignment: number | null;
+  title: string;
+  description: string;
+  category: string;
+  subtype: string | null;
+  passing_percentage: number;
+  duration_minutes: number;
+  total_marks: number;
+  is_active: boolean;
+  status: string;
+}
+
+export const getAdminQuizById = async (quizId: number): Promise<AdminQuizDetail> => {
+  return await apiGet(`/assessment/admin/quizzes/${quizId}/`);
+};
+
+export const updateAdminQuiz = async (
+  quizId: number,
+  payload: Partial<AdminQuizDetail>
+) => {
+  return await apiPut(`/assessment/admin/quizzes/${quizId}/`, payload);
+};
+
+// ---------- Admin: create quiz ----------
+export interface CreateAdminQuizPayload {
+  assignment?: number;        // assignment id (optional)
+  title: string;
+  description?: string;
+  category: string;           // "Technical", "SoftSkill", "Aptitude"
+  subtype?: string;
+  passing_percentage: number;
+  duration_minutes: number;
+  total_marks: number;
+  is_active: boolean;
+  status: string;             // "draft", "published", "archived"
+}
+
+export const createAdminQuiz = async (payload: CreateAdminQuizPayload) => {
+  return await apiPost('/assessment/admin/quizzes/new/', payload);
+};
+
+// ---------- Admin question (programming) ----------
+export interface AdminQuestionDetail {
+  id: number;
+  question: string;
+  description: string | null;
+  level: string;
+  status: string;
+  assignment: number | null; // assignment id
+}
+
+export const getAdminQuestionById = async (questionId: number): Promise<AdminQuestionDetail> => {
+  return await apiGet(`/assessment/admin/questions/${questionId}/`);
+};
+
+export interface UpdateAdminQuestionPayload {
+  question?: string;
+  description?: string | null;
+  level?: string;
+  status?: string;
+  assignment?: number | null;
+}
+
+export const updateAdminQuestion = async (
+  questionId: number,
+  payload: UpdateAdminQuestionPayload
+) => {
+  return await apiPut(`/assessment/admin/questions/${questionId}/update/`, payload);
+};
+
+export interface CreateAdminQuestionPayload {
+  question: string;
+  description?: string;
+  level: string;
+  status?: string;
+  assignment?: number | null;
+}
+
+export const createAdminQuestion = async (payload: CreateAdminQuestionPayload) => {
+  return await apiPost('/assessment/admin/questions/new/', payload);
+};
+
+// ---------- Admin questions list ----------
+export interface AdminQuestionListItem {
+  id: number;
+  question: string;
+  description: string | null;
+  level: string;
+  status: string;
+  assignment: number | null; // assignment ID
+}
+
+export const getAdminQuestions = async (): Promise<AdminQuestionListItem[]> => {
+  return await apiGet('/assessment/admin/questions/');
+};
+
+// ---------- Admin attempts (results) ----------
+export interface AdminAttemptSummary {
+  id: number;
+  user: number;             // user ID
+  user_name?: string;       // optional (backend should include)
+  assignment: number;       // assignment ID
+  programming_score: number;
+  mcq_score: number;
+  total_marks: number;
+  percentage: number;
+  status: string;           // "submitted", "in_progress", "expired"
+  submitted_at: string | null;
+  created_at: string;
+}
+
+// ---------- Admin test cases ----------
+export interface AdminTestCase {
+  id: number;
+  question: number;         // question ID
+  input_data: string | null;
+  expected_output: string;
+}
+
+export const getAdminTestCases = async (questionId: number): Promise<AdminTestCase[]> => {
+  return await apiGet(`/assessment/admin/questions/${questionId}/testcases/`);
+};
+
+export const createAdminTestCase = async (
+  questionId: number,
+  payload: { input_data?: string; expected_output: string }
+) => {
+  return await apiPost(`/assessment/admin/questions/${questionId}/testcases/new/`, payload);
+};
+
+export const updateAdminTestCase = async (
+  testCaseId: number,
+  payload: { input_data?: string; expected_output: string }
+) => {
+  return await apiPut(`/assessment/admin/testcases/${testCaseId}/update/`, payload);
+};
+
+export const deleteAdminTestCase = async (testCaseId: number) => {
+  // apiDelete is not in your services file, but you can implement it similarly to apiPost/apiPut.
+  // For now, use apiPost with DELETE method or add apiDelete.
+  // We'll assume you have a generic apiDelete or just use fetch.
+  // Here's a simple implementation:
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/assessment/admin/testcases/${testCaseId}/delete/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+  if (!response.ok) throw new Error('Deletion failed');
+  return response.json();
 };

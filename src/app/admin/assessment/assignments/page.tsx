@@ -1,32 +1,35 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/app/admin/AdminLayout';
+import toast from 'react-hot-toast';
 import {
-  getAssignments,
-  Assignment,
-} from "@/services/assessmentService";
+  getAdminAssignments,
+  AdminAssignment,
+} from '@/services/assessmentService';
 
 export default function AdminAssignmentsListPage() {
   const router = useRouter();
 
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAssignments = useCallback(async () => {
     try {
-      const data = await getAssignments();
-      const sorted = (data || []).sort(
+      const response = await getAdminAssignments();
+      const data = Array.isArray(response)
+        ? response
+        : (response as { data?: AdminAssignment[] }).data ?? response;
+      const sorted = (Array.isArray(data) ? data : []).sort(
         (a, b) =>
           new Date(a.date_of_expiry).getTime() -
           new Date(b.date_of_expiry).getTime()
       );
       setAssignments(sorted);
     } catch (err) {
-      toast.error("Failed to load assignments");
+      toast.error('Failed to load assignments');
     } finally {
       setLoading(false);
     }
@@ -69,10 +72,12 @@ export default function AdminAssignmentsListPage() {
               <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
                 📋 Assignments
               </h1>
-              <p className="text-white/70 mt-1">Create, view, and update assignments.</p>
+              <p className="text-white/70 mt-1">
+                Create, view, and update assignments.
+              </p>
             </div>
             <button
-              onClick={() => router.push("/admin/assessment/assignments/create")}
+              onClick={() => router.push('/admin/assessment/assignments/create')}
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-fuchsia-700 transition mt-4 sm:mt-0"
             >
               <span>+</span> Create Assignment
@@ -82,13 +87,15 @@ export default function AdminAssignmentsListPage() {
           {/* Assignments list */}
           {assignments.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
-              <p className="text-white/50">No assignments yet. Create one to get started.</p>
+              <p className="text-white/50">
+                No assignments yet. Create one to get started.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {assignments.map((assignment) => {
                 const isExpired =
-                  assignment.status?.toLowerCase() === "expired" ||
+                  assignment.status?.toLowerCase() === 'expired' ||
                   new Date(assignment.date_of_expiry) < now;
                 return (
                   <motion.div
@@ -108,15 +115,15 @@ export default function AdminAssignmentsListPage() {
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                             isExpired
-                              ? "bg-red-400/20 text-red-300 border border-red-400/30"
-                              : "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30"
+                              ? 'bg-red-400/20 text-red-300 border border-red-400/30'
+                              : 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
                           }`}
                         >
-                          {isExpired ? "Expired" : "Active"}
+                          {isExpired ? 'Expired' : 'Active'}
                         </span>
                       </div>
                       <p className="text-xs text-white/50">
-                        Score: {assignment.total_score || "N/A"} • Expiry:{" "}
+                        Score: {assignment.total_marks || 'N/A'} • Expiry:{' '}
                         {new Date(assignment.date_of_expiry).toLocaleDateString()}
                         {assignment.time && ` at ${assignment.time}`}
                       </p>
@@ -124,7 +131,9 @@ export default function AdminAssignmentsListPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() =>
-                          router.push(`/admin/assessment/assignments/${assignment.id}`)
+                          router.push(
+                            `/admin/assessment/assignments/${assignment.id}`
+                          )
                         }
                         className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white/80 hover:bg-white/20 transition"
                       >

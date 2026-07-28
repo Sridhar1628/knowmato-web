@@ -5,67 +5,67 @@ import CodeEditor from '@uiw/react-textarea-code-editor';
 import { toast } from 'sonner';
 import { apiPost } from '@/services/apiService';
 
-// Extend language list to include 'html'
 type Language = 'python' | 'Java' | 'C' | 'cpp' | 'html';
 
-const CodeCompiler: React.FC = () => {
-  const [language, setLanguage] = useState<Language>('python');
-  const [sourceCode, setSourceCode] = useState(`# Write your code here\nprint("Hello, World!")`);
-  const [stdin, setStdin] = useState('');
-  const [output, setOutput] = useState('');          // for text output / console logs
-  const [isRunning, setIsRunning] = useState(false);
-  const [consoleLogs, setConsoleLogs] = useState(''); // separate for HTML
+interface CodeCompilerProps {
+  initialCode?: string;
+  initialLanguage?: Language;
+  onSave?: (code: string, language: Language) => void;
+  onCodeChange?: (code: string) => void;
+}
 
-  // Reference to the iframe for preview
+const CodeCompiler: React.FC<CodeCompilerProps> = ({
+  initialCode = '',
+  initialLanguage = 'python',
+  onSave,
+  onCodeChange,
+}) => {
+  const [language, setLanguage] = useState<Language>(initialLanguage);
+  const [sourceCode, setSourceCode] = useState(initialCode);
+  const [stdin, setStdin] = useState('');
+  const [output, setOutput] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [consoleLogs, setConsoleLogs] = useState('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const languageOptions: { value: Language; label: string }[] = [
+  // Sync props to state when they change
+  useEffect(() => {
+    setLanguage(initialLanguage);
+  }, [initialLanguage]);
+
+  useEffect(() => {
+    setSourceCode(initialCode);
+  }, [initialCode]);
+
+  const languageOptions = [
     { value: 'python', label: 'Python' },
     { value: 'Java', label: 'Java' },
     { value: 'C', label: 'C' },
     { value: 'cpp', label: 'C++' },
     { value: 'html', label: 'HTML / CSS / JS' },
-  ];
+  ] as const;
 
   const getDefaultCode = (lang: Language): string => {
     switch (lang) {
       case 'Java':
-        return `public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, Java!");
-    }
-}`;
+        return `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, Java!");\n    }\n}`;
       case 'cpp':
         return `#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, C++!" << endl;\n    return 0;\n}`;
       case 'C':
         return `#include <stdio.h>\n\nint main() {\n    printf("Hello, C!\\n");\n    return 0;\n}`;
       case 'html':
-        return `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { background: #1a1a2e; color: #eee; font-family: Arial; padding: 2rem; }
-    h1 { color: #e94560; }
-  </style>
-</head>
-<body>
-  <h1>Hello from HTML!</h1>
-  <p>This page has CSS and JavaScript.</p>
-  <script>
-    console.log('Page loaded');
-    console.log('2 + 3 =', 2 + 3);
-  </script>
-</body>
-</html>`;
-      default: // python
+        return `<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { background: #1a1a2e; color: #eee; font-family: Arial; padding: 2rem; }\n    h1 { color: #e94560; }\n  </style>\n</head>\n<body>\n  <h1>Hello from HTML!</h1>\n  <p>This page has CSS and JavaScript.</p>\n  <script>\n    console.log('Page loaded');\n    console.log('2 + 3 =', 2 + 3);\n  </script>\n</body>\n</html>`;
+      default:
         return `# Write your code here\nprint("Hello, World!")`;
     }
   };
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
-    setSourceCode(getDefaultCode(newLang));
-    // Reset output when switching
+    if (!initialCode) {
+      // Only reset to default if no initial code provided
+      setSourceCode(getDefaultCode(newLang));
+    }
     setOutput('');
     setConsoleLogs('');
   };
@@ -75,14 +75,12 @@ const CodeCompiler: React.FC = () => {
     setOutput('');
     setConsoleLogs('');
 
-    // If language is HTML, render preview immediately
     if (language === 'html') {
       if (iframeRef.current) {
         iframeRef.current.srcdoc = sourceCode;
       }
     }
 
-    // Build payload (stdin is ignored for HTML)
     const payload = {
       language,
       source_code: sourceCode,
@@ -91,18 +89,12 @@ const CodeCompiler: React.FC = () => {
 
     try {
       const response = await apiPost('/assessment/compile/', payload);
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
+      if (response.error) throw new Error(response.error);
       const backendOutput = response.output || response.stdout || '';
 
       if (language === 'html') {
-        // For HTML, show console logs in a separate area
         setConsoleLogs(backendOutput || 'No console output');
-        // Optionally, also show it in the main output
-        setOutput(''); // we’ll show preview and logs separately
+        setOutput('');
       } else {
         setOutput(backendOutput);
       }
@@ -125,13 +117,22 @@ const CodeCompiler: React.FC = () => {
     }
   };
 
-  // Automatically set iframe src when HTML code changes (optional – we only update on Run)
-  // But we can also use useEffect to update preview on every code change (debounced).
-  // We'll keep it manual via Run button.
+  const handleSaveClick = () => {
+    if (onSave) {
+      onSave(sourceCode, language);
+    }
+  };
+
+  const handleCodeChange = (value: string) => {
+    setSourceCode(value);
+    if (onCodeChange) {
+      onCodeChange(value);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Language selector & Run button */}
+      {/* Language selector & buttons */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex-1 min-w-[200px]">
           <label htmlFor="language" className="block text-sm font-semibold text-white/80 mb-1">
@@ -168,6 +169,15 @@ const CodeCompiler: React.FC = () => {
             '▶ Run'
           )}
         </button>
+
+        {onSave && (
+          <button
+            onClick={handleSaveClick}
+            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02]"
+          >
+            💾 Save
+          </button>
+        )}
       </div>
 
       {/* Language-specific hints */}
@@ -188,9 +198,15 @@ const CodeCompiler: React.FC = () => {
         <div className="rounded-xl border-2 border-white/20 overflow-hidden bg-gray-900/60 backdrop-blur-sm">
           <CodeEditor
             value={sourceCode}
-            language={language === 'Java' ? 'java' : language === 'cpp' ? 'cpp' : language === 'C' ? 'c' : language === 'html' ? 'html' : 'python'}
+            language={
+              language === 'Java' ? 'java' :
+              language === 'cpp' ? 'cpp' :
+              language === 'C' ? 'c' :
+              language === 'html' ? 'html' :
+              'python'
+            }
             placeholder="Write your code here"
-            onChange={(e) => setSourceCode(e.target.value)}
+            onChange={(e) => handleCodeChange(e.target.value)}
             padding={16}
             style={{
               fontSize: 14,
@@ -204,7 +220,7 @@ const CodeCompiler: React.FC = () => {
         </div>
       </div>
 
-      {/* Standard Input (hidden for HTML) */}
+      {/* Standard Input */}
       {language !== 'html' && (
         <div>
           <label htmlFor="stdin" className="block text-sm font-semibold text-white/80 mb-1">
@@ -235,13 +251,15 @@ const CodeCompiler: React.FC = () => {
               </svg>
               Executing...
             </div>
+          ) : language === 'html' ? (
+            consoleLogs || 'Run to see console output.'
           ) : (
-            language === 'html' ? (consoleLogs || 'Run to see console output.') : (output || 'Run your code to see output here.')
+            output || 'Run your code to see output here.'
           )}
         </div>
       </div>
 
-      {/* HTML Preview (only when language is HTML) */}
+      {/* HTML Preview */}
       {language === 'html' && (
         <div>
           <label className="block text-sm font-semibold text-white/80 mb-1">Preview</label>
@@ -251,7 +269,7 @@ const CodeCompiler: React.FC = () => {
               sandbox="allow-scripts allow-modals"
               className="w-full h-96 rounded-lg bg-white"
               title="HTML Preview"
-              srcDoc={sourceCode} // initial code
+              srcDoc={sourceCode}
             />
           </div>
         </div>

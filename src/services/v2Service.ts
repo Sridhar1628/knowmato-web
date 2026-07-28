@@ -2745,3 +2745,265 @@ export const updateCompanyProfile = async (
   );
   return response.data;
 };
+
+
+export interface PlanCategory {
+  category: string;
+  total_credits: string;
+  remaining_credits: string;
+}
+
+export interface ActivePlan {
+  id: number;
+  plan_name: string;
+  purchase_amount: string;
+  purchased_at: string;
+  expires_at: string;
+  remaining_days: number;
+  status: "active" | "completed" | "expired";
+  remaining_credits: string;
+  categories: PlanCategory[];
+}
+
+export interface ActivePlansResponse {
+  success: boolean;
+  status: number;
+  message: string;
+  data: ActivePlan[];
+}
+
+/**
+ * Get all active credit plans
+ */
+export const getMyActivePlans =
+  async (): Promise<ActivePlansResponse> => {
+    const response = await axiosInstance.get(
+      "/credits/my-active-plans/"
+    );
+
+    return response.data;
+  };
+
+export interface PurchaseHistory {
+  id: number;
+  plan_name: string;
+  purchase_amount: string;
+  purchased_at: string;
+  expires_at: string;
+  remaining_days: number;
+  status: "active" | "completed" | "expired";
+  remaining_credits: string;
+}
+
+export interface PurchaseHistoryResponse {
+  success: boolean;
+  status: number;
+  message: string;
+  data: PurchaseHistory[];
+}
+
+export const getPurchaseHistory =
+  async (): Promise<PurchaseHistoryResponse> => {
+    const response = await axiosInstance.get(
+      "/credits/purchase-history/"
+    );
+
+    return response.data;
+  };
+
+export const mobilePaymentLogin = async (
+    token: string
+) => {
+    return axiosInstance.post(
+        "/credits/mobile-payment-login/",
+        {
+            token,
+        }
+    );
+};
+
+// ======================================================
+// KNOWMATO+ DASHBOARD
+// ======================================================
+
+export interface DashboardUserInfo {
+  id: number;
+  username: string;
+  email: string;
+  display_name: string;
+  avatar: string;
+}
+
+export interface DashboardStats {
+  enrolled_courses: number;
+  active_enrollments: number;
+  completed_enrollments: number;
+  wishlist_count: number;
+  quiz_attempts: number;
+  quiz_passed: number;
+  avg_quiz_percentage: number;
+  certificates_count: number;
+  job_applications_total: number;
+  job_shortlisted: number;
+  internship_applications_total: number;
+  internship_shortlisted: number;
+}
+
+export interface DashboardEnrollment {
+  enrollment_id: number;
+  course_id: number;
+  course_title: string;
+  course_slug: string;
+  thumbnail: string;
+  status: "active" | "completed" | "cancelled" | "expired";
+  progress_percentage: number;
+  last_lecture: string | null;
+  last_accessed_at: string | null;
+  enrolled_at: string;
+  expires_at: string | null;
+  certificate_available: boolean;
+  category: string | null;
+}
+
+export interface DashboardQuizAttempt {
+  quiz_title: string;
+  course_title: string;
+  attempt_number: number;
+  score: number;
+  total_marks: number;
+  percentage: number;
+  is_passed: boolean;
+  submitted_at: string | null;
+}
+
+export interface DashboardJobSummary {
+  total: number;
+  shortlisted: number;
+  interview: number;
+  offered: number;
+  rejected: number;
+}
+
+export interface DashboardInternshipSummary {
+  total: number;
+  shortlisted: number;
+  interview: number;
+  selected: number;
+  rejected: number;
+}
+
+export interface DashboardAnnouncement {
+  id: number;
+  course_title: string;
+  title: string;
+  message: string;
+  created_at: string;
+}
+
+export interface DashboardRecommendedCourse {
+  id: number;
+  title: string;
+  slug: string;
+  thumbnail: string;
+  instructor: string;
+  category: string | null;
+  rating: number;
+  students: number;
+  price: number;
+  discounted_price: number | null;
+  course_type: "free" | "paid" | "premium";
+}
+
+export interface DashboardData {
+  user: DashboardUserInfo;
+  stats: DashboardStats;
+  enrollments: DashboardEnrollment[];
+  recent_quiz_attempts: DashboardQuizAttempt[];
+  job_application_summary: DashboardJobSummary;
+  internship_application_summary: DashboardInternshipSummary;
+  recent_announcements: DashboardAnnouncement[];
+  recommended_courses: DashboardRecommendedCourse[];
+}
+
+export interface DashboardResponse {
+  success: boolean;
+  status: number;
+  message: string;
+  data: DashboardData;
+}
+
+/**
+ * Fetch full KnowMato+ student dashboard data.
+ */
+export const getKnowMatoPlusDashboard = async (): Promise<DashboardResponse> => {
+  const response = await axiosInstance.get<DashboardResponse>(
+    "/v2/knowmato_plus/"   // adjust to your actual endpoint
+  );
+
+  return response.data;
+};
+
+// ----------------------------------------------------------
+// CODE SNIPPETS (Save / Load)
+// ----------------------------------------------------------
+
+export interface CodeSnippet {
+  id: number;
+  title: string;
+  description: string;
+  language: string;
+  source_code: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CodeSnippetPayload {
+  title: string;
+  description?: string;
+  language: string;
+  source_code: string;
+}
+
+/**
+ * Get all saved snippets of the current user.
+ */
+export const getCodeSnippets = async (): Promise<CodeSnippet[]> => {
+  const response = await axiosInstance.get('/v2/snippets/');
+  return response.data;           // ApiResponse with data as CodeSnippet[]
+};
+
+/**
+ * Get a single snippet by ID.
+ */
+export const getCodeSnippetById = async (id: number): Promise<CodeSnippet> => {
+  const response = await axiosInstance.get(`/v2/snippets/${id}/`);
+  return response.data;
+};
+
+/**
+ * Create a new snippet.
+ */
+export const createCodeSnippet = async (
+  payload: CodeSnippetPayload
+): Promise<CodeSnippet> => {
+  const response = await axiosInstance.post('/v2/snippets/', payload);
+  return response.data;
+};
+
+/**
+ * Update an existing snippet (partial update).
+ */
+export const updateCodeSnippet = async (
+  id: number,
+  payload: Partial<CodeSnippetPayload>
+): Promise<CodeSnippet> => {
+  const response = await axiosInstance.patch(`/v2/snippets/${id}/`, payload);
+  return response.data;
+};
+
+/**
+ * Delete a snippet.
+ */
+export const deleteCodeSnippet = async (id: number): Promise<void> => {
+  await axiosInstance.delete(`/v2/snippets/${id}/`);
+};

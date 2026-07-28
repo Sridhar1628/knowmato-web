@@ -1,31 +1,52 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
-import { createQuestion, CreateQuestionPayload, getAssignments, Assignment } from "@/services/assessmentService";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/app/admin/AdminLayout';
+import toast from 'react-hot-toast';
+import {
+  getAdminAssignments,
+  createAdminQuestion,
+  AdminAssignment,
+} from '@/services/assessmentService';
+
+// ---------- Form state type ----------
+interface CreateQuestionForm {
+  question: string;
+  description: string;
+  level: string;
+  status: string;
+  assignment: number | undefined; // assignment ID
+}
 
 export default function CreateQuestionPage() {
   const router = useRouter();
 
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [formData, setFormData] = useState<CreateQuestionPayload>({
-    question: "",
-    description: "",
-    level: "Medium",
-    status: "Pending",
-    Assignment: undefined,
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [formData, setFormData] = useState<CreateQuestionForm>({
+    question: '',
+    description: '',
+    level: 'Medium',
+    status: 'Pending',
+    assignment: undefined,
   });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
-        const data = await getAssignments();
-        setAssignments(data || []);
+        const response = await getAdminAssignments();
+
+        console.log("Assignments Response:", response);
+
+        const assignmentsData = Array.isArray(response)
+          ? response
+          : response?.data ?? [];
+
+        setAssignments(assignmentsData);
       } catch (err) {
+        console.error(err);
         toast.error("Could not load assignments for selection.");
       }
     };
@@ -38,7 +59,7 @@ export default function CreateQuestionPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "Assignment" ? (value ? Number(value) : undefined) : value,
+      [name]: name === 'assignment' ? (value ? Number(value) : undefined) : value,
     }));
   };
 
@@ -46,21 +67,27 @@ export default function CreateQuestionPage() {
     e.preventDefault();
 
     if (!formData.question.trim()) {
-      toast.error("Question text is required");
+      toast.error('Question text is required');
       return;
     }
     if (!formData.level) {
-      toast.error("Please select a difficulty level");
+      toast.error('Please select a difficulty level');
       return;
     }
 
     setSubmitting(true);
     try {
-      await createQuestion(formData);
-      toast.success("Question created successfully!");
-      router.push("/admin/assessment/questions");
+      await createAdminQuestion({
+        question: formData.question,
+        description: formData.description,
+        level: formData.level,
+        status: formData.status,
+        assignment: formData.assignment ?? null,
+      });
+      toast.success('Question created successfully!');
+      router.push('/admin/assessment/questions');
     } catch (err: any) {
-      toast.error(err?.message || "Creation failed");
+      toast.error(err?.message || 'Creation failed');
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +106,7 @@ export default function CreateQuestionPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <button
-              onClick={() => router.push("/admin/assessment/questions")}
+              onClick={() => router.push('/admin/assessment/questions')}
               className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200"
             >
               ← Back to Questions
@@ -103,8 +130,8 @@ export default function CreateQuestionPage() {
                 Assignment
               </label>
               <select
-                name="Assignment"
-                value={formData.Assignment ?? ""}
+                name="assignment"
+                value={formData.assignment ?? ''}
                 onChange={handleChange}
                 className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/50 transition"
               >
@@ -194,7 +221,7 @@ export default function CreateQuestionPage() {
                   Creating...
                 </>
               ) : (
-                "Create Question"
+                'Create Question'
               )}
             </button>
           </motion.form>

@@ -6,12 +6,10 @@ import { motion } from "framer-motion";
 import AdminLayout from "@/app/admin/AdminLayout";
 import toast from "react-hot-toast";
 import {
-  getAssignments,
-  Assignment,
-  getAdminProgrammingMarks,
-  getAdminMCQMarks,
-  AdminProgrammingMark,
-  AdminMCQMark,
+  getAdminAssignments,
+  getAdminAttempts,
+  AdminAttemptSummary,
+  AdminAssignment,
 } from "@/services/assessmentService";
 
 import {
@@ -30,56 +28,48 @@ import {
   Line,
 } from "recharts";
 
-// ---------- colour palette (match dashboard) ----------
 const COLORS = ["#8b5cf6", "#d946ef", "#06b6d4", "#f59e0b", "#10b981"];
 
-// ---------- helper ----------
 const formatPercentage = (val: number) => `${val.toFixed(0)}%`;
 
 export default function AdminAnalyticsPage() {
   const router = useRouter();
 
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [progMarks, setProgMarks] = useState<AdminProgrammingMark[]>([]);
-  const [mcqMarks, setMCQMarks] = useState<AdminMCQMark[]>([]);
+  const [assignments, setAssignments] = useState<AdminAssignment[]>([]);
+  const [attempts, setAttempts] = useState<AdminAttemptSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedAssignment, setSelectedAssignment] = useState<number | "">("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
 
-  // ─── fetch data ─────────────────────────────────
+  // Fetch data
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [assignRes, progRes, mcqRes] = await Promise.all([
-        getAssignments(),
-        getAdminProgrammingMarks({
-          assignment_id: selectedAssignment || undefined,
-        }),
-        getAdminMCQMarks({
+      const [assignRes, attemptRes] = await Promise.all([
+        getAdminAssignments(),
+        getAdminAttempts({
           assignment_id: selectedAssignment || undefined,
         }),
       ]);
       setAssignments(assignRes || []);
 
-      // apply date filter locally (backend may also support it)
-      let prog = progRes || [];
-      let mcq = mcqRes || [];
-
+      // Apply date filter locally
+      let filtered = attemptRes || [];
       if (dateRange.start) {
         const start = new Date(dateRange.start);
-        prog = prog.filter((m) => new Date(m.created_at) >= start);
-        mcq = mcq.filter((m) => new Date(m.created_at) >= start);
+        filtered = filtered.filter((a) =>
+          a.submitted_at ? new Date(a.submitted_at) >= start : false
+        );
       }
       if (dateRange.end) {
         const end = new Date(dateRange.end);
         end.setHours(23, 59, 59, 999);
-        prog = prog.filter((m) => new Date(m.created_at) <= end);
-        mcq = mcq.filter((m) => new Date(m.created_at) <= end);
+        filtered = filtered.filter((a) =>
+          a.submitted_at ? new Date(a.submitted_at) <= end : false
+        );
       }
-
-      setProgMarks(prog);
-      setMCQMarks(mcq);
+      setAttempts(filtered);
     } catch (err) {
       toast.error("Failed to load analytics data");
     } finally {
@@ -91,71 +81,47 @@ export default function AdminAnalyticsPage() {
     fetchData();
   }, [fetchData]);
 
-  // ─── computed stats ───────────────────────────
+  // Computed stats
   const avgProg =
-    progMarks.length > 0
-      ? progMarks.reduce((sum, m) => sum + parseFloat(m.marks), 0) / progMarks.length
+    attempts.length > 0
+      ? attempts.reduce((sum, a) => sum + a.programming_score, 0) / attempts.length
       : 0;
   const avgMCQ =
-    mcqMarks.length > 0
-      ? mcqMarks.reduce((sum, m) => sum + parseFloat(m.marks), 0) / mcqMarks.length
+    attempts.length > 0
+      ? attempts.reduce((sum, a) => sum + a.mcq_score, 0) / attempts.length
       : 0;
 
   const progStatusData = [
-    {
-      name: "Completed",
-      value: progMarks.filter((m) => m.status === "completed").length,
-    },
-    {
-      name: "Pending",
-      value: progMarks.filter((m) => m.status !== "completed").length,
-    },
+    { name: "Submitted", value: attempts.filter((a) => a.status === "submitted").length },
+    { name: "Other", value: attempts.filter((a) => a.status !== "submitted").length },
   ];
 
-  const mcqStatusData = [
-    {
-      name: "Completed",
-      value: mcqMarks.filter((m) => m.status === "completed").length,
-    },
-    {
-      name: "Pending",
-      value: mcqMarks.filter((m) => m.status !== "completed").length,
-    },
-  ];
+  const mcqStatusData = [...progStatusData]; // same data, just for visual consistency
 
-  // per‑assignment average (combine prog + mcq)
-  const assignmentAvg = assignments.map((a) => {
-    const progForA = progMarks.filter(
-      (m) => m.assignment_id === a.id
-    );
-    const mcqForA = mcqMarks.filter((m) =>
-      // some AdminMCQMark items may not have assignment_id typed; guard against that
-      // and only include those matching this assignment id
-      "assignment_id" in m && (m as any).assignment_id === a.id
-    );
-    const totalMarks =
-      progForA.reduce((s, m) => s + parseFloat(m.marks), 0) +
-      mcqForA.reduce((s, m) => s + parseFloat(m.marks), 0);
-    const totalCount = progForA.length + mcqForA.length;
+  // Per‑assignment average
+  const assignmentAvg = assignments.map((ass) => {
+    const forAss = attempts.filter((a) => a.assignment === ass.id);
+    const total = forAss.reduce((s, a) => s + a.total_marks, 0);
     return {
-      assignment: `#${a.id}`,
-      avgScore: totalCount > 0 ? (totalMarks / totalCount).toFixed(1) : 0,
+      assignment: `#${ass.id}`,
+      avgScore: forAss.length > 0 ? (total / forAss.length).toFixed(1) : 0,
     };
   });
 
-  // submission trend – group by date
+  // Submission trend – group by date
   const trendData = (() => {
     const map = new Map<string, number>();
-    [...progMarks, ...mcqMarks].forEach((m) => {
-      const date = new Date(m.created_at).toLocaleDateString();
-      map.set(date, (map.get(date) || 0) + 1);
+    attempts.forEach((a) => {
+      if (a.submitted_at) {
+        const date = new Date(a.submitted_at).toLocaleDateString();
+        map.set(date, (map.get(date) || 0) + 1);
+      }
     });
     return Array.from(map.entries())
       .map(([date, count]) => ({ date, submissions: count }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   })();
 
-  // ─── loading skeleton ─────────────────────────
   if (loading) {
     return (
       <AdminLayout>
@@ -172,7 +138,6 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
-        {/* Background blobs */}
         <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
         <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
@@ -194,18 +159,8 @@ export default function AdminAnalyticsPage() {
               onClick={fetchData}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-violet-300 font-medium hover:bg-white/20 mt-4 sm:mt-0"
             >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
               Refresh
             </button>
@@ -230,20 +185,14 @@ export default function AdminAnalyticsPage() {
             <input
               type="date"
               value={dateRange.start}
-              onChange={(e) =>
-                setDateRange((prev) => ({ ...prev, start: e.target.value }))
-              }
+              onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
               className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 text-white text-sm outline-none focus:border-violet-400"
-              placeholder="Start date"
             />
             <input
               type="date"
               value={dateRange.end}
-              onChange={(e) =>
-                setDateRange((prev) => ({ ...prev, end: e.target.value }))
-              }
+              onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
               className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 text-white text-sm outline-none focus:border-violet-400"
-              placeholder="End date"
             />
           </div>
 
@@ -256,9 +205,7 @@ export default function AdminAnalyticsPage() {
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
             >
               <h3 className="font-semibold text-white/80 mb-2">💻 Avg Programming Score</h3>
-              <p className="text-3xl font-bold text-violet-300">
-                {formatPercentage(avgProg)}
-              </p>
+              <p className="text-3xl font-bold text-violet-300">{formatPercentage(avgProg)}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -267,9 +214,7 @@ export default function AdminAnalyticsPage() {
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
             >
               <h3 className="font-semibold text-white/80 mb-2">📝 Avg MCQ Score</h3>
-              <p className="text-3xl font-bold text-fuchsia-300">
-                {formatPercentage(avgMCQ)}
-              </p>
+              <p className="text-3xl font-bold text-fuchsia-300">{formatPercentage(avgMCQ)}</p>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -278,15 +223,13 @@ export default function AdminAnalyticsPage() {
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
             >
               <h3 className="font-semibold text-white/80 mb-2">📊 Total Submissions</h3>
-              <p className="text-3xl font-bold text-cyan-300">
-                {progMarks.length + mcqMarks.length}
-              </p>
+              <p className="text-3xl font-bold text-cyan-300">{attempts.length}</p>
             </motion.div>
           </div>
 
-          {/* Charts grid */}
+          {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Assignment Average Score Bar Chart */}
+            {/* Per Assignment Bar Chart */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -312,7 +255,7 @@ export default function AdminAnalyticsPage() {
               </ResponsiveContainer>
             </motion.div>
 
-            {/* Submission Trend Line Chart */}
+            {/* Submission Trend */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -344,14 +287,14 @@ export default function AdminAnalyticsPage() {
               </ResponsiveContainer>
             </motion.div>
 
-            {/* Programming Status Pie */}
+            {/* Completion Pie (Programming & MCQ share same attempt status) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
               className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
             >
-              <h3 className="font-semibold text-white/80 mb-4">💻 Programming Completion</h3>
+              <h3 className="font-semibold text-white/80 mb-4">📦 Attempt Completion</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
@@ -362,15 +305,12 @@ export default function AdminAnalyticsPage() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                    label={({ name, percent = 0 }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
                     }
                   >
                     {progStatusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -385,7 +325,7 @@ export default function AdminAnalyticsPage() {
               </ResponsiveContainer>
             </motion.div>
 
-            {/* MCQ Status Pie */}
+            {/* MCQ Completion (same as above, but you could differentiate later) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -403,15 +343,12 @@ export default function AdminAnalyticsPage() {
                     outerRadius={100}
                     paddingAngle={5}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent??0* 100).toFixed(0)}%`
+                    label={({ name, percent = 0 }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
                     }
                   >
                     {mcqStatusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip

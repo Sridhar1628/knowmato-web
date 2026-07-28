@@ -1,235 +1,102 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, memo } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { load } from "@cashfreepayments/cashfree-js";
-import { RootState } from "@/redux/store";
+
+// Existing services (adjust paths as needed)
 import {
-  getMyCreditBalances,
   getPlans,
+  getMyCreditBalances,
   createCreditOrder,
-  getMyCreditTransactions,
-  CreditBalance,
   CreditPlan,
-  CreditTransaction,
+  CreditBalance,
 } from "@/services/v1Service";
-import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next";
 
-// ---------- Sub-components ----------
-const BalanceCard = memo(({ category, balance }: { category: string; balance: number }) => (
-  <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex flex-col items-center transition hover:border-violet-400/40 hover:shadow-xl">
-    <span className="text-sm text-white/70">{category}</span>
-    <span className="text-2xl font-bold text-white">{balance}</span>
-  </div>
-));
-BalanceCard.displayName = "BalanceCard";
+// New services you’ve added
+import {
+  getMyActivePlans,
+  getPurchaseHistory,
+  ActivePlan,
+  PurchaseHistory,
+  ActivePlansResponse,
+  PurchaseHistoryResponse,
+} from "@/services/v2Service"; // adjust import path
 
-const PlanCard = memo(
-  ({
-    plan,
-    onBuy,
-  }: {
-    plan: CreditPlan;
-    onBuy: (plan: CreditPlan) => void;
-  }) => {
-    const { t } = useTranslation();
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white/5 backdrop-blur-md rounded-2xl p-5 border border-white/10 hover:border-violet-400/40 transition-all hover:shadow-xl"
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-            <p className="text-sm text-white/60">{plan.description}</p>
-          </div>
-          <span className="text-xl font-bold text-violet-400">₹{plan.price}</span>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-1">
-          {plan.items.map((item) => (
-            <span
-              key={item.id}
-              className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/80"
-            >
-              {item.category_name}: {item.quantity}
-            </span>
-          ))}
-        </div>
-        <button
-          onClick={() => onBuy(plan)}
-          className="mt-4 w-full py-2.5 bg-violet-600 hover:bg-violet-700 rounded-xl font-semibold text-white transition"
-        >
-          {t("credits.buyNow")}
-        </button>
-      </motion.div>
-    );
-  }
-);
-PlanCard.displayName = "PlanCard";
+const TABS = ["Overview", "Active Plans", "History", "Buy Credits"] as const;
+type Tab = (typeof TABS)[number];
 
-const TransactionItem = memo(({ txn }: { txn: CreditTransaction }) => {
-  const isCredit = txn.amount > 0;
-  const { t } = useTranslation();
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  return (
-    <div className="flex justify-between items-center bg-white/5 rounded-xl p-3 border border-white/10 transition hover:border-violet-400/30">
-      <div>
-        <p className="text-sm font-medium text-white">{txn.category_name}</p>
-        <p className="text-xs text-white/60">{txn.description}</p>
-        <p className="text-xs text-white/40">{formatDate(txn.created_at)}</p>
-      </div>
-      <span className={`font-bold ${isCredit ? "text-emerald-400" : "text-rose-400"}`}>
-        {isCredit ? "+" : ""}{txn.amount}
-      </span>
-    </div>
-  );
-});
-TransactionItem.displayName = "TransactionItem";
-
-// ---------- Purchase Modal ----------
-const PurchaseModal = memo(
-  ({
-    isOpen,
-    onClose,
-    onConfirm,
-    plan,
-    purchasing,
-  }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-    plan: CreditPlan | null;
-    purchasing: boolean;
-  }) => {
-    const { t } = useTranslation();
-    if (!isOpen || !plan) return null;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="bg-[#1f1b3a] rounded-2xl p-6 max-w-md w-full mx-4 border border-white/10 shadow-2xl"
-        >
-          <h2 className="text-2xl font-bold text-white mb-2">{t("credits.confirmPurchaseTitle")}</h2>
-          <p className="text-white/70 mb-4">{t("credits.confirmPurchaseMessage")}</p>
-          <div className="bg-white/5 rounded-xl p-4 border border-white/10 mb-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-white">{plan.name}</span>
-              <span className="text-xl font-bold text-violet-400">₹{plan.price}</span>
-            </div>
-            <p className="text-sm text-white/60 mt-1">{plan.description}</p>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {plan.items.map((item) => (
-                <span
-                  key={item.id}
-                  className="text-xs bg-white/10 px-2 py-1 rounded-full text-white/80"
-                >
-                  {item.category_name}: {item.quantity}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={purchasing}
-              className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-white font-medium transition disabled:opacity-50"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={purchasing}
-              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 rounded-xl text-white font-semibold transition disabled:opacity-50"
-            >
-              {purchasing ? t("credits.processing") : t("credits.confirm")}
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-);
-PurchaseModal.displayName = "PurchaseModal";
-
-// ---------- Main Page ----------
-export default function StudentCreditsPage() {
-  const { t } = useTranslation();
+const CreditPlansPage = () => {
   const router = useRouter();
-  const user = useSelector((state: RootState) => state.auth.user);
 
-  // ---------- State ----------
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
+  // Data states
   const [balances, setBalances] = useState<CreditBalance[]>([]);
+  const [activePlans, setActivePlans] = useState<ActivePlan[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseHistory[]>([]);
   const [plans, setPlans] = useState<CreditPlan[]>([]);
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
 
+  // UI states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [purchasingPlanId, setPurchasingPlanId] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<CreditPlan | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [purchasing, setPurchasing] = useState(false);
-
-  // ---------- Data Fetching ----------
-  const fetchData = useCallback(async () => {
-    try {
-      const [balancesRes, plansRes, txnRes] = await Promise.all([
-        getMyCreditBalances(),
-        getPlans(),
-        getMyCreditTransactions(),
-      ]);
-      setBalances(balancesRes?.data || []);
-      setPlans(plansRes?.data || []);
-      setTransactions(txnRes?.data || []);
-    } catch (error) {
-      console.error("Fetch credits error:", error);
-      toast.error(t("credits.fetchError"));
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [t]);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchData();
-  }, [fetchData]);
-
-  // ---------- Purchase Flow (Cashfree) ----------
-  const handleBuy = useCallback((plan: CreditPlan) => {
-    setSelectedPlan(plan);
-    setIsModalOpen(true);
+    loadData();
   }, []);
 
-  const confirmPurchase = useCallback(async () => {
-    if (!selectedPlan) return;
-    setPurchasing(true);
+  const loadData = async () => {
     try {
-      // Create order via backend
+      setLoading(true);
+      setError(null);
+
+      const [balancesRes, activePlansRes, purchasesRes, plansRes] =
+        await Promise.all([
+          getMyCreditBalances(),
+          getMyActivePlans(),
+          getPurchaseHistory(),
+          getPlans(),
+        ]);
+
+      setBalances(balancesRes.data || []);
+      setActivePlans(activePlansRes.data || []);
+      setPurchases(purchasesRes.data || []);
+      setPlans(plansRes.data || []);
+    } catch (err: any) {
+      console.error("Failed to load credits data:", err);
+      setError("Unable to load your credits. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePurchase = async () => {
+    if (!selectedPlan) return;
+
+    try {
+      setPurchasingPlanId(selectedPlan.id);
+
       const response = await createCreditOrder(selectedPlan.id);
+
+      console.log("CREATE ORDER RESPONSE:", response);
+
       if (!response.success) {
-        toast.error(response.message || t("credits.paymentCreateError"));
+        alert(response.message || "Unable to create payment.");
         return;
       }
 
-      // Store order ID for verification after payment
-      localStorage.setItem("credit_order_id", response.order_id);
+      const paymentData = response.data;
 
-      // Initialize Cashfree
+      console.log("ORDER ID:", paymentData.order_id);
+      console.log("PAYMENT SESSION:", paymentData.payment_session_id);
+
+      localStorage.setItem(
+        "credit_order_id",
+        paymentData.order_id
+      );
+
       const cashfree = await load({
         mode:
           process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION"
@@ -237,135 +104,487 @@ export default function StudentCreditsPage() {
             : "sandbox",
       });
 
-      // Redirect to Cashfree checkout
+      if (!cashfree) {
+        alert("Unable to load Cashfree.");
+        return;
+      }
+
       await cashfree.checkout({
-        paymentSessionId: response.payment_session_id,
+        paymentSessionId: paymentData.payment_session_id,
         redirectTarget: "_self",
       });
-      // After redirect this code won't execute
     } catch (error: any) {
       console.error(error);
-      toast.error(error?.message || t("credits.paymentStartError"));
+      alert(error?.message || "Unable to start payment.");
     } finally {
-      setPurchasing(false);
+      setPurchasingPlanId(null);
     }
-  }, [selectedPlan, t]);
+  };
+  // Helper to format date
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
 
-  // ---------- Render ----------
-  if (loading && !refreshing) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-          <p className="mt-4 text-white/60">{t("common.loading")}</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#111827] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
-      {/* Animated background blobs */}
-      <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
-      <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
-
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between mb-8"
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#111827] flex flex-col items-center justify-center gap-4">
+        <p className="text-red-400 text-lg">{error}</p>
+        <button
+          onClick={loadData}
+          className="px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition"
         >
-          <div>
-            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-              💳 {t("credits.title")}
-            </h1>
-            <p className="text-white/70 mt-1">{t("credits.subtitle")}</p>
-          </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-violet-300 font-medium hover:bg-white/20 hover:text-white transition disabled:opacity-50 mt-4 sm:mt-0"
-          >
-            <svg
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {refreshing ? t("common.refreshing") : t("common.refresh")}
-          </button>
-        </motion.div>
-
-        {/* Balances Section */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold text-white/80 mb-4">
-            📊 {t("credits.balances")}
-          </h2>
-          {balances.length === 0 ? (
-            <p className="text-white/50">{t("credits.noBalances")}</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {balances.map((b) => (
-                <BalanceCard key={b.category} category={b.category_name} balance={b.balance} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Plans Section */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold text-white/80 mb-4">
-            🛒 {t("credits.plans")}
-          </h2>
-          {plans.length === 0 ? (
-            <p className="text-white/50">{t("credits.noPlans")}</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {plans.map((plan) => (
-                <PlanCard key={plan.id} plan={plan} onBuy={handleBuy} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Transaction History */}
-        <section>
-          <h2 className="text-xl font-semibold text-white/80 mb-4">
-            📜 {t("credits.transactions")}
-          </h2>
-          {transactions.length === 0 ? (
-            <p className="text-white/50">{t("credits.noTransactions")}</p>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10">
-              {transactions.slice(0, 10).map((txn) => (
-                <TransactionItem key={txn.id} txn={txn} />
-              ))}
-            </div>
-          )}
-        </section>
+          Retry
+        </button>
       </div>
+    );
+  }
 
-      {/* Purchase Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <PurchaseModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onConfirm={confirmPurchase}
-            plan={selectedPlan}
-            purchasing={purchasing}
-          />
+  // Total overall remaining credits across all active plans (for a quick glance)
+  const totalOverallRemaining = activePlans.reduce(
+    (sum, plan) => sum + parseFloat(plan.remaining_credits),
+    0
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#111827]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => router.back()}
+            className="w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 text-white transition flex items-center justify-center"
+          >
+            ←
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-white">Credits</h1>
+            <p className="text-white/60 mt-1">
+              Manage your credits, view active plans and purchase more.
+            </p>
+          </div>
+        </div>
+
+        {/* Category Balances (from overall user balance) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {balances.map((balance) => (
+            <div
+              key={balance.id}
+              className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10"
+            >
+              <p className="text-sm text-white/60">{balance.category_name}</p>
+              <h3 className="text-3xl font-bold text-violet-300 mt-2">
+                {balance.balance}
+              </h3>
+              <p className="text-xs text-white/40 mt-1">Overall Balance</p>
+            </div>
+          ))}
+          {/* Quick stat: total remaining credits from active plans */}
+          {activePlans.length > 0 && (
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10 col-span-2 md:col-span-2">
+              <p className="text-sm text-white/60">
+                Active Plans Remaining Credits
+              </p>
+              <h3 className="text-3xl font-bold text-emerald-300 mt-2">
+                {totalOverallRemaining}
+              </h3>
+              <p className="text-xs text-white/40 mt-1">
+                Across {activePlans.length} active plan(s)
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-white/10 pb-2">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                activeTab === tab
+                  ? "bg-violet-600 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div>
+          {/* Overview Tab */}
+          {activeTab === "Overview" && (
+            <div className="space-y-8">
+              {/* Active Plans Summary */}
+              {activePlans.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {activePlans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold text-white">
+                            {plan.plan_name}
+                          </h3>
+                          <p className="text-white/60 text-sm mt-1">
+                            Purchased on {formatDate(plan.purchased_at)}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            plan.status === "active"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : plan.status === "expired"
+                              ? "bg-red-500/20 text-red-300"
+                              : "bg-gray-500/20 text-gray-300"
+                          }`}
+                        >
+                          {plan.status.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 space-y-2">
+                        {plan.categories.map((cat) => (
+                          <div key={cat.category} className="flex justify-between text-sm">
+                            <span className="text-white/70">{cat.category}</span>
+                            <span className="text-violet-300 font-medium">
+                              {cat.remaining_credits} / {cat.total_credits}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-4 flex justify-between items-center">
+                        <span className="text-white/50 text-xs">
+                          Expires: {formatDate(plan.expires_at)} &bull;{" "}
+                          {plan.remaining_days} days left
+                        </span>
+                        <span className="text-violet-300 font-semibold">
+                          {plan.remaining_credits} total remaining
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white/5 rounded-2xl">
+                  <p className="text-white/60">You have no active plans.</p>
+                  <button
+                    onClick={() => setActiveTab("Buy Credits")}
+                    className="mt-4 px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition"
+                  >
+                    Buy Your First Plan
+                  </button>
+                </div>
+              )}
+
+              {/* Recent Purchases (last 3) */}
+              {purchases.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-4">
+                    Recent Purchases
+                  </h2>
+                  <div className="space-y-3">
+                    {purchases.slice(0, 3).map((purchase) => (
+                      <div
+                        key={purchase.id}
+                        className="flex justify-between items-center bg-white/5 rounded-xl p-4 border border-white/10"
+                      >
+                        <div>
+                          <p className="text-white font-medium">{purchase.plan_name}</p>
+                          <p className="text-white/50 text-sm">
+                            {formatDate(purchase.purchased_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-white font-semibold">
+                            ₹{purchase.purchase_amount}
+                          </p>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${
+                              purchase.status === "active"
+                                ? "bg-emerald-500/20 text-emerald-300"
+                                : purchase.status === "expired"
+                                ? "bg-red-500/20 text-red-300"
+                                : "bg-gray-500/20 text-gray-300"
+                            }`}
+                          >
+                            {purchase.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active Plans Tab - full list with progress bars */}
+          {activeTab === "Active Plans" && (
+            <div>
+              {activePlans.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {activePlans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 p-6"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-white">
+                            {plan.plan_name}
+                          </h3>
+                          <p className="text-white/60 text-sm">
+                            Purchased {formatDate(plan.purchased_at)}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            plan.status === "active"
+                              ? "bg-emerald-500/20 text-emerald-300"
+                              : "bg-red-500/20 text-red-300"
+                          }`}
+                        >
+                          {plan.status.toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {plan.categories.map((cat) => {
+                          const total = parseFloat(cat.total_credits);
+                          const remaining = parseFloat(cat.remaining_credits);
+                          const used = total - remaining;
+                          const percentage = total > 0 ? (remaining / total) * 100 : 0;
+
+                          return (
+                            <div key={cat.category}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-white/70">{cat.category}</span>
+                                <span className="text-violet-300 font-medium">
+                                  {remaining} / {total}
+                                </span>
+                              </div>
+                              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-violet-500 rounded-full transition-all"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-4 flex justify-between items-center text-sm">
+                        <span className="text-white/50">
+                          Expires {formatDate(plan.expires_at)}
+                        </span>
+                        <span className="text-violet-300 font-semibold">
+                          {plan.remaining_days} days left
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white/5 rounded-2xl">
+                  <p className="text-white/60">No active plans right now.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Purchase History Tab */}
+          {activeTab === "History" && (
+            <div>
+              {purchases.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="border-b border-white/10">
+                      <tr className="text-white/60 text-sm">
+                        <th className="pb-3 pr-4">Plan</th>
+                        <th className="pb-3 pr-4">Amount</th>
+                        <th className="pb-3 pr-4">Purchased</th>
+                        <th className="pb-3 pr-4">Expires</th>
+                        <th className="pb-3 pr-4">Remaining Days</th>
+                        <th className="pb-3 pr-4">Status</th>
+                        <th className="pb-3">Remaining Credits</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchases.map((purchase) => (
+                        <tr
+                          key={purchase.id}
+                          className="border-b border-white/5 text-sm"
+                        >
+                          <td className="py-4 pr-4 text-white font-medium">
+                            {purchase.plan_name}
+                          </td>
+                          <td className="py-4 pr-4 text-white">
+                            ₹{purchase.purchase_amount}
+                          </td>
+                          <td className="py-4 pr-4 text-white/70">
+                            {formatDate(purchase.purchased_at)}
+                          </td>
+                          <td className="py-4 pr-4 text-white/70">
+                            {formatDate(purchase.expires_at)}
+                          </td>
+                          <td className="py-4 pr-4 text-white/70">
+                            {purchase.remaining_days}
+                          </td>
+                          <td className="py-4 pr-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                purchase.status === "active"
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : purchase.status === "expired"
+                                  ? "bg-red-500/20 text-red-300"
+                                  : "bg-gray-500/20 text-gray-300"
+                              }`}
+                            >
+                              {purchase.status}
+                            </span>
+                          </td>
+                          <td className="py-4 text-violet-300 font-semibold">
+                            {purchase.remaining_credits}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 bg-white/5 rounded-2xl">
+                  <p className="text-white/60">No purchase history yet.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Buy Credits Tab */}
+          {activeTab === "Buy Credits" && (
+            <div>
+              {plans.length === 0 ? (
+                <div className="text-center py-12 bg-white/5 rounded-2xl">
+                  <p className="text-white/60">No plans available at the moment.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {plans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10 p-6 flex flex-col"
+                    >
+                      <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
+                      <p className="text-white/60 mt-2">{plan.description}</p>
+                      <div className="text-4xl font-bold text-violet-300 mt-6">
+                        ₹{plan.price}
+                      </div>
+
+                      <div className="mt-6 space-y-3 flex-1">
+                        {plan.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center gap-3 text-white/90"
+                          >
+                            <span className="text-emerald-400">✔</span>
+                            <span>
+                              {item.quantity} {item.category_name} Credits
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setSelectedPlan(plan);
+                          setShowPurchaseModal(true);
+                        }}
+                        disabled={purchasingPlanId === plan.id}
+                        className="mt-8 w-full rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white py-3 font-semibold transition disabled:opacity-50"
+                      >
+                        {purchasingPlanId === plan.id
+                          ? "Processing..."
+                          : "Buy Now"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Purchase Confirmation Modal */}
+        {showPurchaseModal && selectedPlan && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-[#111827] border border-white/10 rounded-3xl p-8 w-full max-w-lg">
+              <h2 className="text-3xl font-bold text-white">💎 Purchase Plan</h2>
+              <p className="text-white/60 mt-2">Confirm your purchase.</p>
+
+              <div className="mt-8">
+                <h3 className="text-2xl text-white font-bold">
+                  {selectedPlan.name}
+                </h3>
+                <p className="text-white/60 mt-2">{selectedPlan.description}</p>
+
+                <div className="text-5xl font-bold text-violet-400 mt-6">
+                  ₹{selectedPlan.price}
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  {selectedPlan.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between border-b border-white/5 pb-3"
+                    >
+                      <span className="text-white">{item.category_name}</span>
+                      <span className="text-violet-300 font-semibold">
+                        {item.quantity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-10">
+                <button
+                  onClick={() => setShowPurchaseModal(false)}
+                  className="flex-1 rounded-xl border border-white/20 text-white py-3"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePurchase}
+                  disabled={purchasingPlanId === selectedPlan.id}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-white font-semibold disabled:opacity-50"
+                >
+                  {purchasingPlanId === selectedPlan.id
+                    ? "Processing..."
+                    : "Continue"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </div>
     </div>
   );
-}
+};
+
+export default CreditPlansPage;

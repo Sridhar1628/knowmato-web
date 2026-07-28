@@ -595,6 +595,46 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      {/* KnowMato Agent Floating Button */}
+      <button
+        onClick={() => router.push('/student/knowmato-agent')}
+        className="
+          fixed
+          bottom-12
+          right-8
+          z-[999]
+          flex
+          items-center
+          gap-3
+          rounded-full
+          bg-gradient-to-r
+          from-violet-600
+          to-fuchsia-600
+          px-5
+          py-3
+          text-white
+          font-bold
+          shadow-2xl
+          shadow-violet-500/40
+          hover:scale-105
+          hover:shadow-fuchsia-500/40
+          transition-all
+          duration-300
+        "
+      >
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-2xl">
+          🤖
+        </span>
+
+        <div className="text-left">
+          <p className="text-sm font-bold leading-none">
+            KnowMato Agent
+          </p>
+          <p className="text-xs text-white/80">
+            AI Assistant
+          </p>
+        </div>
+      </button>
     </div>
   );
 }

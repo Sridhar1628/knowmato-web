@@ -1,24 +1,26 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
-import { getQuestions, Question } from "@/services/assessmentService";
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import AdminLayout from '@/app/admin/AdminLayout';
+import toast from 'react-hot-toast';
+import { getAdminQuestions, AdminQuestionListItem } from '@/services/assessmentService';
 
 export default function AdminQuestionsListPage() {
   const router = useRouter();
 
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<AdminQuestionListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchQuestions = useCallback(async () => {
     try {
-      const data = await getQuestions();
-      setQuestions(data || []);
+      const response = await getAdminQuestions();
+      // Handle either direct array response or an object wrapping the array in `data`.
+      const data = Array.isArray(response) ? response : (response as any)?.data ?? [];
+      setQuestions(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error("Failed to load questions");
+      toast.error('Failed to load questions');
     } finally {
       setLoading(false);
     }
@@ -59,10 +61,12 @@ export default function AdminQuestionsListPage() {
               <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
                 💻 Programming Questions
               </h1>
-              <p className="text-white/70 mt-1">Manage coding challenges and test cases.</p>
+              <p className="text-white/70 mt-1">
+                Manage coding challenges and test cases.
+              </p>
             </div>
             <button
-              onClick={() => router.push("/admin/assessment/questions/create")}
+              onClick={() => router.push('/admin/assessment/questions/create')}
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 hover:from-violet-700 hover:to-fuchsia-700 transition mt-4 sm:mt-0"
             >
               <span>+</span> Create Question
@@ -72,7 +76,9 @@ export default function AdminQuestionsListPage() {
           {/* Questions list */}
           {questions.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
-              <p className="text-white/50">No programming questions yet. Create one to get started.</p>
+              <p className="text-white/50">
+                No programming questions yet. Create one to get started.
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -86,19 +92,19 @@ export default function AdminQuestionsListPage() {
                   <div className="mb-3 sm:mb-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-sm font-bold text-white line-clamp-1">
-                        {question.question || "Untitled Question"}
+                        {question.question || 'Untitled Question'}
                       </span>
                       <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold text-violet-300 border border-violet-400/30">
                         {question.level}
                       </span>
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          question.status === "completed"
-                            ? "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30"
-                            : "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                          question.status === 'completed'
+                            ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/30'
+                            : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
                         }`}
                       >
-                        {question.status || "Pending"}
+                        {question.status || 'Pending'}
                       </span>
                     </div>
                     {question.description && (
@@ -107,7 +113,7 @@ export default function AdminQuestionsListPage() {
                       </p>
                     )}
                     <p className="text-xs text-white/40 mt-1">
-                      Assignment: {question.Assignment ? `#${question.Assignment}` : "None"}
+                      Assignment: {question.assignment ? `#${question.assignment}` : 'None'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
