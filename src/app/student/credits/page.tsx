@@ -30,7 +30,7 @@ const CreditPlansPage = () => {
   const router = useRouter();
 
   // Data states
-  const [balances, setBalances] = useState<CreditBalance[]>([]);
+  const [balance, setBalance] = useState<CreditBalance | null>(null);
   const [activePlans, setActivePlans] = useState<ActivePlan[]>([]);
   const [purchases, setPurchases] = useState<PurchaseHistory[]>([]);
   const [plans, setPlans] = useState<CreditPlan[]>([]);
@@ -60,7 +60,7 @@ const CreditPlansPage = () => {
           getPlans(),
         ]);
 
-      setBalances(balancesRes.data || []);
+      setBalance(balancesRes.data || null);
       setActivePlans(activePlansRes.data || []);
       setPurchases(purchasesRes.data || []);
       setPlans(plansRes.data || []);
@@ -177,32 +177,20 @@ const CreditPlansPage = () => {
 
         {/* Category Balances (from overall user balance) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {balances.map((balance) => (
-            <div
-              key={balance.id}
-              className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10"
-            >
-              <p className="text-sm text-white/60">{balance.category_name}</p>
-              <h3 className="text-3xl font-bold text-violet-300 mt-2">
-                {balance.balance}
-              </h3>
-              <p className="text-xs text-white/40 mt-1">Overall Balance</p>
-            </div>
-          ))}
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10">
+            <p className="text-sm text-white/60">
+              Available Credits
+            </p>
+
+            <h3 className="text-4xl font-bold text-violet-300 mt-2">
+              {balance?.balance ?? 0}
+            </h3>
+
+            <p className="text-xs text-white/40 mt-1">
+              Common Credit Balance
+            </p>
+          </div>
           {/* Quick stat: total remaining credits from active plans */}
-          {activePlans.length > 0 && (
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/10 col-span-2 md:col-span-2">
-              <p className="text-sm text-white/60">
-                Active Plans Remaining Credits
-              </p>
-              <h3 className="text-3xl font-bold text-emerald-300 mt-2">
-                {totalOverallRemaining}
-              </h3>
-              <p className="text-xs text-white/40 mt-1">
-                Across {activePlans.length} active plan(s)
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Tabs */}
@@ -257,15 +245,16 @@ const CreditPlansPage = () => {
                         </span>
                       </div>
 
-                      <div className="mt-4 space-y-2">
-                        {plan.categories.map((cat) => (
-                          <div key={cat.category} className="flex justify-between text-sm">
-                            <span className="text-white/70">{cat.category}</span>
-                            <span className="text-violet-300 font-medium">
-                              {cat.remaining_credits} / {cat.total_credits}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="mt-4">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/70">
+                            Available Credits
+                          </span>
+
+                          <span className="text-violet-300 font-medium">
+                            {plan.remaining_credits} {plan.total_credits}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-4 flex justify-between items-center">
@@ -365,29 +354,36 @@ const CreditPlansPage = () => {
                       </div>
 
                       <div className="space-y-3">
-                        {plan.categories.map((cat) => {
-                          const total = parseFloat(cat.total_credits);
-                          const remaining = parseFloat(cat.remaining_credits);
-                          const used = total - remaining;
-                          const percentage = total > 0 ? (remaining / total) * 100 : 0;
+                        {(() => {
+                          const total = parseFloat(plan.total_credits);
+                          const remaining = parseFloat(plan.remaining_credits);
+
+                          const percentage =
+                            total > 0 ? (remaining / total) * 100 : 0;
 
                           return (
-                            <div key={cat.category}>
+                            <div>
                               <div className="flex justify-between text-sm mb-1">
-                                <span className="text-white/70">{cat.category}</span>
+                                <span className="text-white/70">
+                                  Available Credits
+                                </span>
+
                                 <span className="text-violet-300 font-medium">
                                   {remaining} / {total}
                                 </span>
                               </div>
+
                               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-violet-500 rounded-full transition-all"
-                                  style={{ width: `${percentage}%` }}
+                                  style={{
+                                    width: `${percentage}%`,
+                                  }}
                                 />
                               </div>
                             </div>
                           );
-                        })}
+                        })()}
                       </div>
 
                       <div className="mt-4 flex justify-between items-center text-sm">

@@ -8,7 +8,7 @@ import {
   purchaseCourse,
   type Course,
 } from "@/services/v2Service";
-import { getBalanceByCategory } from "@/services/v1Service";
+import { getMyCreditBalances } from "@/services/v2Service";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next"; // ✅ added
 
@@ -37,12 +37,18 @@ export default function KnowmatoPlusCoursesPage() {
         setError(null);
 
         const [coursesData, balanceRes] = await Promise.all([
-          getCourses(),
-          getBalanceByCategory("course").catch(() => ({ data: { balance: 0 } })),
+            getCourses(),
+            getMyCreditBalances().catch(() => ({
+                data: {
+                    balance: "0.00",
+                },
+            })),
         ]);
 
         setCourses(coursesData);
-        setCourseCredits(balanceRes?.data?.balance ?? 0);
+        setCourseCredits(
+            parseFloat(balanceRes.data.balance)
+        );
         setCreditsLoading(false);
 
         setEnrollmentLoading(true);
@@ -90,8 +96,10 @@ export default function KnowmatoPlusCoursesPage() {
         next.add(selectedCourse.id);
         return next;
       });
-      const balanceRes = await getBalanceByCategory("courses");
-      setCourseCredits(balanceRes?.data?.balance ?? courseCredits - (selectedCourse.course_credit_cost ?? 0));
+      const balanceRes = await getMyCreditBalances();
+      setCourseCredits(
+          parseFloat(balanceRes.data.balance)
+      );
       setShowEnrollModal(false);
       setSelectedCourse(null);
     } catch (err: any) {
@@ -126,7 +134,7 @@ export default function KnowmatoPlusCoursesPage() {
         {!creditsLoading && (
           <div className="rounded-xl bg-violet-500/10 border border-violet-500/30 px-4 py-2 text-sm">
             <span className="text-violet-300">{t("knowmatoCourses.availableCredits")}:</span>{" "}
-            <span className="font-bold text-white">{courseCredits}</span>
+            <span className="font-bold text-white">{courseCredits.toFixed(2)}</span>
           </div>
         )}
         {creditsLoading && (

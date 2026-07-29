@@ -23,10 +23,21 @@ export default function TestsPage() {
   const fetchSnippets = async () => {
     setLoadingSnippets(true);
     try {
-      const snippetList = await getCodeSnippets();
+      const response = await getCodeSnippets();
+      // Ensure we get an array
+      let snippetList: CodeSnippet[] = [];
+      if (Array.isArray(response)) {
+        snippetList = response;
+      } else if (response && typeof response === 'object' && Array.isArray(response.data)) {
+        snippetList = response.data;
+      } else {
+        console.warn('Unexpected snippets response:', response);
+        snippetList = [];
+      }
       setSnippets(snippetList);
     } catch (error: any) {
       toast.error('Failed to load snippets');
+      setSnippets([]);
     } finally {
       setLoadingSnippets(false);
     }
@@ -173,6 +184,7 @@ export default function TestsPage() {
               </div>
             )}
             <CodeCompiler
+              questionId={1} // ← Replace with actual question ID or make it dynamic
               initialCode={selectedSnippet?.source_code || ''}
               initialLanguage={(selectedSnippet?.language as any) || 'python'}
               onSave={handleSave}

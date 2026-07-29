@@ -2747,11 +2747,6 @@ export const updateCompanyProfile = async (
 };
 
 
-export interface PlanCategory {
-  category: string;
-  total_credits: string;
-  remaining_credits: string;
-}
 
 export interface ActivePlan {
   id: number;
@@ -2761,8 +2756,8 @@ export interface ActivePlan {
   expires_at: string;
   remaining_days: number;
   status: "active" | "completed" | "expired";
-  remaining_credits: string;
-  categories: PlanCategory[];
+  total_credits: string;
+  remaining_credits: string;  
 }
 
 export interface ActivePlansResponse {
@@ -3006,4 +3001,18 @@ export const updateCodeSnippet = async (
  */
 export const deleteCodeSnippet = async (id: number): Promise<void> => {
   await axiosInstance.delete(`/v2/snippets/${id}/`);
+};
+
+export interface CreditBalance {
+  balance: number;
+}
+
+export const getMyCreditBalances = async (): Promise<{
+  success: boolean;
+  status: number;
+  message: string;
+  data: CreditBalance;
+}> => {
+    const response = await axiosInstance.get('/credits/my-balances/');
+    return response.data;
 };

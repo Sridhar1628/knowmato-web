@@ -3,18 +3,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import Editor from '@monaco-editor/react';
 import { useTranslation } from 'react-i18next';
+import CodeCompiler from '@/components/CodeCompiler';   // ← NEW: reusable compiler component
 
 import {
   getAttemptDetails,
   saveProgrammingCode,
   getSavedProgrammingCode,
-  compileCode,
   runTestCases,
   getTestCases,
   submitAssessment,
-  CompileResponse,
   RunTestResponse,
   TestCaseResponse,
 } from '@/services/assessmentService';
@@ -25,7 +23,6 @@ const LANGUAGE_OPTIONS = [
   { label: 'Java', value: 'Java' },
   { label: 'Python', value: 'python' },
 ] as const;
-
 type Language = (typeof LANGUAGE_OPTIONS)[number]['value'];
 
 const STARTER_CODES: Record<Language, string> = {
@@ -55,27 +52,24 @@ export default function ProgrammingQuestionPage() {
   // Loading
   const [loading, setLoading] = useState(true);
 
-  // Code editor
+  // Code editor state
   const [language, setLanguage] = useState<Language>('python');
   const [code, setCode] = useState('');
-  const [customInput, setCustomInput] = useState('');
-  const editorMounted = useRef(false);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Compile / Run results
-  const [compileOutput, setCompileOutput] = useState<string | null>(null);
-  const [compileError, setCompileError] = useState<string | null>(null);
-  const [isCompiling, setIsCompiling] = useState(false);
+  // Test‑case run state (only this remains separate)
   const [testResults, setTestResults] = useState<RunTestResponse | null>(null);
   const [isRunningTests, setIsRunningTests] = useState(false);
 
   // Timer
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
-  // Question statuses: passed / failed / not_attempted
+  // Question statuses
   const [questionStatuses, setQuestionStatuses] = useState<Record<number, 'passed' | 'failed' | 'not_attempted'>>({});
 
-  // Fetch attempt details & saved code
+  // ──────────────────────────────────────────
+  // 1. Fetch attempt details & saved code
+  // ──────────────────────────────────────────
   useEffect(() => {
     if (!attemptId || !questionId) return;
 
@@ -83,7 +77,6 @@ export default function ProgrammingQuestionPage() {
       try {
         const res = await getAttemptDetails(attemptId);
         const data = res?.data ?? res;
-
         setAttempt(data.attempt);
         setAssignment(data.assignment);
         const questions = data.programming_questions ?? [];
@@ -97,7 +90,6 @@ export default function ProgrammingQuestionPage() {
         }
         setQuestion(current);
 
-        // Initialize question statuses
         const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
         questions.forEach((q: any) => (initial[q.id] = 'not_attempted'));
         setQuestionStatuses(initial);
@@ -106,9 +98,7 @@ export default function ProgrammingQuestionPage() {
         try {
           const tcRes = await getTestCases(questionId);
           setTestCases(tcRes);
-        } catch (e) {
-          /* test cases optional */
-        }
+        } catch (e) { /* optional */ }
 
         // Load previously saved code
         const savedCodeRes = await getSavedProgrammingCode(attemptId);
@@ -135,7 +125,9 @@ export default function ProgrammingQuestionPage() {
     loadData();
   }, [attemptId, questionId]);
 
-  // Timer logic
+  // ──────────────────────────────────────────
+  // 2. Timer logic (unchanged)
+  // ──────────────────────────────────────────
   useEffect(() => {
     if (!assignment?.date_of_expiry) return;
 
@@ -162,7 +154,9 @@ export default function ProgrammingQuestionPage() {
     return () => clearInterval(timer);
   }, [assignment, t]);
 
-  // Auto‑save code
+  // ──────────────────────────────────────────
+  // 3. Auto‑save (unchanged)
+  // ──────────────────────────────────────────
   const persistCode = useCallback(
     (newCode: string, lang: Language) => {
       localStorage.setItem(storageKey(attemptId, questionId, lang), newCode);
@@ -184,7 +178,9 @@ export default function ProgrammingQuestionPage() {
     };
   }, []);
 
-  // Language change
+  // ──────────────────────────────────────────
+  // 4. Language change (unchanged)
+  // ──────────────────────────────────────────
   const handleLanguageChange = (newLang: Language) => {
     if (newLang === language) return;
     const currentStarter = STARTER_CODES[language];
@@ -195,30 +191,9 @@ export default function ProgrammingQuestionPage() {
     setLanguage(newLang);
   };
 
-  // Compile & Run
-  const handleCompile = async () => {
-    if (!code.trim()) {
-      toast.error(t('codeEditor.pleaseWriteCode'));
-      return;
-    }
-    setIsCompiling(true);
-    setCompileOutput(null);
-    setCompileError(null);
-    try {
-      const result: CompileResponse = await compileCode({
-        language,
-        source_code: code,
-        stdin: customInput || undefined,
-      });
-      if (result.error) setCompileError(result.error);
-      else setCompileOutput(result.output || t('codeEditor.noOutput'));
-    } catch (err: any) {
-      setCompileError(err.message || t('codeEditor.compilationFailed'));
-    } finally {
-      setIsCompiling(false);
-    }
-  };
-
+  // ──────────────────────────────────────────
+  // 5. Run against test cases (unchanged)
+  // ──────────────────────────────────────────
   const handleRunTests = async () => {
     if (!code.trim()) {
       toast.error(t('codeEditor.pleaseWriteCode'));
@@ -231,18 +206,14 @@ export default function ProgrammingQuestionPage() {
         language,
         question_id: questionId,
         source_code: code,
-        input_data: customInput || undefined,
       });
       const result = response.data ?? response;
       setTestResults(result);
-
-      // Update question status based on all test cases passed
       const allPassed = result.passed_cases === result.total_cases;
       setQuestionStatuses((prev) => ({
         ...prev,
         [questionId]: allPassed ? 'passed' : 'failed',
       }));
-
       toast.success(
         t('codeEditor.testsCompleted', {
           passed: result.passed_cases,
@@ -256,7 +227,9 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // Submit attempt
+  // ──────────────────────────────────────────
+  // 6. Submit attempt (unchanged)
+  // ──────────────────────────────────────────
   const handleSubmitAttempt = async () => {
     if (!window.confirm(t('codeEditor.submitConfirm', 'Submit your assessment?'))) return;
     try {
@@ -268,27 +241,25 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // Navigation
+  // ──────────────────────────────────────────
+  // 7. Navigation (unchanged)
+  // ──────────────────────────────────────────
   const currentIndex = allQuestions.findIndex((q) => q.id === questionId);
   const goToQuestion = (id: number) => {
-      router.push(
-          `/student/knowmato-plus/assignments/${attemptId}/question/${id}`
-      );
+    router.push(`/student/knowmato-plus/assignments/${attemptId}/question/${id}`);
   };
   const goToNext = () => {
     const nextIdx = currentIndex + 1;
-    if (nextIdx < allQuestions.length) {
-      goToQuestion(allQuestions[nextIdx].id);
-    }
+    if (nextIdx < allQuestions.length) goToQuestion(allQuestions[nextIdx].id);
   };
   const goToPrev = () => {
     const prevIdx = currentIndex - 1;
-    if (prevIdx >= 0) {
-      goToQuestion(allQuestions[prevIdx].id);
-    }
+    if (prevIdx >= 0) goToQuestion(allQuestions[prevIdx].id);
   };
 
-  // Loading
+  // ──────────────────────────────────────────
+  // Loading state
+  // ──────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -304,6 +275,9 @@ export default function ProgrammingQuestionPage() {
 
   const sampleTestCases = testCases?.test_cases ?? [];
 
+  // ──────────────────────────────────────────
+  // RENDER
+  // ──────────────────────────────────────────
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex flex-col">
       {/* Background blobs */}
@@ -341,7 +315,7 @@ export default function ProgrammingQuestionPage() {
         </div>
       </div>
 
-      {/* Scrollable content */}
+      {/* Main content */}
       <div className="flex-1 overflow-y-auto relative z-10 p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Question statement */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
@@ -380,109 +354,53 @@ export default function ProgrammingQuestionPage() {
           </div>
         )}
 
-        {/* Language selector + Compile/Run buttons */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
-            <div className="flex gap-2">
-              {LANGUAGE_OPTIONS.map((lang) => (
-                <button
-                  key={lang.value}
-                  onClick={() => handleLanguageChange(lang.value)}
-                  className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
-                    language === lang.value
-                      ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
-                      : 'border border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-2 ml-auto">
-            <button
-              onClick={handleCompile}
-              disabled={isCompiling}
-              className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-50"
-            >
-              {isCompiling ? '...' : '▶️ ' + t('codeEditor.compileRun')}
-            </button>
-            <button
-              onClick={handleRunTests}
-              disabled={isRunningTests}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
-            >
-              {isRunningTests ? '...' : '🚀 ' + t('codeEditor.submitRunTests')}
-            </button>
+        {/* Language selector (remains) */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
+          <div className="flex gap-2">
+            {LANGUAGE_OPTIONS.map((lang) => (
+              <button
+                key={lang.value}
+                onClick={() => handleLanguageChange(lang.value)}
+                className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${
+                  language === lang.value
+                    ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg'
+                    : 'border border-white/20 text-white/70 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {lang.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Code Editor */}
-        <div className="relative">
-          {isCompiling && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
-              <div className="text-center">
-                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" />
-                <p className="mt-2 text-sm text-white/70">{t('codeEditor.compiling')}</p>
-              </div>
-            </div>
-          )}
-          <Editor
-            height="400px"
-            language={language === 'cpp' ? 'cpp' : language.toLowerCase()}
-            value={code}
-            theme="vs-dark"
-            onChange={(value) => {
-              const newCode = value ?? '';
+        {/* 🔥 NEW: Unified CodeCompiler (run with input/output built‑in) */}
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-1 backdrop-blur-xl shadow-lg overflow-hidden">
+          <CodeCompiler
+            key={language}                       // force remount when language changes
+            questionId={questionId}              // optional, can be used by the component
+            initialCode={code}
+            initialLanguage={language}
+            onCodeChange={(newCode) => {
               setCode(newCode);
               persistCode(newCode, language);
             }}
-            onMount={() => { editorMounted.current = true; }}
-            loading={
-              <div className="flex h-full items-center justify-center text-white/50">
-                {t('codeEditor.loadingEditor')}
-              </div>
-            }
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-            }}
-            className="rounded-2xl overflow-hidden border-2 border-white/20"
+            // onSave not needed – we already auto‑save
           />
         </div>
 
-        {/* Custom input */}
-        <div>
-          <details className="group">
-            <summary className="cursor-pointer text-sm font-semibold text-white/70 hover:text-white">
-              ⚙️ {t('codeEditor.customInput')}
-            </summary>
-            <textarea
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              placeholder={t('codeEditor.customInputPlaceholder')}
-              className="mt-2 min-h-[80px] w-full rounded-xl border-2 border-white/20 bg-gray-900/60 p-4 text-sm font-mono text-white placeholder-white/30 outline-none focus:border-violet-400"
-            />
-          </details>
+        {/* Run test‑cases button (separate from the compiler) */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleRunTests}
+            disabled={isRunningTests}
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
+          >
+            {isRunningTests ? '...' : '🚀 ' + t('codeEditor.submitRunTests')}
+          </button>
         </div>
 
-        {/* Compile output / error */}
-        {(compileOutput !== null || compileError) && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
-            <h3 className="mb-2 text-sm font-bold text-white">
-              {compileError ? '❌ ' + t('codeEditor.compilationError') : '✅ ' + t('codeEditor.output')}
-            </h3>
-            <pre className="max-h-60 overflow-auto rounded-xl bg-black/30 p-4 text-sm text-white/80 font-mono whitespace-pre-wrap">
-              {compileError || compileOutput}
-            </pre>
-          </div>
-        )}
-
-        {/* Test Results */}
+        {/* Test Results (unchanged) */}
         {testResults && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-4 text-lg font-bold text-white">📊 {t('codeEditor.testResults')}</h3>
@@ -550,7 +468,7 @@ export default function ProgrammingQuestionPage() {
           </div>
         )}
 
-        {/* Pagination row */}
+        {/* Question pagination */}
         <div className="flex justify-center gap-2 flex-wrap pt-6">
           {allQuestions.map((q, idx) => {
             const status = questionStatuses[q.id] || 'not_attempted';

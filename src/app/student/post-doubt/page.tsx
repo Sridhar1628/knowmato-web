@@ -16,6 +16,7 @@ import { dashboardCache } from '@/store/dashboardCache';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { getMyCreditBalances } from '@/services/v2Service';
 
 // Types
 interface Tutor {
@@ -151,11 +152,11 @@ function PostDoubtContent() {
     try {
       setLoadingCredits(true);
       const [balanceRes, costRes] = await Promise.all([
-        getBalanceByCategory('doubts'),
+        getMyCreditBalances(),
         getCreditCosts(),
       ]);
 
-      setDoubtCredits(balanceRes?.data?.balance ?? 0);
+      setDoubtCredits(parseFloat(balanceRes.data.balance));
 
       const doubtCost = costRes?.data?.find(
         (item: any) => item.category_name?.toLowerCase() === 'doubt'
