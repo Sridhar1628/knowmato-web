@@ -1,0 +1,121 @@
+.aiThinking{
+    max-width:80%;
+    align-self:flex-start;
+
+    padding:18px;
+
+    margin-bottom:12px;
+
+    border-radius:18px;
+    border-bottom-left-radius:6px;
+
+    background:rgba(255,255,255,.05);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    overflow:hidden;
+}
+
+.thinkingHeader{
+    display:flex;
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:18px;
+
+    color:#D1D5DB;
+
+    font-weight:600;
+}
+
+.thinkingDot{
+    width:12px;
+    height:12px;
+
+    border-radius:50%;
+
+    background:#8B5CF6;
+}
+
+.skeletonLine{
+
+    height:14px;
+
+    background:#31384D;
+
+    border-radius:999px;
+
+    margin-bottom:12px;
+
+    position:relative;
+
+    overflow:hidden;
+}
+
+.skeletonLine::after{
+    content:"";
+
+    position:absolute;
+
+    inset:0;
+
+    transform:translateX(-100%);
+
+    background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,.18),
+        transparent
+    );
+
+    animation:shimmer 1.4s infinite;
+}
+
+@keyframes shimmer{
+    100%{
+        transform:translateX(100%);
+    }
+}
+
+@keyframes thinkingPulse{
+    0%,100%{
+        opacity:.35;
+        transform:scale(.9);
+    }
+
+    50%{
+        opacity:1;
+        transform:scale(1.15);
+    }
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(6px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+@keyframes typingDot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.35;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  animation: typingDot 1.4s infinite ease-in-out;
+}

@@ -1,7 +1,6 @@
 // components/CodeCompiler.tsx
-
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import CodeEditor from '@uiw/react-textarea-code-editor';
 import { toast } from 'sonner';
 import { getTokens } from '@/services/storageService';
@@ -13,12 +12,39 @@ import {
 
 type Language = 'python' | 'Java' | 'C' | 'cpp' | 'html';
 
+export interface TestCaseResult {
+  test_case_id: number;
+  passed: boolean;
+  input: string;
+  expected: string;
+  output: string;
+  error: string | null;
+}
+
+export interface TestRunResult {
+  passed_cases: number;
+  total_cases: number;
+  marks: number;
+  status: string;
+  verdict: string;
+  execution_time: number | null;
+  memory_used: number | null; // KB
+  public_results: TestCaseResult[];
+  hidden_summary: {
+    count: number;
+    passed: number;
+  };
+}
+
 interface CodeCompilerProps {
   questionId?: number;
   initialCode?: string;
   initialLanguage?: Language;
   onSave?: (code: string, language: Language) => void;
   onCodeChange?: (code: string) => void;
+  // When provided, a "Run Tests" button appears that calls this callback.
+  // The callback should return a Promise with TestRunResult.
+  onRunTests?: (language: string, code: string) => Promise<TestRunResult>;
 }
 
 const CodeCompiler: React.FC<CodeCompilerProps> = ({
@@ -27,6 +53,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   initialLanguage = 'python',
   onSave,
   onCodeChange,
+  onRunTests,
 }) => {
   // ---------- State ----------
   const [language, setLanguage] = useState<Language>(initialLanguage);
@@ -35,6 +62,10 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   const [terminalInput, setTerminalInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [consoleLogs, setConsoleLogs] = useState('');
+
+  // Test run states
+  const [testResult, setTestResult] = useState<TestRunResult | null>(null);
+  const [isRunningTests, setIsRunningTests] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -78,7 +109,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   }, []); // run once
 
   // ---------- WebSocket event handler ----------
-  const handleSocketEvent = (event: string, data: any) => {
+  const handleSocketEvent = useCallback((event: string, data: any) => {
     console.log(`📩 Received event: ${event}`, data);
 
     if (!isMounted.current) return;
@@ -103,7 +134,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
       default:
         console.log('Unhandled event:', event, data);
     }
-  };
+  }, []);
 
   // ---------- Auto-scroll terminal ----------
   useEffect(() => {
@@ -117,6 +148,20 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     if (isRunning && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [isRunning]);
+
+  // ---------- Ctrl+C to stop ----------
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Listen for Ctrl+C only when the terminal is focused and running
+      if (e.ctrlKey && e.key === 'c' && isRunning) {
+        e.preventDefault();
+        handleStop();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isRunning]);
 
   // ---------- Helpers ----------
@@ -143,9 +188,10 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     }
     setTerminalOutput('');
     setConsoleLogs('');
+    setTestResult(null);
   };
 
-  // ---------- Run ----------
+  // ---------- Run (interactive) ----------
   const handleRun = async () => {
     if (language === 'html') {
       runHtml();
@@ -157,7 +203,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
       return;
     }
 
-    console.log('▶️ Starting run...');
+    console.log('▶️ Starting interactive run...');
     setIsRunning(true);
     setTerminalOutput('');
     setTerminalInput('');
@@ -170,6 +216,46 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
         source_code: sourceCode,
       },
     });
+  };
+
+  // ---------- Run Tests ----------
+  const handleRunTests = async () => {
+    if (!onRunTests) {
+      toast.error('Test runner not available');
+      return;
+    }
+
+    if (language === 'html') {
+      toast.error('Tests are not supported for HTML');
+      return;
+    }
+
+    setIsRunningTests(true);
+    setTestResult(null);
+    try {
+      const result = await onRunTests(language, sourceCode);
+      setTestResult(result);
+
+      // Show toast with verdict
+      if (result.verdict === 'Accepted') {
+        toast.success(`✅ ${result.verdict}`);
+      } else {
+        toast.error(`❌ ${result.verdict}`);
+      }
+    } catch (err: any) {
+      toast.error(`Test execution failed: ${err.message}`);
+    } finally {
+      setIsRunningTests(false);
+    }
+  };
+
+  // ---------- Stop execution ----------
+  const handleStop = () => {
+    if (!isRunning) return;
+    console.log('⏹️ Stopping execution...');
+    sendCompilerMessage({ type: 'stop' });
+    setIsRunning(false); // Optimistically close, backend will confirm later
+    setTerminalOutput((prev) => prev + '\n⏹️ Stopped by user');
   };
 
   // ---------- Terminal input submit ----------
@@ -257,7 +343,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             id="language"
             value={language}
             onChange={(e) => handleLanguageChange(e.target.value as Language)}
-            disabled={isRunning}
+            disabled={isRunning || isRunningTests}
             className="w-full rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-sm px-4 py-2.5 text-sm text-white font-medium outline-none transition-all focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 disabled:opacity-60"
           >
             {languageOptions.map((opt) => (
@@ -270,7 +356,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
 
         <button
           onClick={handleRun}
-          disabled={isRunning || (language !== 'html' && !questionId)}
+          disabled={isRunning || isRunningTests || (language !== 'html' && !questionId)}
           className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-green-400 to-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
         >
           {isRunning ? (
@@ -286,10 +372,42 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
           )}
         </button>
 
+        {/* Stop button (visible when running; also Ctrl+C works) */}
+        {isRunning && (
+          <button
+            onClick={handleStop}
+            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-red-500 to-rose-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02]"
+          >
+            ⏹ Stop
+          </button>
+        )}
+
+        {/* Run Tests button (only if callback provided) */}
+        {onRunTests && language !== 'html' && (
+          <button
+            onClick={handleRunTests}
+            disabled={isRunning || isRunningTests}
+            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+          >
+            {isRunningTests ? (
+              <span className="flex items-center gap-2">
+                <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Testing...
+              </span>
+            ) : (
+              '🧪 Run Tests'
+            )}
+          </button>
+        )}
+
         {onSave && (
           <button
             onClick={handleSaveClick}
-            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02]"
+            disabled={isRunning || isRunningTests}
+            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02] disabled:opacity-50"
           >
             💾 Save
           </button>
@@ -324,7 +442,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             placeholder="Write your code here"
             onChange={(e) => handleCodeChange(e.target.value)}
             padding={16}
-            disabled={isRunning}
+            disabled={isRunning || isRunningTests}
             style={{
               fontSize: 14,
               fontFamily: 'Fira Code, monospace',
@@ -337,45 +455,117 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
         </div>
       </div>
 
-      {/* Terminal Console */}
+      {/* Test Results Panel (if any) */}
+      {testResult && (
+        <div className="rounded-xl border-2 border-cyan-400/30 bg-cyan-400/5 backdrop-blur-sm p-4 space-y-3">
+          <h3 className="text-lg font-bold text-cyan-300">Test Results</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            <div className="bg-white/5 rounded-lg p-3">
+              <span className="text-white/60">Verdict</span>
+              <div className={`font-bold text-lg ${testResult.verdict === 'Accepted' ? 'text-green-400' : 'text-red-400'}`}>
+                {testResult.verdict}
+              </div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3">
+              <span className="text-white/60">Passed</span>
+              <div className="font-bold text-lg text-white">{testResult.passed_cases}/{testResult.total_cases}</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3">
+              <span className="text-white/60">Time</span>
+              <div className="font-bold text-lg text-white">{testResult.execution_time ?? '—'}s</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-3">
+              <span className="text-white/60">Memory</span>
+              <div className="font-bold text-lg text-white">{testResult.memory_used ?? '—'} KB</div>
+            </div>
+          </div>
+
+          {/* Public test cases details */}
+          {testResult.public_results.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-white/80 mb-2">Public Test Cases</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {testResult.public_results.map((tc) => (
+                  <div key={tc.test_case_id} className={`rounded-lg p-3 border ${tc.passed ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-sm">Test #{tc.test_case_id}</span>
+                      <span className={`text-xs font-bold ${tc.passed ? 'text-green-400' : 'text-red-400'}`}>
+                        {tc.passed ? '✔ Passed' : '✘ Failed'}
+                      </span>
+                    </div>
+                    {tc.input && (
+                      <div className="mt-1 text-xs text-white/50">
+                        <span className="font-semibold">Input:</span> {tc.input}
+                      </div>
+                    )}
+                    <div className="mt-1 text-xs text-white/50">
+                      <span className="font-semibold">Expected:</span> {tc.expected}
+                    </div>
+                    <div className="mt-1 text-xs text-white/50">
+                      <span className="font-semibold">Got:</span> {tc.output || tc.error || '—'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hidden test cases summary */}
+          {testResult.hidden_summary.count > 0 && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+              <h4 className="font-semibold text-yellow-300 mb-1">Hidden Test Cases</h4>
+              <div className="text-sm text-yellow-200/80">
+                {testResult.hidden_summary.passed} / {testResult.hidden_summary.count} passed
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Terminal Console (interactive) */}
       <div>
         <label className="block text-sm font-semibold text-white/80 mb-1">
           {language === 'html' ? 'Console Output' : 'Terminal'}
         </label>
         <div
           ref={terminalRef}
-          className="rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-sm p-4 min-h-[100px] max-h-[250px] overflow-auto text-sm font-mono text-white/90"
+          tabIndex={0}  // allows focus for Ctrl+C
+          className="rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-sm p-4 min-h-[100px] max-h-[250px] overflow-auto text-sm font-mono text-white/90 focus:outline-none"
         >
-          {isRunning || terminalOutput ? (
+          {isRunning ? (
             <>
               <pre className="whitespace-pre-wrap break-words">{terminalOutput}</pre>
-              {/* Input line – only visible when running */}
-              {isRunning && (
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-white/40">$</span>
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={terminalInput}
-                    onChange={(e) => setTerminalInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleTerminalSubmit();
-                      }
-                    }}
-                    className="flex-1 bg-transparent outline-none text-white/90 caret-white placeholder-white/30"
-                    placeholder={isRunning ? "Type input and press Enter..." : ""}
-                    autoFocus
-                    disabled={!isRunning}
-                  />
-                </div>
-              )}
+              {/* Input prompt area with blinking cursor */}
+              <div className="flex items-center mt-1">
+                <span className="text-green-400 mr-1">❯</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={terminalInput}
+                  onChange={(e) => setTerminalInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleTerminalSubmit();
+                    }
+                  }}
+                  className="flex-1 bg-transparent outline-none text-white caret-white placeholder-white/30"
+                  placeholder="Type input..."
+                  autoFocus
+                />
+                <span className="ml-1 animate-pulse text-white/80">▌</span>
+              </div>
             </>
+          ) : terminalOutput ? (
+            <pre className="whitespace-pre-wrap break-words">{terminalOutput}</pre>
           ) : (
             <span className="text-white/40">Run your code to see output here.</span>
           )}
         </div>
+        {/* Ctrl+C tip */}
+        {isRunning && (
+          <p className="text-xs text-white/30 mt-1">Ctrl+C to stop the program</p>
+        )}
       </div>
 
       {/* HTML Preview */}

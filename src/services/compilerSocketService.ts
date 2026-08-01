@@ -19,7 +19,6 @@ export const connectCompilerSocket = (
     return;
   }
 
-  // If already connected with a different token, disconnect first
   if (socket && socket.readyState === WebSocket.OPEN) {
     if (currentToken === token) {
       console.log('⚠️ Compiler WS already connected with same token');
@@ -74,7 +73,6 @@ export const connectCompilerSocket = (
       return;
     }
 
-    // Auto-reconnect after 3s
     reconnectTimeout = setTimeout(() => {
       console.log('🔄 Reconnecting Compiler WS...');
       connectCompilerSocket(currentToken!, globalHandler!);

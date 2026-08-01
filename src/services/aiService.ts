@@ -1,5 +1,6 @@
 import { BASE_URL } from '../config/env';
 import { getTokens } from './storageService';
+import axiosInstance from '../api/axiosInstance';
 
 export interface StreamEvent {
   event: 'start' | 'token' | 'done' | 'escalate' | 'error';
@@ -15,6 +16,7 @@ export interface StreamEvent {
 export const streamMessageToAI = async (
   message: string,
   conversationId: number | null,
+  agent: 'KNOWMATO' | 'KNOWMATO_PLUS',
   signal?: AbortSignal
 ): Promise<AsyncGenerator<StreamEvent>> => {
   const tokens = await getTokens();
@@ -162,6 +164,7 @@ export const streamMessageToAI = async (
         JSON.stringify({
           message,
           conversation_id: conversationId,
+          agent,
         })
       );
 
@@ -195,3 +198,12 @@ export const streamMessageToAI = async (
     },
   };
 };
+
+export async function estimateDoubtCredits(title: string, description: string, review: boolean = false) {
+  const response = await axiosInstance.post(`${BASE_URL}ai/estimate-credits/`, {
+    title,
+    description,
+    review,
+  });
+  return response.data; // { success, data: { complexity, estimated_time, credit_cost, reasoning } }
+}

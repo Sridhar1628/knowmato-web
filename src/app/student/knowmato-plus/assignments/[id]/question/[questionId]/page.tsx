@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import CodeCompiler from '@/components/CodeCompiler';   // ← NEW: reusable compiler component
+import CodeCompiler from '@/components/CodeCompiler';
 
 import {
   getAttemptDetails,
@@ -35,6 +35,9 @@ const STARTER_CODES: Record<Language, string> = {
 const storageKey = (attemptId: number, questionId: number, language: string) =>
   `attempt_${attemptId}_question_${questionId}_${language}`;
 
+// New key for saving question statuses
+const statusesStorageKey = (attemptId: number) => `attempt_${attemptId}_question_statuses`;
+
 export default function ProgrammingQuestionPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -42,34 +45,28 @@ export default function ProgrammingQuestionPage() {
   const attemptId = Number(params.id);
   const questionId = Number(params.questionId);
 
-  // Core data
   const [attempt, setAttempt] = useState<any>(null);
   const [assignment, setAssignment] = useState<any>(null);
   const [question, setQuestion] = useState<any>(null);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [testCases, setTestCases] = useState<TestCaseResponse | null>(null);
 
-  // Loading
   const [loading, setLoading] = useState(true);
 
-  // Code editor state
   const [language, setLanguage] = useState<Language>('python');
   const [code, setCode] = useState('');
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Test‑case run state (only this remains separate)
   const [testResults, setTestResults] = useState<RunTestResponse | null>(null);
   const [isRunningTests, setIsRunningTests] = useState(false);
 
-  // Timer
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
-  // Question statuses
-  const [questionStatuses, setQuestionStatuses] = useState<Record<number, 'passed' | 'failed' | 'not_attempted'>>({});
+  const [questionStatuses, setQuestionStatuses] = useState<
+    Record<number, 'passed' | 'failed' | 'not_attempted'>
+  >({});
 
-  // ──────────────────────────────────────────
-  // 1. Fetch attempt details & saved code
-  // ──────────────────────────────────────────
+  // ── Load attempt & saved code ──
   useEffect(() => {
     if (!attemptId || !questionId) return;
 
@@ -90,17 +87,34 @@ export default function ProgrammingQuestionPage() {
         }
         setQuestion(current);
 
-        const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
-        questions.forEach((q: any) => (initial[q.id] = 'not_attempted'));
-        setQuestionStatuses(initial);
+        // 🔁 Load statuses from localStorage if any
+        const savedStatuses = localStorage.getItem(statusesStorageKey(attemptId));
+        if (savedStatuses) {
+          try {
+            const parsed = JSON.parse(savedStatuses);
+            // merge with default 'not_attempted' for any new questions
+            const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
+            questions.forEach((q: any) => {
+              initial[q.id] = parsed[q.id] || 'not_attempted';
+            });
+            setQuestionStatuses(initial);
+          } catch {
+            // fallback
+            const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
+            questions.forEach((q: any) => (initial[q.id] = 'not_attempted'));
+            setQuestionStatuses(initial);
+          }
+        } else {
+          const initial: Record<number, 'passed' | 'failed' | 'not_attempted'> = {};
+          questions.forEach((q: any) => (initial[q.id] = 'not_attempted'));
+          setQuestionStatuses(initial);
+        }
 
-        // Load test cases
         try {
           const tcRes = await getTestCases(questionId);
           setTestCases(tcRes);
         } catch (e) { /* optional */ }
 
-        // Load previously saved code
         const savedCodeRes = await getSavedProgrammingCode(attemptId);
         const savedCodes = savedCodeRes?.data ?? savedCodeRes;
         const saved = Array.isArray(savedCodes)
@@ -125,9 +139,7 @@ export default function ProgrammingQuestionPage() {
     loadData();
   }, [attemptId, questionId]);
 
-  // ──────────────────────────────────────────
-  // 2. Timer logic (unchanged)
-  // ──────────────────────────────────────────
+  // ── Timer ──
   useEffect(() => {
     if (!assignment?.date_of_expiry) return;
 
@@ -146,7 +158,9 @@ export default function ProgrammingQuestionPage() {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      setTimeRemaining(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+      setTimeRemaining(
+        `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      );
     };
 
     calcRemaining();
@@ -154,9 +168,7 @@ export default function ProgrammingQuestionPage() {
     return () => clearInterval(timer);
   }, [assignment, t]);
 
-  // ──────────────────────────────────────────
-  // 3. Auto‑save (unchanged)
-  // ──────────────────────────────────────────
+  // ── Auto‑save ──
   const persistCode = useCallback(
     (newCode: string, lang: Language) => {
       localStorage.setItem(storageKey(attemptId, questionId, lang), newCode);
@@ -178,9 +190,7 @@ export default function ProgrammingQuestionPage() {
     };
   }, []);
 
-  // ──────────────────────────────────────────
-  // 4. Language change (unchanged)
-  // ──────────────────────────────────────────
+  // ── Language change ──
   const handleLanguageChange = (newLang: Language) => {
     if (newLang === language) return;
     const currentStarter = STARTER_CODES[language];
@@ -191,9 +201,7 @@ export default function ProgrammingQuestionPage() {
     setLanguage(newLang);
   };
 
-  // ──────────────────────────────────────────
-  // 5. Run against test cases (unchanged)
-  // ──────────────────────────────────────────
+  // ── Run tests ──
   const handleRunTests = async () => {
     if (!code.trim()) {
       toast.error(t('codeEditor.pleaseWriteCode'));
@@ -209,11 +217,17 @@ export default function ProgrammingQuestionPage() {
       });
       const result = response.data ?? response;
       setTestResults(result);
+
       const allPassed = result.passed_cases === result.total_cases;
-      setQuestionStatuses((prev) => ({
-        ...prev,
-        [questionId]: allPassed ? 'passed' : 'failed',
-      }));
+      const newStatus = allPassed ? 'passed' : 'failed';
+
+      // Update status in state and localStorage
+      setQuestionStatuses((prev) => {
+        const updated = { ...prev, [questionId]: newStatus };
+        localStorage.setItem(statusesStorageKey(attemptId), JSON.stringify(updated));
+        return updated;
+      });
+
       toast.success(
         t('codeEditor.testsCompleted', {
           passed: result.passed_cases,
@@ -227,9 +241,7 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // ──────────────────────────────────────────
-  // 6. Submit attempt (unchanged)
-  // ──────────────────────────────────────────
+  // ── Submit attempt ──
   const handleSubmitAttempt = async () => {
     if (!window.confirm(t('codeEditor.submitConfirm', 'Submit your assessment?'))) return;
     try {
@@ -241,9 +253,7 @@ export default function ProgrammingQuestionPage() {
     }
   };
 
-  // ──────────────────────────────────────────
-  // 7. Navigation (unchanged)
-  // ──────────────────────────────────────────
+  // ── Navigation ──
   const currentIndex = allQuestions.findIndex((q) => q.id === questionId);
   const goToQuestion = (id: number) => {
     router.push(`/student/knowmato-plus/assignments/${attemptId}/question/${id}`);
@@ -257,9 +267,6 @@ export default function ProgrammingQuestionPage() {
     if (prevIdx >= 0) goToQuestion(allQuestions[prevIdx].id);
   };
 
-  // ──────────────────────────────────────────
-  // Loading state
-  // ──────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -275,9 +282,6 @@ export default function ProgrammingQuestionPage() {
 
   const sampleTestCases = testCases?.test_cases ?? [];
 
-  // ──────────────────────────────────────────
-  // RENDER
-  // ──────────────────────────────────────────
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex flex-col">
       {/* Background blobs */}
@@ -354,7 +358,7 @@ export default function ProgrammingQuestionPage() {
           </div>
         )}
 
-        {/* Language selector (remains) */}
+        {/* Language selector */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white/70">{t('codeEditor.language')}:</span>
           <div className="flex gap-2">
@@ -374,70 +378,49 @@ export default function ProgrammingQuestionPage() {
           </div>
         </div>
 
-        {/* 🔥 NEW: Unified CodeCompiler (run with input/output built‑in) */}
+        {/* 🔥 CodeCompiler – NO internal Run/Stop button, terminal hidden when results exist */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-1 backdrop-blur-xl shadow-lg overflow-hidden">
           <CodeCompiler
-            key={language}                       // force remount when language changes
-            questionId={questionId}              // optional, can be used by the component
+            key={language}
+            questionId={questionId}
             initialCode={code}
             initialLanguage={language}
             onCodeChange={(newCode) => {
               setCode(newCode);
               persistCode(newCode, language);
             }}
-            // onSave not needed – we already auto‑save
+            // 🚫 Remove the compiler's own Run / Stop button
+            hideRunButton={true}
+            // 🖥️ Hide the compiler's terminal when we are showing our own test results
+            hideOutput={testResults !== null}
           />
         </div>
 
-        {/* Run test‑cases button (separate from the compiler) */}
+        {/* Run tests button – hidden while running */}
         <div className="flex justify-end">
-          <button
-            onClick={handleRunTests}
-            disabled={isRunningTests}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
-          >
-            {isRunningTests ? '...' : '🚀 ' + t('codeEditor.submitRunTests')}
-          </button>
+          {isRunningTests ? (
+            <div className="flex items-center gap-2 rounded-xl bg-violet-500/20 px-6 py-3 text-sm font-bold text-violet-300">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-violet-300 border-t-transparent" />
+              {t('codeEditor.runningTests', 'Running tests...')}
+            </div>
+          ) : (
+            <button
+              onClick={handleRunTests}
+              disabled={isRunningTests}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 disabled:opacity-50"
+            >
+              🚀 {t('codeEditor.submitRunTests')}
+            </button>
+          )}
         </div>
 
-        {/* Test Results (unchanged) */}
+        {/* Test Results – reordered: summary FIRST, then public results */}
         {testResults && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg">
             <h3 className="mb-4 text-lg font-bold text-white">📊 {t('codeEditor.testResults')}</h3>
-            {testResults.test_case_results && (
-              <div className="mb-4 space-y-2">
-                {testResults.test_case_results.map((tcRes) => (
-                  <div
-                    key={tcRes.test_case_id}
-                    className={`rounded-xl border p-3 ${
-                      tcRes.passed ? 'border-emerald-400/30 bg-emerald-400/10' : 'border-red-400/30 bg-red-400/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{tcRes.passed ? '✅' : '❌'}</span>
-                      <span className="text-sm font-semibold text-white">
-                        {t('codeEditor.testCase')} {tcRes.test_case_id}
-                      </span>
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.input')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.input || '—'}</pre>
-                      </div>
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.expected')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.expected || '—'}</pre>
-                      </div>
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.yourOutput')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.output || '—'}</pre>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+
+            {/* 1. Summary grid */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-6">
               <div className="rounded-xl bg-white/5 p-4 text-center">
                 <p className="text-xs text-white/50">{t('codeEditor.passed')}</p>
                 <p className="text-2xl font-bold text-emerald-300">{testResults.passed_cases}</p>
@@ -465,10 +448,52 @@ export default function ProgrammingQuestionPage() {
                 </span>
               </div>
             </div>
+
+            {/* 2. Public results details (input / expected / output) */}
+            {testResults.public_results && testResults.public_results.length > 0 && (
+              <div className="space-y-2">
+                {testResults.public_results.map((tcRes) => (
+                  <div
+                    key={tcRes.test_case_id}
+                    className={`rounded-xl border p-3 ${
+                      tcRes.passed ? 'border-emerald-400/30 bg-emerald-400/10' : 'border-red-400/30 bg-red-400/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span>{tcRes.passed ? '✅' : '❌'}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {t('codeEditor.testCase')} {tcRes.test_case_id}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <p className="text-white/50">{t('codeEditor.input')}:</p>
+                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.input || '—'}</pre>
+                      </div>
+                      <div>
+                        <p className="text-white/50">{t('codeEditor.expected')}:</p>
+                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.expected || '—'}</pre>
+                      </div>
+                      <div>
+                        <p className="text-white/50">{t('codeEditor.yourOutput')}:</p>
+                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.output || '—'}</pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hidden cases summary (optional) */}
+            {testResults.hidden_summary && (
+              <div className="mt-4 text-sm text-white/60">
+                🕵️ {t('codeEditor.hiddenCases', { passed: testResults.hidden_summary.passed, total: testResults.hidden_summary.count })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Question pagination */}
+        {/* Question pagination (colours persist now) */}
         <div className="flex justify-center gap-2 flex-wrap pt-6">
           {allQuestions.map((q, idx) => {
             const status = questionStatuses[q.id] || 'not_attempted';

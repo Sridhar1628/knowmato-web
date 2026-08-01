@@ -597,7 +597,7 @@ export default function DashboardPage() {
       )}
       {/* KnowMato Agent Floating Button */}
       <button
-        onClick={() => router.push('/student/knowmato-agent')}
+        onClick={() => router.push('/knowmato-agent')}
         className="
           fixed
           bottom-12
