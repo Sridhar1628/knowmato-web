@@ -2105,12 +2105,16 @@ export const purchasePlan = async (planId: number) => {
 };
 
 export const createCreditOrder = async (
-  planId: number
-): Promise<ApiResponse<CreateCreditOrderResponse>> => {
+  planId: number,
+  fromMobile: boolean = false
+) => {
   return await apiPost(
-    "/v2/create-order/",
+    "/credits/create-order/",
     {
       plan_id: planId,
+      source: fromMobile
+        ? "mobile"
+        : "web",
     }
   );
 };

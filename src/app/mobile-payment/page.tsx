@@ -22,6 +22,7 @@ export default function MobilePaymentPage() {
         // 1. Get token from URL
         // ----------------------------------------
         const token = searchParams.get("token");
+        const source = searchParams.get("source");
 
         if (!token) {
           setMessage("Invalid payment session.");
@@ -76,7 +77,10 @@ export default function MobilePaymentPage() {
         setMessage("Creating payment...");
 
         const orderResponse =
-          await createCreditOrder(data.plan_id);
+            await createCreditOrder(
+                data.plan_id,
+                source === "mobile"
+            );
 
         console.log(
           "CREATE CREDIT ORDER RESPONSE:",

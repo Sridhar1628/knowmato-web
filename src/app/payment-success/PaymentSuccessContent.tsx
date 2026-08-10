@@ -169,41 +169,102 @@ const PaymentSuccessPage: React.FC = () => {
 
   const handlePaymentSuccess = useCallback(async () => {
     try {
-      const orderId = searchParams.get("order_id");
+      const orderId =
+        searchParams.get("order_id");
+
+      const source =
+        searchParams.get("source");
 
       if (!orderId) {
         setSuccess(false);
         setMessage("Order ID not found.");
-        scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
+
+        scheduleRedirect(
+          "/student/credits",
+          FAILURE_REDIRECT_DELAY_MS
+        );
+
         return;
       }
 
-      const res = await verifyCreditPayment(orderId);
+      console.log(
+        "PAYMENT ORDER ID:",
+        orderId
+      );
+
+      console.log(
+        "PAYMENT SOURCE:",
+        source
+      );
+
+      // ----------------------------------------
+      // Verify payment
+      // ----------------------------------------
+
+      const res =
+        await verifyCreditPayment(orderId);
+
+      console.log(
+        "PAYMENT VERIFICATION:",
+        res
+      );
 
       setSuccess(res.success);
       setMessage(res.message);
 
-      if (res.success) {
-        runConfetti();
+      if (!res.success) {
+        scheduleRedirect(
+          "/student/credits",
+          FAILURE_REDIRECT_DELAY_MS
+        );
 
-        const fromApp =
-          localStorage.getItem(FROM_APP_STORAGE_KEY) === "true";
-
-        if (fromApp) {
-          localStorage.removeItem(FROM_APP_STORAGE_KEY);
-          scheduleRedirect(
-              `knowmato://payment-success?status=success&order_id=${orderId}`,
-              REDIRECT_DELAY_MS,
-              true
-          );
-        } else {
-          scheduleRedirect("/student/credits", REDIRECT_DELAY_MS);
-        }
-      } else {
-        scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
+        return;
       }
+
+      // ----------------------------------------
+      // Payment successful
+      // ----------------------------------------
+
+      runConfetti();
+
+      // ----------------------------------------
+      // Mobile → Android
+      // ----------------------------------------
+
+      if (source === "mobile") {
+        const deepLink =
+          `knowmato://payment-success` +
+          `?status=success` +
+          `&order_id=${encodeURIComponent(orderId)}`;
+
+        console.log(
+          "🚀 RETURNING TO ANDROID:",
+          deepLink
+        );
+
+        scheduleRedirect(
+          deepLink,
+          REDIRECT_DELAY_MS,
+          true
+        );
+
+        return;
+      }
+
+      // ----------------------------------------
+      // Normal Web payment
+      // ----------------------------------------
+
+      scheduleRedirect(
+        "/student/credits",
+        REDIRECT_DELAY_MS
+      );
+
     } catch (err: any) {
-      console.error(err);
+      console.error(
+        "PAYMENT VERIFICATION ERROR:",
+        err
+      );
 
       setSuccess(false);
 
@@ -212,16 +273,29 @@ const PaymentSuccessPage: React.FC = () => {
           "Unable to verify payment."
       );
 
-      scheduleRedirect("/student/credits", FAILURE_REDIRECT_DELAY_MS);
+      scheduleRedirect(
+        "/student/credits",
+        FAILURE_REDIRECT_DELAY_MS
+      );
+
     } finally {
       setLoading(false);
     }
-  }, [searchParams, scheduleRedirect]);
+  }, [
+    searchParams,
+    scheduleRedirect,
+  ]);
+
   useEffect(() => {
     handlePaymentSuccess();
-    return () => clearAllTimers();
-  }, [handlePaymentSuccess, clearAllTimers]);
 
+    return () => {
+      clearAllTimers();
+    };
+  }, [
+    handlePaymentSuccess,
+    clearAllTimers,
+  ]);
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
