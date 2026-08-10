@@ -2109,7 +2109,7 @@ export const createCreditOrder = async (
   fromMobile: boolean = false
 ) => {
   return await apiPost(
-    "/credits/create-order/",
+    "/v2/create-order/",
     {
       plan_id: planId,
       source: fromMobile
