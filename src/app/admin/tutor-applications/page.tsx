@@ -16,13 +16,16 @@ interface Application {
   email: string;
   skills: string;
   status: "pending" | "approved" | "rejected";
-  created_at?: string;
+  submitted_at?: string;   // API returns "submitted_at", not "created_at"
 }
 
 // ---------------------------------------------------------------------------
 // Status helpers (dark theme)
 // ---------------------------------------------------------------------------
-const statusConfig: Record<string, { label: string; colors: string; emoji: string }> = {
+const statusConfig: Record<
+  string,
+  { label: string; colors: string; emoji: string }
+> = {
   pending: {
     label: "Pending",
     colors: "bg-amber-400/20 text-amber-300 border-amber-400/40",
@@ -80,8 +83,26 @@ export default function TutorApplicationsPage() {
       setLoading(true);
       setError(null);
       const res = await getTutorApplications();
-      const data = res?.data ?? res ?? [];
-      setApplications(Array.isArray(data) ? data : data?.data ?? []);
+
+      // FIXED: correctly extract the nested array
+      let apps: Application[] = [];
+
+      // Possible response shapes:
+      // 1. res = { data: { count, applications } }   ← your actual API
+      // 2. res = [ ... ] (direct array, rare)
+      // 3. res = { data: [ ... ] }
+
+      if (Array.isArray(res)) {
+        apps = res;
+      } else if (res?.data?.applications) {
+        apps = res.data.applications;               // ← this is the right path
+      } else if (Array.isArray(res?.data)) {
+        apps = res.data;
+      } else if (res?.data?.data) {
+        apps = res.data.data;
+      }
+
+      setApplications(apps);
     } catch (err: any) {
       const message = err?.message || "Failed to load applications";
       setError(message);
@@ -98,6 +119,7 @@ export default function TutorApplicationsPage() {
   // ---------- filtering & sorting ----------
   const filtered = useMemo(() => {
     let result = [...applications];
+
     if (statusFilter !== "All") {
       result = result.filter((a) => a.status === statusFilter);
     }
@@ -110,10 +132,10 @@ export default function TutorApplicationsPage() {
           a.skills.toLowerCase().includes(term)
       );
     }
-    // newest first
+    // newest first – uses submitted_at
     result.sort((a, b) => {
-      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+      const da = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+      const db = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
       return db - da;
     });
     return result;
@@ -183,7 +205,9 @@ export default function TutorApplicationsPage() {
               </span>
             </div>
             <div className="mt-3 flex items-center gap-2 sm:mt-0">
-              <span className="text-sm font-medium text-white/70">Filter:</span>
+              <span className="text-sm font-medium text-white/70">
+                Filter:
+              </span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -191,7 +215,9 @@ export default function TutorApplicationsPage() {
               >
                 {statusOptions.map((s) => (
                   <option key={s} value={s} className="bg-gray-900">
-                    {s === "All" ? "All Status" : s.charAt(0).toUpperCase() + s.slice(1)}
+                    {s === "All"
+                      ? "All Status"
+                      : s.charAt(0).toUpperCase() + s.slice(1)}
                   </option>
                 ))}
               </select>
@@ -212,7 +238,9 @@ export default function TutorApplicationsPage() {
               className="py-20 text-center bg-white/5 backdrop-blur-md rounded-3xl border border-white/10 shadow-lg"
             >
               <span className="text-5xl">📭</span>
-              <h2 className="mt-4 text-xl font-bold text-white">No applications found</h2>
+              <h2 className="mt-4 text-xl font-bold text-white">
+                No applications found
+              </h2>
               <p className="mt-2 text-white/60">
                 {applications.length === 0
                   ? "No tutor applications have been submitted yet."
@@ -222,7 +250,8 @@ export default function TutorApplicationsPage() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((app) => {
-                const status = statusConfig[app.status] ?? statusConfig.pending;
+                const status =
+                  statusConfig[app.status] ?? statusConfig.pending;
                 const initials = app.full_name
                   .split(" ")
                   .map((n) => n[0])
@@ -235,7 +264,10 @@ export default function TutorApplicationsPage() {
                     key={app.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -4, borderColor: "rgba(167,139,250,0.6)" }}
+                    whileHover={{
+                      y: -4,
+                      borderColor: "rgba(167,139,250,0.6)",
+                    }}
                     className="group rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl transition-all hover:shadow-2xl"
                   >
                     {/* Avatar & Info */}
@@ -265,6 +297,14 @@ export default function TutorApplicationsPage() {
                       </p>
                       <p className="mt-1 text-sm text-white/60">{app.skills}</p>
                     </div>
+
+                    {/* Submitted date (optional) */}
+                    {app.submitted_at && (
+                      <p className="mt-2 text-xs text-white/40">
+                        Submitted:{" "}
+                        {new Date(app.submitted_at).toLocaleDateString()}
+                      </p>
+                    )}
 
                     {/* Action */}
                     <motion.button

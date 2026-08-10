@@ -53,12 +53,9 @@ export default function InternshipsPage() {
         ]);
 
         // Safely extract arrays from possible API envelope objects
-        const internshipArray = Array.isArray(internshipsData)
-          ? internshipsData
-          : internshipsData?.data ?? internshipsData?.results ?? [];
-        const applicationsArray = Array.isArray(myApps)
-          ? myApps
-          : myApps?.data ?? myApps?.applications ?? myApps?.results ?? [];
+        const internshipArray = internshipsData;
+
+        const applicationsArray = myApps;
 
         setInternships(internshipArray);
         setApplications(applicationsArray);
@@ -114,11 +111,8 @@ export default function InternshipsPage() {
         setApplications((prev) => [...prev, result.data]);
       } else {
         const updatedApps = await getMyInternshipApplications();
-        // Apply the same extraction logic when refreshing the list
-        const updatedArray = Array.isArray(updatedApps)
-          ? updatedApps
-          : updatedApps?.data ?? updatedApps?.applications ?? updatedApps?.results ?? [];
-        setApplications(updatedArray);
+
+        setApplications(updatedApps);
       }
       setApplyMessage({
         type: 'success',

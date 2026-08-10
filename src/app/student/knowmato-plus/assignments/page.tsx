@@ -94,7 +94,10 @@ export default function AssignmentsListPage() {
     setStartingId(assignmentId);
     try {
       const response = await startAssessment(assignmentId);
-      router.push(`/student/knowmato-plus/assignments/${response.data.id}`);
+
+      router.push(
+        `/student/knowmato-plus/assignments/${response.id}`
+      );
     } catch (error: any) {
       console.error('Start assessment error:', error);
       const errorMessage =

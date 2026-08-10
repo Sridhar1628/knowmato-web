@@ -52,12 +52,9 @@ export default function JobsPage() {
           getMyJobApplications(),
         ]);
 
-        // 🔥 Safely extract arrays from possible wrapped responses
-        const jobsData = jobsRes?.data ?? jobsRes;
-        const appsData = appsRes?.data ?? appsRes;
+        setJobs(jobsRes);
+        setApplications(appsRes);
 
-        setJobs(Array.isArray(jobsData) ? jobsData : []);
-        setApplications(Array.isArray(appsData) ? appsData : []);
       } catch (err: any) {
         setError(err?.response?.data?.detail || err?.message || t('jobs.loadError'));
         console.error(err);
@@ -110,8 +107,8 @@ export default function JobsPage() {
         setApplications((prev) => [...prev, result.data]);
       } else {
         const updatedApps = await getMyJobApplications();
-        const appsData = updatedApps?.data ?? updatedApps;
-        setApplications(Array.isArray(appsData) ? appsData : []);
+
+        setApplications(updatedApps);
       }
       setApplyMessage({
         type: 'success',

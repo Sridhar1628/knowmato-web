@@ -33,13 +33,15 @@ export default function EditAssignmentPage() {
 
     const fetchAssignment = async () => {
       try {
-        const data = await getAdminAssignmentDetail(assignmentId);
-        if (!data || !data.id) {
-          toast.error('Assignment not found');
-          router.push('/admin/assessment/assignments');
+        const response = await getAdminAssignmentDetail(assignmentId);
+
+        if (!response?.data?.id) {
+          toast.error("Assignment not found");
+          router.push("/admin/assessment/assignments");
           return;
         }
-        setAssignment(data);
+
+        const data = response.data;
         setFormData({
           batch: data.batch?.toString() ?? '',
           total_marks: data.total_marks ?? '',

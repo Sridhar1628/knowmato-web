@@ -18,7 +18,7 @@ export const streamMessageToAI = async (
   conversationId: number | null,
   agent: 'KNOWMATO' | 'KNOWMATO_PLUS',
   signal?: AbortSignal
-): Promise<AsyncGenerator<StreamEvent>> => {
+): Promise<AsyncIterable<StreamEvent>> => {
   const tokens = await getTokens();
   const accessToken = tokens?.access || '';
 

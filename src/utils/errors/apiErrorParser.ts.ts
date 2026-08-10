@@ -3,6 +3,7 @@ import axios, { AxiosError } from "axios";
 import { getErrorTranslation } from "./errorTranslations";
 import { formatValidationError } from "./validationFormatter";
 import { getHttpErrorMessage } from "./httpErrorMessages";
+import type { AppError } from "./types";
 
 const buildError = (
   partial: Partial<AppError>
@@ -18,21 +19,6 @@ const buildError = (
   original: partial.original,
 });
 
-export interface AppError {
-  success: false;
-
-  status: number;
-
-  title: string;
-
-  message: string;
-
-  code?: string;
-
-  errors?: Record<string, string[]>;
-
-  original?: unknown;
-}
 
 const capitalize = (text: string) =>
   text.charAt(0).toUpperCase() + text.slice(1);

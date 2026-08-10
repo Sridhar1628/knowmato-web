@@ -36,13 +36,7 @@ export default function CreateQuestionPage() {
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
-        const response = await getAdminAssignments();
-
-        console.log("Assignments Response:", response);
-
-        const assignmentsData = Array.isArray(response)
-          ? response
-          : response?.data ?? [];
+        const assignmentsData = await getAdminAssignments();
 
         setAssignments(assignmentsData);
       } catch (err) {

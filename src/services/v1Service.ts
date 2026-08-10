@@ -1265,15 +1265,14 @@ export const submitTutorApplication =
 // 👀 GET APPLICATION DETAIL
 // ======================================================
 
-export const getTutorApplication =
-  async (
-    applicationId: number
-  ) => {
+export const getTutorApplication = async (
+  applicationId: number
+) => {
+  const response = await apiGet(
+    `/accounts/tutor/apply/${applicationId}/`
+  );
 
-    return await apiGet(
-      `/accounts/tutor/apply/${applicationId}/`
-    );
-
+  return response.data;
 };
 
 // ======================================================
@@ -2060,8 +2059,6 @@ export interface CreditTransaction {
 }
 
 export interface CreateCreditOrderResponse {
-  success: boolean;
-  message: string;
   payment_session_id: string;
   order_id: string;
   plan: {
@@ -2069,6 +2066,13 @@ export interface CreateCreditOrderResponse {
     name: string;
     price: string;
   };
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  status: number;
+  message: string;
+  data: T;
 }
 
 export interface VerifyCreditPaymentResponse {
@@ -2102,10 +2106,13 @@ export const purchasePlan = async (planId: number) => {
 
 export const createCreditOrder = async (
   planId: number
-): Promise<CreateCreditOrderResponse> => {
-  return await apiPost("/v2/create-order/", {
-    plan_id: planId,
-  });
+): Promise<ApiResponse<CreateCreditOrderResponse>> => {
+  return await apiPost(
+    "/v2/create-order/",
+    {
+      plan_id: planId,
+    }
+  );
 };
 
 export const verifyCreditPayment = async (

@@ -2748,6 +2748,12 @@ export const updateCompanyProfile = async (
 
 
 
+export interface ActivePlanCategory {
+  category: string;
+  remaining_credits: string;
+  total_credits: string;
+}
+
 export interface ActivePlan {
   id: number;
   plan_name: string;
@@ -2757,7 +2763,7 @@ export interface ActivePlan {
   remaining_days: number;
   status: "active" | "completed" | "expired";
   total_credits: string;
-  remaining_credits: string;  
+  remaining_credits: string;
 }
 
 export interface ActivePlansResponse {
@@ -2766,7 +2772,6 @@ export interface ActivePlansResponse {
   message: string;
   data: ActivePlan[];
 }
-
 /**
  * Get all active credit plans
  */

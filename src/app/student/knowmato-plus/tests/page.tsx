@@ -24,15 +24,9 @@ export default function TestsPage() {
     setLoadingSnippets(true);
     try {
       const response = await getCodeSnippets();
-      let snippetList: CodeSnippet[] = [];
-      if (Array.isArray(response)) {
-        snippetList = response;
-      } else if (response && typeof response === 'object' && Array.isArray(response.data)) {
-        snippetList = response.data;
-      }
-      setSnippets(snippetList);
+      setSnippets(response);
     } catch (error: any) {
-      toast.error('Failed to load snippets');
+      toast.error("Failed to load snippets");
       setSnippets([]);
     } finally {
       setLoadingSnippets(false);

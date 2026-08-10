@@ -156,7 +156,7 @@ function PostDoubtContent() {
         getCreditCosts(),
       ]);
 
-      setDoubtCredits(parseFloat(balanceRes.data.balance));
+      setDoubtCredits(balanceRes.data.balance);
 
       const doubtCost = costRes?.data?.find(
         (item: any) => item.category_name?.toLowerCase() === 'doubt'

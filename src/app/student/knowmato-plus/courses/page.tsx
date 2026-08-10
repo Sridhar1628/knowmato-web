@@ -47,7 +47,7 @@ export default function KnowmatoPlusCoursesPage() {
 
         setCourses(coursesData);
         setCourseCredits(
-            parseFloat(balanceRes.data.balance)
+          Number(balanceRes.data.balance) || 0
         );
         setCreditsLoading(false);
 
@@ -98,7 +98,7 @@ export default function KnowmatoPlusCoursesPage() {
       });
       const balanceRes = await getMyCreditBalances();
       setCourseCredits(
-          parseFloat(balanceRes.data.balance)
+        Number(balanceRes.data.balance) || 0
       );
       setShowEnrollModal(false);
       setSelectedCourse(null);

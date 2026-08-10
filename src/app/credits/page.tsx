@@ -258,14 +258,12 @@ const CreditPlansPage = () => {
                       </div>
 
                       <div className="mt-4 space-y-2">
-                        {plan.categories.map((cat) => (
-                          <div key={cat.category} className="flex justify-between text-sm">
-                            <span className="text-white/70">{cat.category}</span>
-                            <span className="text-violet-300 font-medium">
-                              {cat.remaining_credits} / {cat.total_credits}
-                            </span>
-                          </div>
-                        ))}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/70">Credits</span>
+                          <span className="text-violet-300 font-medium">
+                            {plan.remaining_credits} / {plan.total_credits}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-4 flex justify-between items-center">
@@ -365,29 +363,12 @@ const CreditPlansPage = () => {
                       </div>
 
                       <div className="space-y-3">
-                        {plan.categories.map((cat) => {
-                          const total = parseFloat(cat.total_credits);
-                          const remaining = parseFloat(cat.remaining_credits);
-                          const used = total - remaining;
-                          const percentage = total > 0 ? (remaining / total) * 100 : 0;
-
-                          return (
-                            <div key={cat.category}>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span className="text-white/70">{cat.category}</span>
-                                <span className="text-violet-300 font-medium">
-                                  {remaining} / {total}
-                                </span>
-                              </div>
-                              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-violet-500 rounded-full transition-all"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/70">Credits</span>
+                          <span className="text-violet-300 font-medium">
+                            {plan.remaining_credits} / {plan.total_credits}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="mt-4 flex justify-between items-center text-sm">

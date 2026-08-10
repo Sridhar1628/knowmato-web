@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import {
   getTutorApplicationDetail,
@@ -80,6 +80,7 @@ export default function TutorApplicationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
 
   // ------ fetch detail ------
   useEffect(() => {
@@ -100,83 +101,40 @@ export default function TutorApplicationDetailPage() {
     fetchData();
   }, [id]);
 
-  // ------ approve with confirmation ------
-  const handleApprove = () => {
-    toast(
-      (t) => (
-        <div className="flex items-center gap-4">
-          <p className="text-sm font-medium">Approve this tutor?</p>
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              performApprove();
-            }}
-            className="rounded-lg bg-emerald-500 px-3 py-1 text-sm text-white"
-          >
-            Confirm
-          </button>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="rounded-lg bg-gray-700 px-3 py-1 text-sm text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      ),
-      { duration: Infinity, position: "top-center" }
-    );
-  };
+  // ------ approve & reject logic ------
+  const handleApproveClick = () => setConfirmAction("approve");
+  const handleRejectClick = () => setConfirmAction("reject");
+  const cancelAction = () => setConfirmAction(null);
 
-  const performApprove = async () => {
-    try {
-      setActionLoading(true);
-      await approveTutorApplication(Number(id));
-      toast.success("Tutor approved successfully!");
-      router.push("/admin/tutor-applications");
-    } catch (error) {
-      toast.error("Approval failed");
-    } finally {
-      setActionLoading(false);
+  const performAction = async () => {
+    if (!confirmAction || !application) return;
+
+    const appId = Number(id);
+    if (isNaN(appId)) {
+      toast.error("Invalid application ID");
+      setConfirmAction(null);
+      return;
     }
-  };
 
-  // ------ reject with confirmation ------
-  const handleReject = () => {
-    toast(
-      (t) => (
-        <div className="flex items-center gap-4">
-          <p className="text-sm font-medium">Reject this application?</p>
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              performReject();
-            }}
-            className="rounded-lg bg-rose-500 px-3 py-1 text-sm text-white"
-          >
-            Confirm
-          </button>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="rounded-lg bg-gray-700 px-3 py-1 text-sm text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      ),
-      { duration: Infinity, position: "top-center" }
-    );
-  };
-
-  const performReject = async () => {
     try {
       setActionLoading(true);
-      await rejectTutorApplication(Number(id));
-      toast.success("Application rejected.");
+      console.log(`Calling ${confirmAction} for application ${appId}`);
+
+      if (confirmAction === "approve") {
+        await approveTutorApplication(appId);
+        toast.success("Tutor approved successfully!");
+      } else {
+        await rejectTutorApplication(appId);
+        toast.success("Application rejected.");
+      }
+
       router.push("/admin/tutor-applications");
     } catch (error) {
-      toast.error("Rejection failed");
+      console.error(`${confirmAction} failed:`, error);
+      toast.error(`${confirmAction === "approve" ? "Approval" : "Rejection"} failed. Please try again.`);
     } finally {
       setActionLoading(false);
+      setConfirmAction(null);
     }
   };
 
@@ -403,7 +361,7 @@ export default function TutorApplicationDetailPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleApprove}
+                  onClick={handleApproveClick}
                   disabled={actionLoading}
                   className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 px-6 py-3.5 font-bold text-white shadow-lg disabled:opacity-50 transition"
                 >
@@ -437,7 +395,7 @@ export default function TutorApplicationDetailPage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleReject}
+                  onClick={handleRejectClick}
                   disabled={actionLoading}
                   className="flex-1 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-400/30 hover:bg-rose-500/30 hover:text-white px-6 py-3.5 font-bold shadow-sm disabled:opacity-50 transition"
                 >
@@ -447,6 +405,54 @@ export default function TutorApplicationDetailPage() {
             )}
           </motion.div>
         </div>
+
+        {/* ---------- CONFIRMATION MODAL ---------- */}
+        <AnimatePresence>
+          {confirmAction && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-gray-900 border border-white/20 rounded-2xl p-6 shadow-2xl max-w-sm w-full"
+              >
+                <h3 className="text-lg font-bold text-white mb-2">
+                  {confirmAction === "approve" ? "✅ Approve Tutor" : "❌ Reject Application"}
+                </h3>
+                <p className="text-white/70 text-sm mb-6">
+                  {confirmAction === "approve"
+                    ? "This tutor will be able to start mentoring. Are you sure?"
+                    : "This action cannot be undone. Are you sure?"}
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={cancelAction}
+                    disabled={actionLoading}
+                    className="px-4 py-2 rounded-xl bg-white/10 text-white hover:bg-white/20 transition disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={performAction}
+                    disabled={actionLoading}
+                    className={`px-4 py-2 rounded-xl font-semibold text-white transition disabled:opacity-50 ${
+                      confirmAction === "approve"
+                        ? "bg-emerald-500 hover:bg-emerald-600"
+                        : "bg-rose-500 hover:bg-rose-600"
+                    }`}
+                  >
+                    {actionLoading ? "Processing..." : "Confirm"}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </AdminLayout>
   );

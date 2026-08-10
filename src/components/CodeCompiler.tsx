@@ -36,15 +36,21 @@ export interface TestRunResult {
   };
 }
 
-interface CodeCompilerProps {
+export interface CodeCompilerProps {
   questionId?: number;
   initialCode?: string;
   initialLanguage?: Language;
   onSave?: (code: string, language: Language) => void;
   onCodeChange?: (code: string) => void;
-  // When provided, a "Run Tests" button appears that calls this callback.
-  // The callback should return a Promise with TestRunResult.
-  onRunTests?: (language: string, code: string) => Promise<TestRunResult>;
+
+  onRunTests?: (
+    language: string,
+    code: string
+  ) => Promise<TestRunResult>;
+
+  // Optional UI controls
+  hideRunButton?: boolean;
+  hideOutput?: boolean;
 }
 
 const CodeCompiler: React.FC<CodeCompilerProps> = ({
@@ -54,6 +60,8 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   onSave,
   onCodeChange,
   onRunTests,
+  hideRunButton = false,
+  hideOutput = false,
 }) => {
   // ---------- State ----------
   const [language, setLanguage] = useState<Language>(initialLanguage);
@@ -354,23 +362,45 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
           </select>
         </div>
 
-        <button
-          onClick={handleRun}
-          disabled={isRunning || isRunningTests || (language !== 'html' && !questionId)}
-          className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-green-400 to-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
-        >
-          {isRunning ? (
-            <span className="flex items-center gap-2">
-              <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              Running...
-            </span>
-          ) : (
-            '▶ Run'
-          )}
-        </button>
+        {!hideRunButton && (
+          <button
+            onClick={handleRun}
+            disabled={
+              isRunning ||
+              isRunningTests ||
+              (language !== 'html' && !questionId)
+            }
+            className="mt-4 sm:mt-0 rounded-xl bg-gradient-to-r from-green-400 to-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100"
+          >
+            {isRunning ? (
+              <span className="flex items-center gap-2">
+                <svg
+                  className="h-5 w-5 animate-spin text-white"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+
+                Running...
+              </span>
+            ) : (
+              '▶ Run'
+            )}
+          </button>
+        )}
 
         {/* Stop button (visible when running; also Ctrl+C works) */}
         {isRunning && (
@@ -523,50 +553,69 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
       )}
 
       {/* Terminal Console (interactive) */}
-      <div>
-        <label className="block text-sm font-semibold text-white/80 mb-1">
-          {language === 'html' ? 'Console Output' : 'Terminal'}
-        </label>
-        <div
-          ref={terminalRef}
-          tabIndex={0}  // allows focus for Ctrl+C
-          className="rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-sm p-4 min-h-[100px] max-h-[250px] overflow-auto text-sm font-mono text-white/90 focus:outline-none"
-        >
-          {isRunning ? (
-            <>
-              <pre className="whitespace-pre-wrap break-words">{terminalOutput}</pre>
-              {/* Input prompt area with blinking cursor */}
-              <div className="flex items-center mt-1">
-                <span className="text-green-400 mr-1">❯</span>
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={terminalInput}
-                  onChange={(e) => setTerminalInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleTerminalSubmit();
+      {!hideOutput && (
+        <div>
+          <label className="block text-sm font-semibold text-white/80 mb-1">
+            {language === 'html' ? 'Console Output' : 'Terminal'}
+          </label>
+
+          <div
+            ref={terminalRef}
+            tabIndex={0}
+            className="rounded-xl border-2 border-white/20 bg-gray-900/60 backdrop-blur-sm p-4 min-h-[100px] max-h-[250px] overflow-auto text-sm font-mono text-white/90 focus:outline-none"
+          >
+            {isRunning ? (
+              <>
+                <pre className="whitespace-pre-wrap break-words">
+                  {terminalOutput}
+                </pre>
+
+                <div className="flex items-center mt-1">
+                  <span className="text-green-400 mr-1">
+                    ❯
+                  </span>
+
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={terminalInput}
+                    onChange={(e) =>
+                      setTerminalInput(e.target.value)
                     }
-                  }}
-                  className="flex-1 bg-transparent outline-none text-white caret-white placeholder-white/30"
-                  placeholder="Type input..."
-                  autoFocus
-                />
-                <span className="ml-1 animate-pulse text-white/80">▌</span>
-              </div>
-            </>
-          ) : terminalOutput ? (
-            <pre className="whitespace-pre-wrap break-words">{terminalOutput}</pre>
-          ) : (
-            <span className="text-white/40">Run your code to see output here.</span>
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleTerminalSubmit();
+                      }
+                    }}
+                    className="flex-1 bg-transparent outline-none text-white caret-white placeholder-white/30"
+                    placeholder="Type input..."
+                    autoFocus
+                  />
+
+                  <span className="ml-1 animate-pulse text-white/80">
+                    ▌
+                  </span>
+                </div>
+              </>
+            ) : terminalOutput ? (
+              <pre className="whitespace-pre-wrap break-words">
+                {terminalOutput}
+              </pre>
+            ) : (
+              <span className="text-white/40">
+                Run your code to see output here.
+              </span>
+            )}
+          </div>
+
+          {isRunning && (
+            <p className="text-xs text-white/30 mt-1">
+              Ctrl+C to stop the program
+            </p>
           )}
         </div>
-        {/* Ctrl+C tip */}
-        {isRunning && (
-          <p className="text-xs text-white/30 mt-1">Ctrl+C to stop the program</p>
-        )}
-      </div>
+      )}
 
       {/* HTML Preview */}
       {language === 'html' && (

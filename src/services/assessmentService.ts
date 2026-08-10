@@ -261,6 +261,11 @@ export interface TestCaseResult {
   error: string | null;
 }
 
+export interface HiddenSummary {
+  passed: number;
+  count: number;
+}
+
 
 export interface RunTestResponse {
   passed_cases: number;
@@ -268,7 +273,13 @@ export interface RunTestResponse {
   marks: number;
   status: "completed" | "pending";
 
-  test_case_results: TestCaseResult[];
+  verdict: string;
+  execution_time: string | number | null;
+  memory_used: string | number | null;
+
+  public_results: TestCaseResult[];
+
+  hidden_summary: HiddenSummary;
 }
 
 export const runTestCases = async (
@@ -795,6 +806,8 @@ export interface AdminAssignmentDetail {
   date_of_expiry: string;
   batch: number;
   total_marks: string | null;
+  pass_percentage: number;
+
   programming_questions: {
     id: number;
     question: string;
@@ -802,6 +815,7 @@ export interface AdminAssignmentDetail {
     status: string;
     description: string | null;
   }[];
+
   mcq_quizzes: {
     id: number;
     title: string;
@@ -812,10 +826,19 @@ export interface AdminAssignmentDetail {
   }[];
 }
 
+export interface ApiResponse<T> {
+  success: boolean;
+  status: number;
+  message: string;
+  data: T;
+}
+
 export const getAdminAssignmentDetail = async (
   assignmentId: number
-): Promise<AdminAssignmentDetail> => {
-  return await apiGet(`/assessment/admin/assignments/${assignmentId}/`);
+): Promise<ApiResponse<AdminAssignmentDetail>> => {
+  return await apiGet(
+    `/assessment/admin/assignments/${assignmentId}/`
+  );
 };
 
 // ---------- Admin: update assignment ----------

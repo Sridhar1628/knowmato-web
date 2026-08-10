@@ -62,9 +62,9 @@ export default function ProgrammingQuestionPage() {
 
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
-  const [questionStatuses, setQuestionStatuses] = useState<
-    Record<number, 'passed' | 'failed' | 'not_attempted'>
-  >({});
+  type QuestionStatus = 'passed' | 'failed' | 'not_attempted';
+
+  const [questionStatuses, setQuestionStatuses] = useState<Record<number, QuestionStatus>>({});
 
   // ── Load attempt & saved code ──
   useEffect(() => {
@@ -215,15 +215,19 @@ export default function ProgrammingQuestionPage() {
         question_id: questionId,
         source_code: code,
       });
-      const result = response.data ?? response;
+      const result = response;
+
       setTestResults(result);
 
       const allPassed = result.passed_cases === result.total_cases;
       const newStatus = allPassed ? 'passed' : 'failed';
 
       // Update status in state and localStorage
-      setQuestionStatuses((prev) => {
-        const updated = { ...prev, [questionId]: newStatus };
+      setQuestionStatuses((prev: Record<number, QuestionStatus>) => {
+        const updated: Record<number, QuestionStatus> = {
+          ...prev,
+          [questionId]: newStatus,
+        };
         localStorage.setItem(statusesStorageKey(attemptId), JSON.stringify(updated));
         return updated;
       });
@@ -389,10 +393,6 @@ export default function ProgrammingQuestionPage() {
               setCode(newCode);
               persistCode(newCode, language);
             }}
-            // 🚫 Remove the compiler's own Run / Stop button
-            hideRunButton={true}
-            // 🖥️ Hide the compiler's terminal when we are showing our own test results
-            hideOutput={testResults !== null}
           />
         </div>
 
@@ -449,48 +449,116 @@ export default function ProgrammingQuestionPage() {
               </div>
             </div>
 
-            {/* 2. Public results details (input / expected / output) */}
-            {testResults.public_results && testResults.public_results.length > 0 && (
-              <div className="space-y-2">
-                {testResults.public_results.map((tcRes) => (
-                  <div
-                    key={tcRes.test_case_id}
-                    className={`rounded-xl border p-3 ${
-                      tcRes.passed ? 'border-emerald-400/30 bg-emerald-400/10' : 'border-red-400/30 bg-red-400/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span>{tcRes.passed ? '✅' : '❌'}</span>
-                      <span className="text-sm font-semibold text-white">
-                        {t('codeEditor.testCase')} {tcRes.test_case_id}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.input')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.input || '—'}</pre>
-                      </div>
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.expected')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.expected || '—'}</pre>
-                      </div>
-                      <div>
-                        <p className="text-white/50">{t('codeEditor.yourOutput')}:</p>
-                        <pre className="text-white/80 whitespace-pre-wrap">{tcRes.output || '—'}</pre>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* 2. Public results details */}
+            {testResults.public_results &&
+              testResults.public_results.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold text-white/80">
+                    {t('codeEditor.publicTestCases', 'Public Test Cases')}
+                  </h4>
 
-            {/* Hidden cases summary (optional) */}
+                  {testResults.public_results.map((tcRes) => (
+                    <div
+                      key={tcRes.test_case_id}
+                      className={`rounded-xl border p-4 ${
+                        tcRes.passed
+                          ? 'border-emerald-400/30 bg-emerald-400/10'
+                          : 'border-red-400/30 bg-red-400/10'
+                      }`}
+                    >
+                      {/* Test case header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">
+                            {tcRes.passed ? '✅' : '❌'}
+                          </span>
+
+                          <span className="text-sm font-semibold text-white">
+                            {t('codeEditor.testCase')} #{tcRes.test_case_id}
+                          </span>
+                        </div>
+
+                        <span
+                          className={`text-xs font-semibold ${
+                            tcRes.passed
+                              ? 'text-emerald-300'
+                              : 'text-red-300'
+                          }`}
+                        >
+                          {tcRes.passed
+                            ? t('codeEditor.passed', 'Passed')
+                            : t('codeEditor.failed', 'Failed')}
+                        </span>
+                      </div>
+
+                      {/* Test case details */}
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                        {/* Input */}
+                        <div className="rounded-lg bg-black/20 p-3">
+                          <p className="mb-1 text-xs font-semibold text-white/50">
+                            {t('codeEditor.input')}:
+                          </p>
+
+                          <pre className="whitespace-pre-wrap break-words text-xs text-white/80">
+                            {tcRes.input || '—'}
+                          </pre>
+                        </div>
+
+                        {/* Expected */}
+                        <div className="rounded-lg bg-black/20 p-3">
+                          <p className="mb-1 text-xs font-semibold text-white/50">
+                            {t('codeEditor.expected')}:
+                          </p>
+
+                          <pre className="whitespace-pre-wrap break-words text-xs text-white/80">
+                            {tcRes.expected || '—'}
+                          </pre>
+                        </div>
+
+                        {/* Actual output */}
+                        <div className="rounded-lg bg-black/20 p-3">
+                          <p className="mb-1 text-xs font-semibold text-white/50">
+                            {t('codeEditor.yourOutput')}:
+                          </p>
+
+                          <pre className="whitespace-pre-wrap break-words text-xs text-white/80">
+                            {tcRes.output || tcRes.error || '—'}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Error message, if any */}
+                      {tcRes.error && (
+                        <div className="mt-3 rounded-lg border border-red-400/20 bg-red-400/10 p-3">
+                          <p className="text-xs font-semibold text-red-300">
+                            {t('codeEditor.error', 'Error')}:
+                          </p>
+
+                          <pre className="mt-1 whitespace-pre-wrap break-words text-xs text-red-200/80">
+                            {tcRes.error}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            {/* 3. Hidden cases summary */}
             {testResults.hidden_summary && (
-              <div className="mt-4 text-sm text-white/60">
-                🕵️ {t('codeEditor.hiddenCases', { passed: testResults.hidden_summary.passed, total: testResults.hidden_summary.count })}
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60">
+                    🕵️ {t('codeEditor.hiddenCases')}
+                  </span>
+
+                  <span className="font-semibold text-white">
+                    {testResults.hidden_summary.passed} /{' '}
+                    {testResults.hidden_summary.count} passed
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
+            )}          </div>
         )}
 
         {/* Question pagination (colours persist now) */}

@@ -30,7 +30,7 @@ const CreditPlansPage = () => {
   const router = useRouter();
 
   // Data states
-  const [balance, setBalance] = useState<CreditBalance | null>(null);
+  const [balance, setBalance] = useState<CreditBalance[]>([]);
   const [activePlans, setActivePlans] = useState<ActivePlan[]>([]);
   const [purchases, setPurchases] = useState<PurchaseHistory[]>([]);
   const [plans, setPlans] = useState<CreditPlan[]>([]);
@@ -183,7 +183,7 @@ const CreditPlansPage = () => {
             </p>
 
             <h3 className="text-4xl font-bold text-violet-300 mt-2">
-              {balance?.balance ?? 0}
+              {balance[0]?.balance ?? 0}
             </h3>
 
             <p className="text-xs text-white/40 mt-1">

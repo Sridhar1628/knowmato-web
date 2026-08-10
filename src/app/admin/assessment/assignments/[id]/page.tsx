@@ -25,9 +25,7 @@ export default function AdminAssignmentDetailPage() {
       try {
         const response = await getAdminAssignmentDetail(assignmentId);
 
-        console.log("DETAIL RESPONSE:", response);
-
-        const data = response?.data ?? response;
+        const data = response.data;
 
         console.log("DETAIL DATA:", data);
 
