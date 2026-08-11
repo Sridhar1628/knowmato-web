@@ -198,7 +198,10 @@ const VideoCallScreen: React.FC = () => {
       message: "Do you want to request to end the call?",
       onAccept: () => {
         setRequestSent(true);
-        sendChatMessage({ type: "END_SESSION_REQUEST", session_id: sessionId });
+        sendChatMessage({
+          type: "END_SESSION_REQUEST",
+          session_id: sessionId ?? undefined,
+        });
         window.alert("Request Sent: Waiting for other user...");
         setAlertData(null);
       },

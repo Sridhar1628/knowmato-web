@@ -236,8 +236,31 @@ const ChatScreen = () => {
         setCurrentUserId(userId);
         setCurrentUserName(payload.display_name || "");
 
-        const res = await axiosInstance.get(`/v1/session/${sessionId}/`);
-        const data: SessionDetails = res.data;
+        const res = await axiosInstance.get(
+          `/v1/session/${sessionId}/`
+        );
+
+        console.log(
+          "📦 SESSION API RESPONSE:",
+          JSON.stringify(res.data, null, 2)
+        );
+
+        const body = res?.data;
+
+        const data: SessionDetails =
+          body?.data ?? body;
+
+        if (!data) {
+          throw new Error(
+            "Session data not found."
+          );
+        }
+
+        console.log(
+          "📦 SESSION DATA:",
+          JSON.stringify(data, null, 2)
+        );
+
         setSessionDetails(data);
 
         const studentId = Number(data.student_id);
@@ -276,53 +299,296 @@ const ChatScreen = () => {
   }, [sessionId, normalizeMessage]);
 
   // ----- Socket connection (reconnect on foreground) -----
+  // ============================================================
+  // CHAT SOCKET CONNECTION
+  // ============================================================
+
   useEffect(() => {
-    if (!currentUserId || !otherUserId) return;
+
+    if (
+      !currentUserId ||
+      !otherUserId
+    ) {
+      console.log(
+        "⏳ Waiting for users before connecting chat socket...",
+        {
+          currentUserId,
+          otherUserId,
+        }
+      );
+
+      return;
+    }
 
     let mounted = true;
 
     const initSocket = async () => {
-      try {
-        const tokens = await getTokens();
-        if (!tokens?.access) return;
 
-        connectChatSocket(Number(sessionId), tokens.access, handleSocketEvent);
-        socketInitialized.current = true;
-      } catch (err) {
-        console.error("Socket init error:", err);
+      try {
+
+        console.log(
+          "🚀 INITIALIZING WEB CHAT SOCKET",
+          {
+            sessionId,
+            currentUserId,
+            otherUserId,
+          }
+        );
+
+        const tokens =
+          await getTokens();
+
+        if (!tokens?.access) {
+
+          console.error(
+            "❌ No access token available"
+          );
+
+          if (mounted) {
+            setOnlineStatus(
+              "offline"
+            );
+          }
+
+          return;
+        }
+
+        if (mounted) {
+          setOnlineStatus(
+            "connecting"
+          );
+        }
+
+        connectChatSocket(
+
+          Number(sessionId),
+
+          tokens.access,
+
+          handleSocketEvent,
+
+          // ---------------------------------------
+          // SOCKET CONNECTED
+          // ---------------------------------------
+
+          () => {
+
+            console.log(
+              "🟢 WEB CHAT SCREEN: SOCKET ONLINE"
+            );
+
+            if (mounted) {
+
+              setOnlineStatus(
+                "online"
+              );
+
+              setStatusVersion(
+                prev => prev + 1
+              );
+            }
+          },
+
+          // ---------------------------------------
+          // SOCKET DISCONNECTED
+          // ---------------------------------------
+
+          () => {
+
+            console.log(
+              "🔴 WEB CHAT SCREEN: SOCKET OFFLINE"
+            );
+
+            if (mounted) {
+
+              setOnlineStatus(
+                "offline"
+              );
+
+              setStatusVersion(
+                prev => prev + 1
+              );
+            }
+          }
+        );
+
+        socketInitialized.current =
+          true;
+
+      } catch (error) {
+
+        console.error(
+          "❌ Socket init error:",
+          error
+        );
+
+        if (mounted) {
+          setOnlineStatus(
+            "offline"
+          );
+        }
       }
     };
 
     initSocket();
 
     return () => {
-      mounted = false;
-      disconnectChatSocket();
-      socketInitialized.current = false;
-    };
-  }, [currentUserId, otherUserId, sessionId, handleSocketEvent]);
 
+      mounted = false;
+
+      console.log(
+        "🧹 Web ChatScreen socket cleanup"
+      );
+
+      disconnectChatSocket();
+
+      socketInitialized.current =
+        false;
+
+    };
+
+  }, [
+    currentUserId,
+    otherUserId,
+    sessionId,
+    handleSocketEvent,
+  ]);
   // ----- App visibility handling (background/foreground) -----
+  // ============================================================
+  // BROWSER TAB VISIBILITY
+  // ============================================================
+
   useEffect(() => {
-    const handleVisibilityChange = () => {
+
+    const handleVisibilityChange = async () => {
+
+      // -----------------------------------------
+      // TAB HIDDEN
+      // -----------------------------------------
+
       if (document.hidden) {
+
+        console.log(
+          "🌙 Browser tab hidden"
+        );
+
         disconnectChatSocket();
-        socketInitialized.current = false;
-      } else {
-        if (!currentUserId || !otherUserId) return;
-        (async () => {
-          const tokens = await getTokens();
-          if (!tokens?.access) return;
-          connectChatSocket(Number(sessionId), tokens.access, handleSocketEvent);
-          socketInitialized.current = true;
-        })();
+
+        socketInitialized.current =
+          false;
+
+        setOnlineStatus(
+          "offline"
+        );
+
+        return;
+      }
+
+      // -----------------------------------------
+      // TAB VISIBLE
+      // -----------------------------------------
+
+      console.log(
+        "☀️ Browser tab visible"
+      );
+
+      if (
+        !currentUserId ||
+        !otherUserId
+      ) {
+        return;
+      }
+
+      try {
+
+        const tokens =
+          await getTokens();
+
+        if (!tokens?.access) {
+          return;
+        }
+
+        setOnlineStatus(
+          "connecting"
+        );
+
+        connectChatSocket(
+
+          Number(sessionId),
+
+          tokens.access,
+
+          handleSocketEvent,
+
+          // CONNECTED
+          () => {
+
+            console.log(
+              "🟢 WEB CHAT RECONNECTED"
+            );
+
+            setOnlineStatus(
+              "online"
+            );
+
+            setStatusVersion(
+              prev => prev + 1
+            );
+          },
+
+          // DISCONNECTED
+          () => {
+
+            console.log(
+              "🔴 WEB CHAT RECONNECT DISCONNECTED"
+            );
+
+            setOnlineStatus(
+              "offline"
+            );
+
+            setStatusVersion(
+              prev => prev + 1
+            );
+          }
+        );
+
+        socketInitialized.current =
+          true;
+
+      } catch (error) {
+
+        console.error(
+          "❌ Web reconnect failed:",
+          error
+        );
+
+        setOnlineStatus(
+          "offline"
+        );
       }
     };
 
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [currentUserId, otherUserId, sessionId, handleSocketEvent]);
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
 
+    return () => {
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+
+    };
+
+  }, [
+    currentUserId,
+    otherUserId,
+    sessionId,
+    handleSocketEvent,
+  ]);
   // ----- Scroll to bottom when messages change -----
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
