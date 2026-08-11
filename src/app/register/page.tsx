@@ -77,6 +77,7 @@ const FloatingEmoji = ({
 export default function RegisterPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleRegister = async (
     values: RegisterData,
@@ -255,12 +256,51 @@ export default function RegisterPage() {
                     />
                   </div>
 
+                  {/* Terms & Conditions */}
+                  <div className="flex items-start gap-3 pt-2">
+                    <input
+                      id="terms"
+                      type="checkbox"
+                      checked={acceptedTerms}
+                      onChange={(e) => setAcceptedTerms(e.target.checked)}
+                      disabled={isSubmitting}
+                      className="mt-1 h-4 w-4 cursor-pointer rounded border-white/20 bg-white/10 text-violet-500 accent-violet-500"
+                    />
+
+                    <label
+                      htmlFor="terms"
+                      className="text-sm leading-6 text-white/70"
+                    >
+                      I agree to the{" "}
+                      <button
+                        type="button"
+                        onClick={() => router.push("/legal")}
+                        className="font-semibold text-violet-300 hover:text-violet-200 transition-colors"
+                      >
+                        Terms & Conditions
+                      </button>{" "}
+                      and{" "}
+                      <button
+                        type="button"
+                        onClick={() => router.push("/legal")}
+                        className="font-semibold text-violet-300 hover:text-violet-200 transition-colors"
+                      >
+                        Privacy Policy
+                      </button>
+                      .
+                    </label>
+                  </div>
+
                   {/* Submit Button */}
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-4 font-bold text-white shadow-lg shadow-violet-500/25 transition-all hover:scale-[1.01] hover:shadow-xl disabled:opacity-70 disabled:cursor-not-allowed"
+                    disabled={isSubmitting || !acceptedTerms}
+                    className={`w-full rounded-2xl py-4 font-bold text-white shadow-lg transition-all ${
+                      acceptedTerms && !isSubmitting
+                        ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-violet-500/25 hover:scale-[1.01] hover:shadow-xl"
+                        : "bg-white/10 cursor-not-allowed opacity-50"
+                    }`}
                   >
                     {isSubmitting ? "Creating Account..." : "Create Account ✨"}
                   </motion.button>

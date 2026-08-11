@@ -255,6 +255,29 @@ export default function LoginPage() {
                     <ErrorMessage name="password" component="div" className="mt-1 text-xs text-rose-400" />
                   </div>
 
+                  {/* Terms & Privacy */}
+                  <div className="flex items-start gap-2 px-1 text-xs text-white/50">
+                    <span>
+                      By continuing, you agree to our{' '}
+                      <button
+                        type="button"
+                        onClick={() => router.push('/legal')}
+                        className="font-semibold text-violet-400 transition hover:text-violet-300 hover:underline"
+                      >
+                        Terms & Conditions
+                      </button>
+                      {' '}and{' '}
+                      <button
+                        type="button"
+                        onClick={() => router.push('/legal')}
+                        className="font-semibold text-violet-400 transition hover:text-violet-300 hover:underline"
+                      >
+                        Privacy Policy
+                      </button>
+                      .
+                    </span>
+                  </div>
+
                   {/* Submit button */}
                   <motion.button
                     type="submit"
