@@ -1,13 +1,29 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { purchaseCourse, getCourseContent, getCourseEnrollmentStatus, getQuizQuestions } from "@/services/v2Service";
-import type { CourseContentResponse } from "@/services/v2Service";
+import {
+  getCourseContent,
+  getCourseEnrollmentStatus,
+  getLectureProgressByLecture,
+  getQuizQuestions,
+  purchaseCourse,
+  recordLecturePlay,
+  updateLectureProgress,
+} from "@/services/v2Service";
+import type {
+  CourseContentResponse,
+  LectureProgress,
+} from "@/services/v2Service";
+import CourseVideoPlayer from "@/components/CourseVideoPlayer";
+import DiscussionForumWeb from "@/components/DiscussionForumWeb";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // ✅ added
+import { useTranslation } from "react-i18next";
+import type {
+  CourseProgressResponse,
+} from "@/services/courseService";
+import {getCourseProgress,completeLecture,} from "@/services/courseService";
 
-// ---------- Type definitions (matching the course content structure) ----------
 interface Lecture {
   id: number;
   title: string;
@@ -86,6 +102,8 @@ interface QuizQuestion {
   correct_option_id?: number;
 }
 
+type Tab = "video" | "syllabus" | "discussion";
+
 const normalizeQuizQuestions = (questions: any[]): QuizQuestion[] =>
   questions.map((question: any) => ({
     id: question.id,
@@ -93,125 +111,331 @@ const normalizeQuizQuestions = (questions: any[]): QuizQuestion[] =>
       question.question_text ?? question.question ?? question.text ?? "",
     options: question.options ?? question.answers ?? question.choices ?? [],
     correct_option_id:
-      question.correct_option_id ?? question.correct_answer_id ?? question.answer_id,
+      question.correct_option_id ??
+      question.correct_answer_id ??
+      question.answer_id,
   }));
 
-// ---------- Helper: extract YouTube video ID ----------
-function getYouTubeEmbedUrl(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=)([^&]+)/,
-    /(?:youtu\.be\/)([^?]+)/,
-    /(?:youtube\.com\/embed\/)([^/?]+)/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  }
-  return null;
-}
+const safeNumber = (value: unknown, fallback = 0) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+};
 
-// ---------- Main Component ----------
 export default function CourseDetailPage() {
-  const { t } = useTranslation(); // ✅ added
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const courseId = Number(params.id);
 
-  // Course & enrollment state
   const [course, setCourse] = useState<CourseDetail | null>(null);
+  const [courseProgress, setCourseProgress] =
+    useState<CourseProgressResponse | null>(null);
+  const [lectureProgress, setLectureProgress] = useState<
+    Record<number, LectureProgress>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState<boolean | null>(null);
   const [enrollLoading, setEnrollLoading] = useState(false);
 
-  // UI state
-  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
-  const [activeItem, setActiveItem] = useState<{
-    type: "lecture" | "quiz";
-    id: number;
-    sectionId: number;
-  } | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("video");
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(
+    new Set(),
+  );
+  const [activeLectureId, setActiveLectureId] = useState<number | null>(null);
+  const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
 
-  // Video progress (simplified)
-  const [watchedSeconds, setWatchedSeconds] = useState<Record<number, number>>({});
+  const [savingProgress, setSavingProgress] = useState(false);
 
-  // Quiz state
+  const lastSavedSecondsRef = useRef<Record<number, number>>({});
+  const playRecordedRef = useRef<Set<number>>(new Set());
+
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
   const [quizFinished, setQuizFinished] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
 
-  // ---------- Fetch course content ----------
+  const allLectures = useMemo(
+    () => course?.sections.flatMap((section) => section.lectures) ?? [],
+    [course],
+  );
+
+  const activeLecture = useMemo(
+    () => allLectures.find((lecture) => lecture.id === activeLectureId) ?? null,
+    [allLectures, activeLectureId],
+  );
+
+  const activeQuiz = useMemo(
+    () =>
+      course?.sections
+        .flatMap((section) => section.quizzes)
+        .find((quiz) => quiz.id === activeQuizId) ?? null,
+    [course, activeQuizId],
+  );
+
   const fetchCourseDetail = useCallback(async () => {
+    if (!Number.isFinite(courseId) || courseId <= 0) {
+      setError("Invalid course ID.");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
+
       const response: CourseContentResponse = await getCourseContent(courseId);
+
       if (!response.success) {
-        throw new Error(response.message || t("courseDetail.loadError"));
+        throw new Error(
+          response.message || t("courseDetail.loadError"),
+        );
       }
+
       setCourse(response.data as unknown as CourseDetail);
     } catch (err: any) {
-      setError(err?.message || t("courseDetail.loadError"));
-      console.error(err);
+      console.error("Failed to load course:", err);
+      setError(
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          err?.message ||
+          t("courseDetail.loadError"),
+      );
     } finally {
       setLoading(false);
     }
   }, [courseId, t]);
 
-  // ---------- Check enrollment ----------
-  const checkEnrollment = useCallback(async () => {
+  const checkEnrollment = useCallback(async (lectureId?: number) => {
+    if (!lectureId) return;
+
     try {
-      const status = await getCourseEnrollmentStatus(courseId);
-      setIsEnrolled(status.is_enrolled);
+      const rawProgress = await getLectureProgressByLecture(lectureId);
+
+      // The API/service may return either a single LectureProgress
+      // object or an array containing LectureProgress objects.
+      const progress = Array.isArray(rawProgress)
+        ? rawProgress[0]
+        : rawProgress;
+
+      if (progress) {
+        setLectureProgress((previous) => ({
+          ...previous,
+          [lectureId]: progress,
+        }));
+      }
     } catch (err) {
-      console.error("Enrollment check failed", err);
-      setIsEnrolled(false);
+      console.error("Failed to load selected lecture progress:", err);
+    }
+  }, []);
+
+  const loadCourseProgress = useCallback(async () => {
+    if (!courseId) return;
+
+    try {
+      const progress = await getCourseProgress(courseId);
+      setCourseProgress(progress);
+    } catch (err) {
+      console.error("Course progress load failed:", err);
     }
   }, [courseId]);
+
+  const loadLectureProgress = useCallback(
+    async (lectures: Lecture[]) => {
+      if (!lectures.length) return;
+
+      const results = await Promise.all(
+        lectures.map(async (lecture) => {
+          try {
+            const progress = await getLectureProgressByLecture(lecture.id);
+            return progress ? [lecture.id, progress] : null;
+          } catch (err) {
+            console.error(
+              `Failed to load lecture progress ${lecture.id}:`,
+              err,
+            );
+            return null;
+          }
+        }),
+      );
+
+      const map: Record<number, LectureProgress> = {};
+
+      results.forEach((result) => {
+        if (result) {
+          map[result[0] as number] = result[1] as unknown as LectureProgress;
+        }
+      });
+
+      setLectureProgress(map);
+    },
+    [],
+  );
 
   useEffect(() => {
     fetchCourseDetail();
     checkEnrollment();
   }, [fetchCourseDetail, checkEnrollment]);
 
-  // ---------- Handlers ----------
+  /*
+   * Once course + enrollment are available:
+   * 1. Fetch course progress.
+   * 2. Fetch lecture resume positions.
+   * 3. Automatically select the last lecture.
+   */
+  useEffect(() => {
+    if (!course || isEnrolled === null) return;
+
+    if (!isEnrolled) {
+      setActiveLectureId(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const initializeLearningState = async () => {
+      try {
+        await loadCourseProgress();
+        await loadLectureProgress(
+          course.sections.flatMap((section) => section.lectures),
+        );
+
+        if (cancelled) return;
+
+        const latestProgress = await getCourseProgress(course.id).catch(
+          () => null,
+        );
+
+        const lastLectureId = latestProgress?.last_lecture?.id;
+
+        const firstLecture =
+          course.sections
+            .flatMap((section) => section.lectures)
+            .sort((a, b) => a.order - b.order)[0] ?? null;
+
+        const resumeLecture =
+          allLectures.find((lecture) => lecture.id === lastLectureId) ??
+          firstLecture;
+
+        if (resumeLecture) {
+          const parentSection = course.sections.find((section) =>
+            section.lectures.some(
+              (lecture) => lecture.id === resumeLecture.id,
+            ),
+          );
+
+          if (parentSection) {
+            setExpandedSections(new Set([parentSection.id]));
+          }
+
+          setActiveLectureId(resumeLecture.id);
+          setActiveQuizId(null);
+          setActiveTab("video");
+        }
+      } catch (err) {
+        console.error("Failed to initialize learning state:", err);
+      }
+    };
+
+    initializeLearningState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    course,
+    isEnrolled,
+    loadCourseProgress,
+    loadLectureProgress,
+    allLectures,
+  ]);
+
   const toggleSection = (sectionId: number) => {
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) next.delete(sectionId);
-      else next.add(sectionId);
+    setExpandedSections((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+
       return next;
     });
   };
 
-  const handleLectureClick = (lecture: Lecture, sectionId: number) => {
-    setActiveItem({ type: "lecture", id: lecture.id, sectionId });
+  const selectLecture = async (lecture: Lecture, sectionId: number) => {
+    if (!isEnrolled && !lecture.is_preview) {
+      toast.error(t("courseDetail.enrollToAccessMessage"));
+      return;
+    }
+
+    setExpandedSections((previous) => {
+      const next = new Set(previous);
+      next.add(sectionId);
+      return next;
+    });
+
+    setActiveLectureId(lecture.id);
+    setActiveQuizId(null);
+    setActiveTab("video");
     setQuizQuestions([]);
-    setCurrentQuestionIndex(0);
-    setSelectedOption(null);
     setQuizFinished(false);
+    setQuizScore(0);
+
+    /*
+     * Load this lecture's latest progress immediately.
+     * This makes manual lecture switching resume correctly.
+     */
+    try {
+      const rawProgress = await getLectureProgressByLecture(lecture.id);
+
+      const progress: LectureProgress | null = Array.isArray(rawProgress)
+        ? (rawProgress[0] ?? null)
+        : rawProgress ?? null;
+
+      if (progress) {
+        setLectureProgress((previous): Record<number, LectureProgress> => ({
+          ...previous,
+          [lecture.id]: progress,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to load selected lecture progress:", err);
+    }
   };
 
-  const handleQuizClick = async (quiz: Quiz, sectionId: number) => {
-    setActiveItem({ type: "quiz", id: quiz.id, sectionId });
-    if (!isEnrolled) return;
+  const selectQuiz = async (quiz: Quiz, sectionId: number) => {
+    if (!isEnrolled) {
+      toast.error(t("courseDetail.enrollToAccessMessage"));
+      return;
+    }
+
+    setExpandedSections((previous) => {
+      const next = new Set(previous);
+      next.add(sectionId);
+      return next;
+    });
+
+    setActiveQuizId(quiz.id);
+    setActiveLectureId(null);
+    setActiveTab("video");
+
     setQuizLoading(true);
+    setQuizQuestions([]);
+    setQuizFinished(false);
+    setQuizScore(0);
+    setCurrentQuestionIndex(0);
+    setSelectedOption(null);
+
     try {
       const questions = await getQuizQuestions(quiz.id);
-      const normalizedQuestions = normalizeQuizQuestions(questions);
-      setQuizQuestions(normalizedQuestions);
-      setCurrentQuestionIndex(0);
-      setSelectedOption(null);
-      setAnswers({});
-      setQuizFinished(false);
-      setQuizScore(0);
-    } catch (err: any) {
+      setQuizQuestions(normalizeQuizQuestions(questions));
+    } catch (err) {
+      console.error("Quiz load failed:", err);
       toast.error(t("courseDetail.quizLoadError"));
-      setQuizQuestions([]);
     } finally {
       setQuizLoading(false);
     }
@@ -219,406 +443,928 @@ export default function CourseDetailPage() {
 
   const handleEnroll = async () => {
     if (!course) return;
-    setEnrollLoading(true);
+
     try {
+      setEnrollLoading(true);
+
       await purchaseCourse(course.id);
-      toast.success(t("courseDetail.enrollSuccess"));
+
       setIsEnrolled(true);
+      toast.success(t("courseDetail.enrollSuccess"));
+
+      await loadCourseProgress();
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || err.message || t("courseDetail.enrollFailed");
-      toast.error(msg);
+      toast.error(
+        err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          err?.message ||
+          t("courseDetail.enrollFailed"),
+      );
     } finally {
       setEnrollLoading(false);
     }
   };
 
-  const handleVideoTimeUpdate = (lectureId: number, currentTime: number) => {
-    setWatchedSeconds((prev) => ({ ...prev, [lectureId]: currentTime }));
+  const handleVideoPlayStart = async () => {
+    if (!activeLecture || !isEnrolled) return;
+
+    if (playRecordedRef.current.has(activeLecture.id)) return;
+
+    playRecordedRef.current.add(activeLecture.id);
+
+    try {
+      const result = await recordLecturePlay(activeLecture.id);
+
+      setLectureProgress((previous) => ({
+        ...previous,
+        [activeLecture.id]: {
+          ...(previous[activeLecture.id] || ({} as LectureProgress)),
+          play_count:
+            safeNumber((result as any)?.play_count, 0) ||
+            previous[activeLecture.id]?.play_count ||
+            0,
+        } as LectureProgress,
+      }));
+    } catch (err) {
+      /*
+       * Do not block video playback if analytics/play-count recording fails.
+       */
+      console.error("Failed to record lecture play:", err);
+    }
   };
 
-  const handleOptionSelect = (optionId: number) => {
+  const handleVideoProgress = async ({
+    currentTime,
+  }: {
+    currentTime: number;
+    duration: number;
+  }) => {
+    if (!activeLecture || !isEnrolled) return;
+
+    const seconds = Math.max(0, Math.floor(currentTime));
+    const previousSaved = lastSavedSecondsRef.current[activeLecture.id] ?? 0;
+
+    /*
+     * Save every 5 seconds, and never send a lower position.
+     * The backend calculates completion_percentage.
+     */
+    if (
+      seconds < previousSaved ||
+      seconds - previousSaved < 5
+    ) {
+      return;
+    }
+
+    lastSavedSecondsRef.current[activeLecture.id] = seconds;
+    setSavingProgress(true);
+
+    try {
+      const result = await updateLectureProgress(
+        activeLecture.id,
+        seconds,
+      );
+
+      const progress = result?.lecture_progress;
+
+      if (progress) {
+        setLectureProgress((previous) => ({
+          ...previous,
+          [activeLecture.id]: progress,
+        }));
+      }
+
+      if (result?.course_progress !== undefined) {
+        setCourseProgress((previous) =>
+          previous
+            ? {
+                ...previous,
+                progress_percentage: safeNumber(
+                  result.course_progress,
+                  previous.progress_percentage,
+                ),
+                course_completed: Boolean(
+                  result.course_completed,
+                ),
+              }
+            : previous,
+        );
+      }
+    } catch (err) {
+      console.error("Failed to save video progress:", err);
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
+  const handleVideoEnd = async () => {
+    if (!activeLecture || !isEnrolled) return;
+
+    try {
+      const result = await completeLecture(activeLecture.id);
+
+      if (result?.lecture_progress) {
+        setLectureProgress((previous) => ({
+          ...previous,
+          [activeLecture.id]: result.lecture_progress,
+        }));
+      }
+
+      if (result?.course_progress !== undefined) {
+        setCourseProgress((previous) =>
+          previous
+            ? {
+                ...previous,
+                progress_percentage: safeNumber(
+                  result.course_progress,
+                  previous.progress_percentage,
+                ),
+                course_completed: Boolean(
+                  result.course_completed,
+                ),
+              }
+            : previous,
+        );
+      }
+
+      toast.success("Lecture completed.");
+
+      await loadCourseProgress();
+    } catch (err) {
+      console.error("Failed to complete lecture:", err);
+    }
+  };
+
+  const handleVideoError = () => {
+    toast.error("Video could not be loaded.");
+  };
+
+  const handleQuizOption = (optionId: number) => {
     setSelectedOption(optionId);
   };
 
   const handleNextQuestion = () => {
-    if (selectedOption === null) {
+    const question = quizQuestions[currentQuestionIndex];
+
+    if (!question || selectedOption === null) {
       toast.error(t("courseDetail.pleaseSelectOption"));
       return;
     }
-    const question = quizQuestions[currentQuestionIndex];
-    const isCorrect = selectedOption === question.correct_option_id;
 
-    setAnswers((prev) => ({ ...prev, [question.id]: selectedOption }));
+    const isCorrect =
+      selectedOption === question.correct_option_id;
 
-    if (isCorrect) setQuizScore((prev) => prev + 1);
+    if (isCorrect) {
+      setQuizScore((previous) => previous + 1);
+    }
 
     if (currentQuestionIndex < quizQuestions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
+      setCurrentQuestionIndex((previous) => previous + 1);
       setSelectedOption(null);
     } else {
       setQuizFinished(true);
     }
   };
 
-  // ---------- Active item data ----------
-  const activeLecture = course?.sections
-    .flatMap((s) => s.lectures)
-    .find((l) => l.id === activeItem?.id);
-  const activeQuiz = course?.sections
-    .flatMap((s) => s.quizzes)
-    .find((q) => q.id === activeItem?.id);
+  const courseProgressPercent = Math.min(
+    100,
+    Math.max(
+      0,
+      safeNumber(courseProgress?.progress_percentage, 0),
+    ),
+  );
 
-  // ---------- Render ----------
+  const currentLectureProgress = activeLecture
+    ? lectureProgress[activeLecture.id]
+    : null;
+
+  const currentWatchedSeconds = safeNumber(
+    currentLectureProgress?.watched_seconds ??
+      activeLecture?.watched_seconds,
+    0,
+  );
+
+  const currentLecturePercent = Math.min(
+    100,
+    Math.max(
+      0,
+      safeNumber(
+        currentLectureProgress?.completion_percentage ??
+          activeLecture?.completion_percentage,
+        0,
+      ),
+    ),
+  );
+
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: "video", label: "Video", icon: "▶" },
+    { id: "syllabus", label: "Syllabus", icon: "📚" },
+    { id: "discussion", label: "Discussion", icon: "💬" },
+  ];
+
   if (loading || isEnrolled === null) {
     return (
-      <div className="p-6 text-white flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-violet-400" />
+      <div className="flex min-h-screen items-center justify-center bg-[#080018] text-white">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-white/10 border-t-violet-500" />
+          <p className="mt-4 text-sm text-white/50">
+            Loading course...
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !course) {
     return (
-      <div className="p-6 text-white flex flex-col items-center justify-center min-h-screen">
-        <p className="text-red-400 text-lg">{error}</p>
-        <button
-          onClick={() => router.back()}
-          className="mt-4 px-4 py-2 rounded bg-white/10 hover:bg-white/20"
-        >
-          {t("common.goBack")}
-        </button>
+      <div className="flex min-h-screen items-center justify-center bg-[#080018] px-4 text-white">
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl">
+          <div className="text-4xl">⚠️</div>
+          <p className="mt-4 text-red-300">
+            {error || "Course not found."}
+          </p>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mt-5 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold hover:bg-white/15"
+          >
+            {t("common.goBack")}
+          </button>
+        </div>
       </div>
     );
   }
-
-  if (!course) return null;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex">
-      {/* Sidebar: always visible */}
-      <aside className="w-80 border-r border-white/10 bg-gray-900/50 p-4 overflow-y-auto max-h-screen sticky top-0">
-        <button
-          onClick={() => router.back()}
-          className="mb-4 text-sm text-white/60 hover:text-white flex items-center gap-1"
-        >
-          ← {t("courseDetail.backToCourses")}
-        </button>
-        <h2 className="text-xl font-bold mb-4 bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
-          {course.title}
-        </h2>
-        <p className="text-sm text-white/60 mb-6">{course.subtitle}</p>
+    <div className="min-h-screen bg-[#080018] text-white">
+      {/* Top course header */}
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080018]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 sm:px-5 lg:px-6">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="rounded-lg p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
+            aria-label="Go back"
+          >
+            ←
+          </button>
 
-        {course.sections.map((section) => (
-          <div key={section.id} className="mb-3">
-            <button
-              onClick={() => toggleSection(section.id)}
-              className="w-full flex items-center justify-between text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition"
-            >
-              <span className="font-semibold">{section.title}</span>
-              <span className="text-xs">
-                {expandedSections.has(section.id) ? "▲" : "▼"}
-              </span>
-            </button>
-
-            {expandedSections.has(section.id) && (
-              <div className="ml-4 mt-2 space-y-1">
-                {section.lectures.map((lecture) => (
-                  <button
-                    key={lecture.id}
-                    onClick={() => handleLectureClick(lecture, section.id)}
-                    className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 transition ${
-                      activeItem?.type === "lecture" && activeItem.id === lecture.id
-                        ? "bg-violet-500/20 text-violet-200"
-                        : "hover:bg-white/5"
-                    }`}
-                  >
-                    <span className="text-xs w-4">
-                      {lecture.content_type === "video"
-                        ? "🎬"
-                        : lecture.content_type === "article"
-                        ? "📄"
-                        : "❓"}
-                    </span>
-                    <span className="flex-1 truncate">{lecture.title}</span>
-                    {lecture.is_completed && isEnrolled && (
-                      <span className="text-green-400 text-xs">✓</span>
-                    )}
-                    {!isEnrolled && !lecture.is_preview && (
-                      <span className="text-yellow-400 text-xs">🔒</span>
-                    )}
-                  </button>
-                ))}
-
-                {section.quizzes.map((quiz) => (
-                  <button
-                    key={quiz.id}
-                    onClick={() => handleQuizClick(quiz, section.id)}
-                    className={`w-full text-left p-2 rounded text-sm flex items-center gap-2 transition ${
-                      activeItem?.type === "quiz" && activeItem.id === quiz.id
-                        ? "bg-fuchsia-500/20 text-fuchsia-200"
-                        : "hover:bg-white/5"
-                    }`}
-                  >
-                    <span className="text-xs">📝</span>
-                    <span className="flex-1 truncate">{quiz.title}</span>
-                    <span className="text-xs text-white/40">
-                      {quiz.questions_count} Q
-                    </span>
-                    {!isEnrolled && (
-                      <span className="text-yellow-400 text-xs">🔒</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-base font-bold sm:text-lg">
+              {course.title}
+            </h1>
+            <p className="hidden truncate text-xs text-white/40 sm:block">
+              {course.subtitle}
+            </p>
           </div>
-        ))}
-      </aside>
 
-      {/* Main content area */}
-      <main className="flex-1 p-6 overflow-y-auto">
-        {/* ---------- No active item: show course overview ---------- */}
-        {!activeItem && (
-          <div className="max-w-4xl mx-auto">
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold">{course.title}</h1>
-                <p className="mt-2 text-xl text-white/80">{course.subtitle}</p>
-                <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/60">
-                  <span className="flex items-center gap-1">
-                    {t("courseDetail.sectionsCount", { count: course.total_sections })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {t("courseDetail.lecturesCount", { count: course.total_lectures })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {t("courseDetail.quizzesCount", { count: course.total_quizzes })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    {t("courseDetail.duration", { duration: course.duration_hours })}
-                  </span>
-                  <span className="capitalize">{course.difficulty}</span>
-                  <span>{course.language}</span>
-                </div>
-                <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
-                  <h3 className="font-semibold mb-2">{t("courseDetail.aboutCourse")}</h3>
-                  <p className="text-white/70 whitespace-pre-line">
-                    {course.description}
-                  </p>
-                </div>
-                <div className="mt-4 flex items-center gap-3 text-sm text-white/50">
-                  <span>{t("courseDetail.instructor", { name: course.instructor_name })}</span>
-                  <span>•</span>
-                  <span>{t("courseDetail.studentsEnrolled", { count: course.total_students })}</span>
-                  <span>•</span>
-                  <span>{t("courseDetail.ratingAndReviews", { rating: course.average_rating, reviews: course.total_reviews })}</span>
-                </div>
+          <div className="hidden min-w-[180px] md:block">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/40">Course Progress</span>
+              <span className="font-bold text-violet-300">
+                {courseProgressPercent.toFixed(0)}%
+              </span>
+            </div>
+
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all"
+                style={{ width: `${courseProgressPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Responsive tabs */}
+        <nav className="mx-auto flex max-w-[1600px] overflow-x-auto px-2 sm:px-5 lg:px-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative min-w-[100px] flex-1 px-4 py-3 text-sm font-semibold transition sm:flex-none ${
+                activeTab === tab.id
+                  ? "text-violet-300"
+                  : "text-white/50 hover:text-white"
+              }`}
+            >
+              <span className="mr-1.5">{tab.icon}</span>
+              {tab.label}
+
+              {activeTab === tab.id && (
+                <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-violet-500" />
+              )}
+            </button>
+          ))}
+        </nav>
+      </header>
+
+      <div className="mx-auto grid max-w-[1600px] lg:grid-cols-[300px_minmax(0,1fr)]">
+        {/* Desktop syllabus sidebar */}
+        <aside className="hidden border-r border-white/10 bg-black/10 lg:block lg:min-h-[calc(100vh-113px)]">
+          <div className="sticky top-[113px] max-h-[calc(100vh-113px)] overflow-y-auto p-4">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                Course Content
+              </p>
+
+              <div className="mt-2 flex items-center justify-between text-xs text-white/40">
+                <span>
+                  {courseProgress?.completed_lectures ?? 0}/
+                  {courseProgress?.total_lectures ??
+                    course.total_lectures} lectures
+                </span>
+                <span>{courseProgressPercent.toFixed(0)}%</span>
               </div>
-              {/* Price / Enroll Button */}
-              <div className="md:w-64">
-                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 sticky top-24">
-                  {course.thumbnail && (
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="w-full h-40 object-cover rounded-lg mb-4"
-                    />
-                  )}
-                  <div className="text-2xl font-bold mb-2">
-                    {course.discounted_price ? (
-                      <>
-                        ₹{course.discounted_price}{" "}
-                        <span className="text-sm text-white/40 line-through">
-                          ₹{course.price}
-                        </span>
-                      </>
-                    ) : (
-                      <>{Number(course.price) === 0 ? t("courseDetail.free") : `₹${course.price}`}</>
-                    )}
-                  </div>
-                  {!isEnrolled ? (
-                    <button
-                      onClick={handleEnroll}
-                      disabled={enrollLoading}
-                      className="w-full mt-3 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold text-white disabled:opacity-50"
-                    >
-                      {enrollLoading ? t("courseDetail.enrolling") : t("courseDetail.enrollNow")}
-                    </button>
-                  ) : (
-                    <div className="text-center p-2 rounded-lg bg-emerald-500/20 text-emerald-300 font-semibold">
-                      {t("courseDetail.enrolled")}
+
+              <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-violet-500"
+                  style={{
+                    width: `${courseProgressPercent}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {course.sections.map((section) => {
+              const expanded = expandedSections.has(section.id);
+
+              return (
+                <div key={section.id} className="mb-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.08]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">
+                        {section.title}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-white/35">
+                        {section.lectures.length} lectures
+                        {section.quizzes.length
+                          ? ` • ${section.quizzes.length} quizzes`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <span className="ml-2 text-xs text-white/40">
+                      {expanded ? "▲" : "▼"}
+                    </span>
+                  </button>
+
+                  {expanded && (
+                    <div className="mt-1 space-y-1 pl-2">
+                      {section.lectures.map((lecture) => {
+                        const progress =
+                          lectureProgress[lecture.id];
+
+                        const percentage = Math.min(
+                          100,
+                          Math.max(
+                            0,
+                            safeNumber(
+                              progress?.completion_percentage ??
+                                lecture.completion_percentage,
+                              0,
+                            ),
+                          ),
+                        );
+
+                        const selected =
+                          activeLectureId === lecture.id;
+
+                        return (
+                          <button
+                            key={lecture.id}
+                            type="button"
+                            onClick={() =>
+                              selectLecture(
+                                lecture,
+                                section.id,
+                              )
+                            }
+                            className={`w-full rounded-lg p-2.5 text-left transition ${
+                              selected
+                                ? "bg-violet-500/15 text-violet-200"
+                                : "text-white/65 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs">
+                                {lecture.content_type ===
+                                "video"
+                                  ? "🎬"
+                                  : lecture.content_type ===
+                                      "article"
+                                    ? "📄"
+                                    : "❓"}
+                              </span>
+
+                              <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                                {lecture.title}
+                              </span>
+
+                              {percentage >= 100 && (
+                                <span className="text-xs text-emerald-400">
+                                  ✓
+                                </span>
+                              )}
+
+                              {!isEnrolled &&
+                                !lecture.is_preview && (
+                                  <span className="text-xs text-amber-300">
+                                    🔒
+                                  </span>
+                                )}
+                            </div>
+
+                            {isEnrolled && (
+                              <div className="mt-1.5 ml-5 h-1 overflow-hidden rounded-full bg-white/10">
+                                <div
+                                  className="h-full rounded-full bg-violet-500"
+                                  style={{
+                                    width: `${percentage}%`,
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+
+                      {section.quizzes.map((quiz) => (
+                        <button
+                          key={quiz.id}
+                          type="button"
+                          onClick={() =>
+                            selectQuiz(
+                              quiz,
+                              section.id,
+                            )
+                          }
+                          className={`flex w-full items-center gap-2 rounded-lg p-2.5 text-left text-xs transition ${
+                            activeQuizId === quiz.id
+                              ? "bg-fuchsia-500/15 text-fuchsia-200"
+                              : "text-white/60 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <span>📝</span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {quiz.title}
+                          </span>
+                          <span className="text-white/30">
+                            {quiz.questions_count} Q
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
-        )}
+        </aside>
 
-        {/* ---------- If not enrolled and an item is selected: show lock ---------- */}
-        {activeItem && !isEnrolled && (
-          <div className="max-w-md mx-auto mt-20 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-8 text-center backdrop-blur-xl">
-            <h2 className="text-2xl font-bold text-yellow-200">{t("courseDetail.enrollToAccessTitle")}</h2>
-            <p className="mt-4 text-white/70">
-              {t("courseDetail.enrollToAccessMessage")}
-            </p>
-            {course && (
-              <div className="mt-4 text-lg font-semibold">
-                {course.discounted_price ? (
-                  <>
-                    <span>₹{course.discounted_price}</span>
-                    <span className="ml-2 text-sm text-white/40 line-through">
-                      ₹{course.price}
-                    </span>
-                  </>
-                ) : (
-                  <span>{Number(course.price) === 0 ? t("courseDetail.free") : `₹${course.price}`}</span>
-                )}
-              </div>
-            )}
-            <button
-              onClick={handleEnroll}
-              disabled={enrollLoading}
-              className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold text-white disabled:opacity-50"
-            >
-              {enrollLoading ? t("courseDetail.enrolling") : t("courseDetail.enrollNow")}
-            </button>
-          </div>
-        )}
-
-        {/* ---------- Lecture Content (only if enrolled) ---------- */}
-        {activeItem?.type === "lecture" && activeLecture && isEnrolled && (
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-2">{activeLecture.title}</h1>
-            <p className="text-white/60 mb-6">{activeLecture.description}</p>
-
-            {activeLecture.content_type === "video" ? (
-              <div className="rounded-xl overflow-hidden bg-black">
-                {getYouTubeEmbedUrl(activeLecture.video_url) ? (
-                  <iframe
-                    className="w-full aspect-video"
-                    src={getYouTubeEmbedUrl(activeLecture.video_url)!}
-                    title={activeLecture.title}
-                    allowFullScreen
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  />
-                ) : activeLecture.video_url ? (
-                  <video
-                    controls
-                    className="w-full aspect-video"
-                    src={activeLecture.video_url}
-                    onTimeUpdate={(e) =>
-                      handleVideoTimeUpdate(activeLecture.id, e.currentTarget.currentTime)
-                    }
-                  >
-                    {t("courseDetail.videoNotSupported")}
-                  </video>
-                ) : (
-                  <div className="aspect-video bg-gray-800 flex items-center justify-center text-white/50">
-                    {t("courseDetail.noVideoSource")}
-                  </div>
-                )}
-              </div>
-            ) : activeLecture.content_type === "article" ? (
-              <div
-                className="prose prose-invert max-w-none mt-4"
-                dangerouslySetInnerHTML={{ __html: activeLecture.article_content }}
-              />
-            ) : (
-              <div className="text-center py-12 text-white/50">
-                {t("courseDetail.contentTypeNotSupported")}
-              </div>
-            )}
-
-            {activeLecture.resource_url && (
-              <div className="mt-6 p-4 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-sm font-semibold">{t("courseDetail.resource")}</p>
-                <a
-                  href={activeLecture.resource_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-violet-400 underline text-sm"
-                >
-                  {activeLecture.resource_name || t("courseDetail.download")}
-                </a>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ---------- Quiz Content (only if enrolled) ---------- */}
-        {activeItem?.type === "quiz" && activeQuiz && isEnrolled && (
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-2xl font-bold mb-2">{activeQuiz.title}</h1>
-            <p className="text-white/60 mb-6">{activeQuiz.description}</p>
-
-            {quizLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin h-8 w-8 border-t-2 border-violet-400 rounded-full" />
-              </div>
-            ) : quizFinished ? (
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-6 text-center">
-                <h2 className="text-3xl font-bold text-emerald-400">
-                  {t("courseDetail.quizCompleted")}
-                </h2>
-                <p className="mt-2 text-lg">
-                  {t("courseDetail.quizScore", { score: quizScore, total: quizQuestions.length })}
+        <main className="min-w-0 p-3 sm:p-5 lg:p-6">
+          {/* Mobile syllabus */}
+          {activeTab === "syllabus" && (
+            <section className="mx-auto max-w-4xl lg:hidden">
+              <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                <h2 className="text-lg font-bold">Course Syllabus</h2>
+                <p className="mt-1 text-sm text-white/40">
+                  {courseProgress?.completed_lectures ?? 0}/
+                  {courseProgress?.total_lectures ??
+                    course.total_lectures} lectures completed
                 </p>
-                <button
-                  onClick={() => setActiveItem(null)}
-                  className="mt-4 px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30"
-                >
-                  {t("courseDetail.backToCourse")}
-                </button>
-              </div>
-            ) : quizQuestions.length > 0 ? (
-              <>
-                <div className="mb-4 text-sm text-white/40">
-                  {t("courseDetail.questionProgress", { current: currentQuestionIndex + 1, total: quizQuestions.length })}
+
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                    style={{
+                      width: `${courseProgressPercent}%`,
+                    }}
+                  />
                 </div>
-                <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-                  <p className="text-lg font-medium mb-4">
-                    {quizQuestions[currentQuestionIndex].question_text}
-                  </p>
-                  <div className="space-y-3">
-                    {quizQuestions[currentQuestionIndex].options.map((option) => (
-                      <label
-                        key={option.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition ${
-                          selectedOption === option.id
-                            ? "border-violet-400 bg-violet-500/10"
-                            : "border-white/10 hover:border-white/30"
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="quiz-option"
-                          value={option.id}
-                          checked={selectedOption === option.id}
-                          onChange={() => handleOptionSelect(option.id)}
-                          className="accent-violet-400"
-                        />
-                        <span>{option.text}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button
-                    onClick={handleNextQuestion}
-                    className="mt-6 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 font-bold disabled:opacity-50"
-                    disabled={selectedOption === null}
+              </div>
+
+              <div className="space-y-2">
+                {course.sections.map((section) => (
+                  <div
+                    key={section.id}
+                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"
                   >
-                    {currentQuestionIndex < quizQuestions.length - 1 ? t("courseDetail.next") : t("courseDetail.finish")}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleSection(section.id)
+                      }
+                      className="flex w-full items-center justify-between p-2 text-left"
+                    >
+                      <span className="font-semibold">
+                        {section.title}
+                      </span>
+                      <span className="text-xs text-white/40">
+                        {expandedSections.has(section.id)
+                          ? "▲"
+                          : "▼"}
+                      </span>
+                    </button>
+
+                    {expandedSections.has(section.id) && (
+                      <div className="mt-2 space-y-1">
+                        {section.lectures.map(
+                          (lecture) => (
+                            <button
+                              key={lecture.id}
+                              type="button"
+                              onClick={() => {
+                                selectLecture(
+                                  lecture,
+                                  section.id,
+                                );
+                              }}
+                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] p-3 text-left hover:bg-white/[0.07]"
+                            >
+                              <span>
+                                {lecture.content_type ===
+                                "video"
+                                  ? "🎬"
+                                  : "📄"}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate text-sm">
+                                {lecture.title}
+                              </span>
+                              {lectureProgress[
+                                lecture.id
+                              ]?.completion_percentage >=
+                                100 && (
+                                <span className="text-emerald-400">
+                                  ✓
+                                </span>
+                              )}
+                            </button>
+                          ),
+                        )}
+
+                        {section.quizzes.map(
+                          (quiz) => (
+                            <button
+                              key={quiz.id}
+                              type="button"
+                              onClick={() =>
+                                selectQuiz(
+                                  quiz,
+                                  section.id,
+                                )
+                              }
+                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] p-3 text-left text-sm hover:bg-white/[0.07]"
+                            >
+                              <span>📝</span>
+                              <span className="min-w-0 flex-1 truncate">
+                                {quiz.title}
+                              </span>
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Video tab */}
+          {activeTab === "video" && (
+            <section className="mx-auto max-w-6xl">
+              {activeLecture && isEnrolled ? (
+                <>
+                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl">
+                    {activeLecture.content_type ===
+                    "video" ? (
+                      <CourseVideoPlayer
+                        key={activeLecture.id}
+                        videoUrl={
+                          activeLecture.video_url
+                        }
+                        title={activeLecture.title}
+                        isEnrolled={isEnrolled}
+                        isFree={
+                          activeLecture.is_preview
+                        }
+                        initialPosition={
+                          currentWatchedSeconds
+                        }
+                        onPlayStart={
+                          handleVideoPlayStart
+                        }
+                        onProgress={
+                          handleVideoProgress
+                        }
+                        onEnd={handleVideoEnd}
+                        onError={handleVideoError}
+                      />
+                    ) : activeLecture.content_type ===
+                      "article" ? (
+                      <div className="min-h-[300px] bg-[#101018] p-5 sm:p-8">
+                        <div
+                          className="prose prose-invert max-w-none"
+                          dangerouslySetInnerHTML={{
+                            __html:
+                              activeLecture.article_content ||
+                              "<p>No article content available.</p>",
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-white/50">
+                        Select the quiz from the syllabus.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
+                          Now Learning
+                        </p>
+
+                        <h2 className="mt-1 text-xl font-bold">
+                          {activeLecture.title}
+                        </h2>
+
+                        {activeLecture.description && (
+                          <p className="mt-2 text-sm leading-6 text-white/50">
+                            {activeLecture.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 rounded-xl bg-white/5 px-4 py-3 text-center">
+                        <p className="text-xs text-white/40">
+                          Lecture Progress
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-violet-300">
+                          {currentLecturePercent.toFixed(
+                            0,
+                          )}
+                          %
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all"
+                        style={{
+                          width: `${currentLecturePercent}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-xs text-white/35">
+                      <span>
+                        {Math.floor(
+                          currentWatchedSeconds / 60,
+                        )}{" "}
+                        min watched
+                      </span>
+
+                      <span>
+                        {savingProgress
+                          ? "Saving..."
+                          : currentLecturePercent >=
+                              100
+                            ? "Completed"
+                            : "Progress saved automatically"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {activeLecture.resource_url && (
+                    <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-4">
+                      <p className="text-sm font-semibold">
+                        Resource
+                      </p>
+                      <a
+                        href={
+                          activeLecture.resource_url
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-block text-sm text-violet-300 underline"
+                      >
+                        {activeLecture.resource_name ||
+                          "Open resource"}
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : activeQuiz && isEnrolled ? (
+                <div className="mx-auto max-w-3xl">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-7">
+                    <h2 className="text-2xl font-bold">
+                      {activeQuiz.title}
+                    </h2>
+                    <p className="mt-2 text-white/50">
+                      {activeQuiz.description}
+                    </p>
+
+                    {quizLoading ? (
+                      <div className="flex justify-center py-16">
+                        <div className="h-9 w-9 animate-spin rounded-full border-4 border-white/10 border-t-violet-500" />
+                      </div>
+                    ) : quizFinished ? (
+                      <div className="py-12 text-center">
+                        <div className="text-5xl">🎉</div>
+                        <h3 className="mt-4 text-2xl font-bold text-emerald-300">
+                          Quiz Completed
+                        </h3>
+                        <p className="mt-2 text-lg">
+                          {quizScore} /{" "}
+                          {quizQuestions.length}
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveQuizId(null);
+                            setActiveLectureId(
+                              allLectures[0]?.id ??
+                                null,
+                            );
+                          }}
+                          className="mt-6 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-bold"
+                        >
+                          Back to Course
+                        </button>
+                      </div>
+                    ) : quizQuestions.length > 0 ? (
+                      <div className="mt-6">
+                        <div className="text-xs text-white/40">
+                          Question{" "}
+                          {currentQuestionIndex + 1}{" "}
+                          of {quizQuestions.length}
+                        </div>
+
+                        <div className="mt-3 h-1.5 rounded-full bg-white/10">
+                          <div
+                            className="h-full rounded-full bg-violet-500"
+                            style={{
+                              width: `${
+                                ((currentQuestionIndex +
+                                  1) /
+                                  quizQuestions.length) *
+                                100
+                              }%`,
+                            }}
+                          />
+                        </div>
+
+                        <p className="mt-6 text-lg font-semibold">
+                          {
+                            quizQuestions[
+                              currentQuestionIndex
+                            ].question_text
+                          }
+                        </p>
+
+                        <div className="mt-5 space-y-3">
+                          {quizQuestions[
+                            currentQuestionIndex
+                          ].options.map((option) => (
+                            <label
+                              key={option.id}
+                              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+                                selectedOption ===
+                                option.id
+                                  ? "border-violet-400 bg-violet-500/10"
+                                  : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`quiz-${activeQuiz.id}`}
+                                checked={
+                                  selectedOption ===
+                                  option.id
+                                }
+                                onChange={() =>
+                                  handleQuizOption(
+                                    option.id,
+                                  )
+                                }
+                                className="accent-violet-500"
+                              />
+                              <span className="text-sm">
+                                {option.text}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={
+                            handleNextQuestion
+                          }
+                          disabled={
+                            selectedOption === null
+                          }
+                          className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {currentQuestionIndex <
+                          quizQuestions.length - 1
+                            ? "Next Question"
+                            : "Finish Quiz"}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="py-12 text-center text-white/40">
+                        No quiz questions available.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mx-auto max-w-md rounded-2xl border border-amber-500/20 bg-amber-500/10 p-8 text-center">
+                  <div className="text-4xl">🔒</div>
+                  <h2 className="mt-4 text-xl font-bold text-amber-200">
+                    {t(
+                      "courseDetail.enrollToAccessTitle",
+                    )}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-white/60">
+                    {t(
+                      "courseDetail.enrollToAccessMessage",
+                    )}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleEnroll}
+                    disabled={enrollLoading}
+                    className="mt-5 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-3 font-bold disabled:opacity-50"
+                  >
+                    {enrollLoading
+                      ? t("courseDetail.enrolling")
+                      : t("courseDetail.enrollNow")}
                   </button>
                 </div>
-              </>
-            ) : (
-              <p className="text-center text-white/50">
-                {t("courseDetail.noQuizQuestions")}
-              </p>
-            )}
-          </div>
-        )}
-      </main>
+              )}
+            </section>
+          )}
+
+          {/* Discussion */}
+          {activeTab === "discussion" && (
+            <div className="mx-auto max-w-5xl">
+              {isEnrolled ? (
+                <DiscussionForumWeb
+                  courseId={course.id}
+                />
+              ) : (
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-8 text-center">
+                  <div className="text-4xl">🔒</div>
+                  <h2 className="mt-4 text-xl font-bold text-amber-200">
+                    Enrol to join the discussion
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={handleEnroll}
+                    disabled={enrollLoading}
+                    className="mt-5 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2.5 font-bold disabled:opacity-50"
+                  >
+                    {enrollLoading
+                      ? t("courseDetail.enrolling")
+                      : t("courseDetail.enrollNow")}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Mobile course progress */}
+      <div className="fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/10 bg-[#100820]/95 p-3 shadow-2xl backdrop-blur-xl md:hidden">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="text-white/40">Course Progress</span>
+          <span className="font-bold text-violet-300">
+            {courseProgressPercent.toFixed(0)}%
+          </span>
+        </div>
+
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+            style={{
+              width: `${courseProgressPercent}%`,
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

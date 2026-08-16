@@ -612,6 +612,7 @@ export const getDownloadableLectures = async (): Promise<Lecture[]> => {
   return response.data;
 };
 
+
 // ==========================================
 // Lecture Progress
 // ==========================================
@@ -635,88 +636,110 @@ export interface LectureProgress {
 
     completion_percentage: number;
 
-    first_watched_at: string;
-    last_watched_at: string;
+    play_count: number;
+
+    first_watched_at: string | null;
+    last_watched_at: string | null;
 }
+
+
+// ==========================================
+// Get All Lecture Progress
+// ==========================================
 
 export const getLectureProgress = async () => {
 
-    const response = await axiosInstance.get<LectureProgress[]>(
-        "/v2/lecture-progress/"
-    );
+    const response =
+        await axiosInstance.get<LectureProgress[]>(
+            "/v2/lecture-progress/"
+        );
 
     return response.data;
 };
+
+
+// ==========================================
+// Get Progress For One Lecture
+// ==========================================
 
 export const getLectureProgressByLecture = async (
     lectureId: number
 ) => {
 
-    const response = await axiosInstance.get<LectureProgress[]>(
-        "/v2/lecture-progress/",
-        {
-            params: {
-                lecture: lectureId,
-            },
-        }
-    );
+    const response =
+        await axiosInstance.get<LectureProgress[]>(
+            "/v2/lecture-progress/",
+            {
+                params: {
+                    lecture: lectureId,
+                },
+            }
+        );
 
     return response.data;
 };
+
+
+// ==========================================
+// Update Watch Progress
+// ==========================================
 
 export const updateLectureProgress = async (
-    id: number,
-    data: Partial<LectureProgress>
+    lectureId: number,
+    watchedSeconds: number
 ) => {
 
-    const response = await axiosInstance.patch<LectureProgress>(
-        `/v2/lecture-progress/${id}/`,
-        data,
-    );
+    const response =
+        await axiosInstance.post(
+            "/v2/lecture-progress/update/",
+            {
+                lecture_id: lectureId,
+                watched_seconds: Math.max(
+                    0,
+                    Math.floor(watchedSeconds)
+                ),
+            }
+        );
 
     return response.data;
 };
 
-export const createLectureProgress = async (
-    data: Partial<LectureProgress>
-) => {
 
-    const response = await axiosInstance.post<LectureProgress>(
-        "/v2/lecture-progress/",
-        data,
-    );
-
-    return response.data;
-};
+// ==========================================
+// Mark Lecture Completed
+// ==========================================
 
 export const markLectureCompleted = async (
-    id: number
+    lectureId: number
 ) => {
 
-    const response = await axiosInstance.patch<LectureProgress>(
-        `/v2/lecture-progress/${id}/`,
-        {
-            is_completed: true,
-            completion_percentage: 100,
-        },
-    );
+    const response =
+        await axiosInstance.post(
+            "/v2/lecture-progress/complete/",
+            {
+                lecture_id: lectureId,
+            }
+        );
 
     return response.data;
 };
 
-export const updateWatchTime = async (
-    id: number,
-    watched_seconds: number,
-    completion_percentage: number
+
+// ==========================================
+// Record Lecture Play
+// ==========================================
+
+export const recordLecturePlay = async (
+    lectureId: number
 ) => {
 
-    const response = await axiosInstance.patch<LectureProgress>(
-        `/v2/lecture-progress/${id}/`,
-        {
-            watched_seconds,
-            completion_percentage,
-        },
-    );
+    const response =
+        await axiosInstance.post(
+            "/v2/lecture-progress/play/",
+            {
+                lecture_id: lectureId,
+            }
+        );
 
     return response.data;
 };

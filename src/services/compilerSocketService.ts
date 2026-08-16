@@ -1,10 +1,8 @@
-// services/compilerSocketService.ts
-
 import { WS_BASE_URL } from '../config/env';
 
 let socket: WebSocket | null = null;
 let currentToken: string | null = null;
-let reconnectTimeout: NodeJS.Timeout | null = null;
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let manualDisconnect = false;
 
 type EventHandler = (event: string, data: any) => void;
@@ -24,6 +22,7 @@ export const connectCompilerSocket = (
       console.log('⚠️ Compiler WS already connected with same token');
       return;
     }
+
     disconnectCompilerSocket();
   }
 
@@ -38,6 +37,7 @@ export const connectCompilerSocket = (
 
   socket.onopen = () => {
     console.log('✅ Compiler WS connected');
+
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
@@ -48,6 +48,7 @@ export const connectCompilerSocket = (
     try {
       const parsed = JSON.parse(event.data);
       console.log('📩 Compiler WS event:', parsed);
+
       if (parsed.event && globalHandler) {
         globalHandler(parsed.event, parsed.data);
       }
@@ -56,18 +57,25 @@ export const connectCompilerSocket = (
     }
   };
 
-  socket.onerror = (error) => {
-    console.error('❌ Compiler WS error:', error);
+  socket.onerror = (event) => {
+    // Browser Event objects usually show as `{}` when logged directly.
+    console.error('❌ Compiler WS error occurred:', event.type);
   };
 
-  socket.onclose = () => {
-    console.log('🔌 Compiler WS disconnected');
+  socket.onclose = (event) => {
+    console.log('🔌 Compiler WS disconnected', {
+      code: event.code,
+      reason: event.reason,
+      wasClean: event.wasClean,
+    });
+
     socket = null;
 
     if (manualDisconnect) {
       console.log('🚪 Manual disconnect – no reconnect');
       return;
     }
+
     if (!currentToken) {
       console.log('🚫 No token – no reconnect');
       return;
@@ -82,12 +90,15 @@ export const connectCompilerSocket = (
 
 export const disconnectCompilerSocket = () => {
   console.log('🛑 Disconnecting Compiler WS');
+
   manualDisconnect = true;
   currentToken = null;
+
   if (reconnectTimeout) {
     clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
   }
+
   if (socket) {
     socket.close();
     socket = null;

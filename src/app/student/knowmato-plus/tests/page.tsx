@@ -1,4 +1,3 @@
-// app/tests/page.tsx (or wherever TestsPage is located)
 'use client';
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
@@ -13,6 +12,21 @@ import {
 } from '@/services/v2Service';
 import { getTokens } from '@/services/storageService';
 
+// Normalize common API response shapes into CodeSnippet[]
+function normalizeSnippetList(payload: unknown): CodeSnippet[] {
+  if (Array.isArray(payload)) return payload as CodeSnippet[];
+
+  const data = payload as any;
+
+  if (Array.isArray(data?.data)) return data.data as CodeSnippet[];
+  if (Array.isArray(data?.results)) return data.results as CodeSnippet[];
+  if (Array.isArray(data?.data?.results)) return data.data.results as CodeSnippet[];
+  if (Array.isArray(data?.items)) return data.items as CodeSnippet[];
+
+  console.warn('Unexpected code snippets response shape:', payload);
+  return [];
+}
+
 export default function TestsPage() {
   const { t } = useTranslation();
   const [snippets, setSnippets] = useState<CodeSnippet[]>([]);
@@ -24,9 +38,9 @@ export default function TestsPage() {
     setLoadingSnippets(true);
     try {
       const response = await getCodeSnippets();
-      setSnippets(response);
+      setSnippets(normalizeSnippetList(response));
     } catch (error: any) {
-      toast.error("Failed to load snippets");
+      toast.error('Failed to load snippets');
       setSnippets([]);
     } finally {
       setLoadingSnippets(false);
@@ -52,7 +66,12 @@ export default function TestsPage() {
     setSaving(true);
     try {
       if (selectedSnippet?.id) {
-        const updated = await updateCodeSnippet(selectedSnippet.id, { title, language, source_code: code });
+        const updated = await updateCodeSnippet(selectedSnippet.id, {
+          title,
+          language,
+          source_code: code,
+        });
+
         if (updated) {
           toast.success('Snippet updated');
           setSelectedSnippet(updated);
@@ -61,7 +80,12 @@ export default function TestsPage() {
           toast.error('Update failed');
         }
       } else {
-        const created = await createCodeSnippet({ title, language, source_code: code });
+        const created = await createCodeSnippet({
+          title,
+          language,
+          source_code: code,
+        });
+
         if (created) {
           toast.success('Snippet saved');
           setSelectedSnippet(created);
@@ -80,6 +104,7 @@ export default function TestsPage() {
   const handleDelete = async () => {
     if (!selectedSnippet?.id) return;
     if (!confirm('Delete this snippet?')) return;
+
     try {
       await deleteCodeSnippet(selectedSnippet.id);
       toast.success('Snippet deleted');
@@ -94,10 +119,10 @@ export default function TestsPage() {
     // Nothing needed, just for sync if required
   };
 
-  // ---------- Run Tests against the question (example) ----------
-  const runTestsForSnippet = async (language: string, code: string): Promise<TestRunResult> => {
-    // Assume we have a question ID from the snippet or a fixed one for testing.
-    // Here we use a dummy question ID = 1 (adjust as needed).
+  const runTestsForSnippet = async (
+    language: string,
+    code: string
+  ): Promise<TestRunResult> => {
     const questionId = 1; // Replace with actual question ID
 
     const tokens = await getTokens();
@@ -115,7 +140,7 @@ export default function TestsPage() {
         question_id: questionId,
         language: language,
         source_code: code,
-        input_data: '',  // can be left empty, backend will use test case inputs
+        input_data: '',
       }),
     });
 
@@ -125,7 +150,6 @@ export default function TestsPage() {
     }
 
     const resultData = await response.json();
-    // The API response is wrapped in ApiResponse; extract data
     return resultData.data as TestRunResult;
   };
 
@@ -135,7 +159,10 @@ export default function TestsPage() {
         {/* Sidebar: Saved Snippets */}
         <div className="w-full lg:w-80 shrink-0">
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 shadow-lg">
-            <h2 className="text-lg font-bold mb-4">{t('knowmatoPlus.tests')} – Snippets</h2>
+            <h2 className="text-lg font-bold mb-4">
+              {t('knowmatoPlus.tests')} – Snippets
+            </h2>
+
             <button
               onClick={handleNewSnippet}
               disabled={saving}
@@ -162,9 +189,12 @@ export default function TestsPage() {
                           : 'border-white/10 hover:bg-white/5'
                       }`}
                     >
-                      <div className="font-semibold text-white truncate">{snip.title}</div>
+                      <div className="font-semibold text-white truncate">
+                        {snip.title}
+                      </div>
                       <div className="text-xs text-white/50 mt-1">
-                        {snip.language} · {new Date(snip.updated_at).toLocaleDateString()}
+                        {snip.language} ·{' '}
+                        {new Date(snip.updated_at).toLocaleDateString()}
                       </div>
                     </button>
                   </li>
@@ -187,13 +217,15 @@ export default function TestsPage() {
                 </button>
               </div>
             )}
+
             <CodeCompiler
-              questionId={1} // ← Replace with actual question ID as needed
+              key={selectedSnippet?.id ?? 'new-snippet'}
+              questionId={1}
               initialCode={selectedSnippet?.source_code || ''}
               initialLanguage={(selectedSnippet?.language as any) || 'python'}
               onSave={handleSave}
               onCodeChange={handleCodeChange}
-              onRunTests={runTestsForSnippet}  // <-- NEW
+              onRunTests={runTestsForSnippet}
             />
           </div>
         </div>
