@@ -2,7 +2,7 @@ import axios from "axios";
 import { parseApiError } from "@/utils/errors/apiErrorParser.ts";
 
 const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: "https://api.knowmato.in/api/",
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
