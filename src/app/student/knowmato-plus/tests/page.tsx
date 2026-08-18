@@ -2,7 +2,7 @@
 import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import CodeCompiler, { TestRunResult } from '@/components/CodeCompiler';
+import CodeCompiler from '@/components/CodeCompiler';
 import {
   getCodeSnippets,
   createCodeSnippet,
@@ -11,6 +11,12 @@ import {
   type CodeSnippet,
 } from '@/services/v2Service';
 import { getTokens } from '@/services/storageService';
+import {
+  getAgentCompilerPayload,
+  clearAgentCompilerPayload,
+  saveAgentCompilerResult,
+  AgentCompilerPayload
+} from '@/services/agentCompilerBridge';
 
 // Normalize common API response shapes into CodeSnippet[]
 function normalizeSnippetList(payload: unknown): CodeSnippet[] {
@@ -34,6 +40,11 @@ export default function TestsPage() {
   const [loadingSnippets, setLoadingSnippets] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [agentPayload, setAgentPayload] =
+    useState<AgentCompilerPayload | null>(null);
+
+  const [compilerKey, setCompilerKey] = useState(0);
+
   const fetchSnippets = async () => {
     setLoadingSnippets(true);
     try {
@@ -46,6 +57,27 @@ export default function TestsPage() {
       setLoadingSnippets(false);
     }
   };
+
+  useEffect(() => {
+    const payload = getAgentCompilerPayload();
+
+    if (!payload) return;
+
+    console.log(
+      '🤖 Agent compiler payload received:',
+      payload
+    );
+
+    setAgentPayload(payload);
+
+    // Agent code should take priority over saved snippets.
+    setSelectedSnippet(null);
+
+    // Force CodeCompiler to mount with Agent code.
+    setCompilerKey((prev) => prev + 1);
+
+    clearAgentCompilerPayload();
+  }, []);
 
   useEffect(() => {
     fetchSnippets();
@@ -119,40 +151,6 @@ export default function TestsPage() {
     // Nothing needed, just for sync if required
   };
 
-  const runTestsForSnippet = async (
-    language: string,
-    code: string
-  ): Promise<TestRunResult> => {
-    const questionId = 1; // Replace with actual question ID
-
-    const tokens = await getTokens();
-    if (!tokens?.access) {
-      throw new Error('No access token');
-    }
-
-    const response = await fetch('/api/assessment/run-test-cases/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${tokens.access}`,
-      },
-      body: JSON.stringify({
-        question_id: questionId,
-        language: language,
-        source_code: code,
-        input_data: '',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Test execution failed');
-    }
-
-    const resultData = await response.json();
-    return resultData.data as TestRunResult;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-4 sm:p-6 text-white">
       <div className="mx-auto max-w-7xl flex flex-col lg:flex-row gap-6">
@@ -219,13 +217,42 @@ export default function TestsPage() {
             )}
 
             <CodeCompiler
-              key={selectedSnippet?.id ?? 'new-snippet'}
+              key={
+                agentPayload
+                  ? `agent-${agentPayload.executionId}-${compilerKey}`
+                  : selectedSnippet?.id ?? 'new-snippet'
+              }
               questionId={1}
-              initialCode={selectedSnippet?.source_code || ''}
-              initialLanguage={(selectedSnippet?.language as any) || 'python'}
+              initialCode={
+                agentPayload?.code ||
+                selectedSnippet?.source_code ||
+                ''
+              }
+              initialLanguage={
+                (agentPayload?.language ||
+                  selectedSnippet?.language ||
+                  'python') as any
+              }
               onSave={handleSave}
               onCodeChange={handleCodeChange}
-              onRunTests={runTestsForSnippet}
+              onExecutionResult={
+                agentPayload
+                  ? (result) => {
+                      saveAgentCompilerResult({
+                        executionId: agentPayload.executionId,
+                        output: result.output,
+                        status: result.status,
+                        exitCode: result.exitCode,
+                        completedAt: Date.now(),
+                      });
+
+                      console.log(
+                        '✅ Agent execution result saved:',
+                        agentPayload.executionId
+                      );
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>

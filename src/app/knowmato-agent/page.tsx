@@ -10,6 +10,13 @@ import styles from './ThinkingIndicator.module.css';
 import { handleAINavigation } from '@/utils/aiNavigation';
 
 
+import {
+  connectCompilerSocket,
+  sendCompilerMessage,
+} from '@/services/compilerSocketService';
+import { getTokens } from '@/services/storageService';
+
+
 const LAST_CONVERSATION_KEY = "knowmato_last_conversation";
 
 
@@ -108,29 +115,124 @@ const ACTION_META: Record<string, { icon: string; subtitle: string }> = {
 };
 
 // ---------- Components ----------
-const CodeBlock: React.FC<{ code: string; language: string }> = ({ code, language }) => {
-  const handleRun = () => {
-    const encodedCode = encodeURIComponent(code);
-    let url = '';
-    const lang = language?.toLowerCase();
-    if (lang === 'html' || lang === 'htmlcss') url = `https://onecompiler.com/html?code=${encodedCode}`;
-    else if (lang === 'css' || lang === 'javascript' || lang === 'js') url = `https://onecompiler.com/javascript?code=${encodedCode}`;
-    else if (lang === 'python') url = `https://onecompiler.com/python?code=${encodedCode}`;
-    else if (lang === 'java') url = `https://onecompiler.com/java?code=${encodedCode}`;
-    else if (lang === 'cpp' || lang === 'c++') url = `https://onecompiler.com/cpp?code=${encodedCode}`;
-    else url = `https://onecompiler.com/embed?code=${encodedCode}`;
-    window.open(url, '_blank');
-  };
+interface CodeBlockProps {
+  code: string;
+  language: string;
+  executionId: string;
+  onTestNow: (
+    code: string,
+    language: string,
+    executionId: string
+  ) => void;
+  onShowResult: (
+    executionId: string,
+    code: string,
+    language: string
+  ) => void;
+}
+
+const CodeBlock: React.FC<CodeBlockProps> = ({
+  code,
+  language,
+  executionId,
+  onTestNow,
+  onShowResult,
+}) => {
+  const normalizedLanguage =
+    language?.toLowerCase().trim() || 'text';
+
+  const supportedLanguage = [
+    'python',
+    'java',
+    'cpp',
+    'c++',
+    'c',
+    'html',
+  ].includes(normalizedLanguage);
+
+  if (!supportedLanguage) {
+    return (
+      <div className="bg-black/30 rounded-lg border border-white/10 p-2 my-1">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-purple-400 text-xs font-semibold uppercase">
+            {language || 'code'}
+          </span>
+        </div>
+
+        <pre className="bg-black/20 p-2 rounded text-gray-200 font-mono text-sm whitespace-pre-wrap overflow-x-auto">
+          <code>{code}</code>
+        </pre>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-black/30 rounded-lg border border-white/10 p-2 my-1">
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-purple-400 text-xs font-semibold uppercase">{language || 'code'}</span>
-        <button onClick={handleRun} className="bg-green-500 px-3 py-0.5 rounded-full text-white text-xs font-bold">
-          ▶ Run
-        </button>
+    <div className="bg-black/30 rounded-lg border border-white/10 p-2 my-2">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <span className="text-purple-400 text-xs font-semibold uppercase">
+          {language || 'code'}
+        </span>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              onTestNow(
+                code,
+                normalizedLanguage,
+                executionId
+              )
+            }
+            className="
+              inline-flex
+              items-center
+              gap-1.5
+              rounded-full
+              bg-green-500
+              hover:bg-green-600
+              px-3
+              py-1
+              text-white
+              text-xs
+              font-bold
+              transition
+              hover:scale-[1.02]
+            "
+          >
+            🧪 Test Now
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              onShowResult(
+                executionId,
+                code,
+                normalizedLanguage
+              )
+            }
+            className="
+              inline-flex
+              items-center
+              gap-1.5
+              rounded-full
+              bg-violet-500
+              hover:bg-violet-600
+              px-3
+              py-1
+              text-white
+              text-xs
+              font-bold
+              transition
+              hover:scale-[1.02]
+            "
+          >
+            📊 Result
+          </button>
+        </div>
       </div>
-      <pre className="bg-black/20 p-2 rounded text-gray-200 font-mono text-sm whitespace-pre-wrap">
+
+      <pre className="bg-black/20 p-2 rounded text-gray-200 font-mono text-sm whitespace-pre-wrap overflow-x-auto">
         <code>{code}</code>
       </pre>
     </div>
@@ -210,19 +312,57 @@ const SkeletonPlaceholder: React.FC = () => (
   </div>
 );
 
-const StreamMessage: React.FC<{ content: string }> = ({ content }) => {
+interface StreamMessageProps {
+  content: string;
+  conversationId: number | null;
+  onTestNow: (
+    code: string,
+    language: string,
+    executionId: string
+  ) => void;
+  onShowResult: (
+    executionId: string,
+    code: string,
+    language: string
+  ) => void;
+}
+
+const StreamMessage: React.FC<StreamMessageProps> = ({
+  content,
+  conversationId,
+  onTestNow,
+  onShowResult,
+}) => {
   const parts = parseMessageContent(content);
+
   return (
     <>
-      {parts.map((part, idx) =>
-        part.type === 'code' ? (
-          <CodeBlock key={idx} code={part.code!} language={part.language!} />
-        ) : (
-          <span key={idx} className="text-white text-sm leading-5 whitespace-pre-wrap">
+      {parts.map((part, idx) => {
+        if (part.type === 'code') {
+          const executionId =
+            `stream-${conversationId ?? 'new'}-code-${idx}`;
+
+          return (
+            <CodeBlock
+              key={executionId}
+              code={part.code || ''}
+              language={part.language || 'text'}
+              executionId={executionId}
+              onTestNow={onTestNow}
+              onShowResult={onShowResult}
+            />
+          );
+        }
+
+        return (
+          <span
+            key={`stream-text-${idx}`}
+            className="text-white text-sm leading-5 whitespace-pre-wrap"
+          >
             {part.content}
           </span>
-        )
-      )}
+        );
+      })}
     </>
   );
 };
@@ -258,6 +398,608 @@ export default function AgentChatScreen() {
   const currentConvo = conversations.find((c) => c.id === currentConversationId);
   const messages = currentConvo?.messages || [];
   const theme = THEME[selectedAgent];
+
+  const [agentResult, setAgentResult] = useState<{
+    executionId: string;
+    code: string;
+    language: string;
+    output: string;
+    status: 'idle' | 'running' | 'success' | 'error';
+  } | null>(null);
+
+  const [agentResultLoading, setAgentResultLoading] = useState(false);
+
+  const agentExecutionRef = useRef<{
+    executionId: string;
+    compileId: string | null;
+    language: string;
+    code: string;
+  } | null>(null);
+
+  const agentResultMountedRef = useRef(true);
+
+  // Interactive terminal input for Agent Result.
+  // This is rendered INSIDE the terminal and is sent through
+  // the same compiler WebSocket using the backend's existing
+  // `input_response` message type.
+  const [agentTerminalInput, setAgentTerminalInput] = useState('');
+  const agentTerminalInputRef = useRef<HTMLInputElement>(null);
+
+  const createCodeBlockId = (
+    messageId: number,
+    index: number
+  ) => {
+    return `message-${messageId}-code-${index}`;
+  };
+
+  // Some compiler responses can contain escaped newline sequences
+  // (`\\n`) instead of real newline characters. Normalize those
+  // only for display; the actual input sent to the backend remains
+  // untouched.
+  const normalizeTerminalOutput = (value: string): string => {
+    return value.replace(/\\r?\\n/g, '\n');
+  };
+
+  const handleAgentCompilerEvent = useCallback(
+    (event: string, data: any) => {
+      if (!agentResultMountedRef.current) {
+        return;
+      }
+
+      const activeExecution =
+        agentExecutionRef.current;
+
+      if (!activeExecution) {
+        return;
+      }
+
+      console.log(
+        '📩 Agent Compiler Event:',
+        {
+          event,
+          data,
+          activeExecution,
+        }
+      );
+
+      // ========================================================
+      // ACK
+      // ========================================================
+
+      if (
+        event === 'ack' ||
+        event === 'compile_ack'
+      ) {
+        const compileId =
+          data?.compile_id ??
+          data?.compileId ??
+          data?.execution_id ??
+          data?.executionId ??
+          null;
+
+        if (compileId) {
+          agentExecutionRef.current = {
+            ...activeExecution,
+            compileId: String(compileId),
+          };
+
+          console.log(
+            '✅ Agent compile ACK:',
+            compileId
+          );
+
+          // The compiler is now running. Put the cursor directly
+          // inside the terminal input so the user can type there.
+          setTimeout(() => {
+            agentTerminalInputRef.current?.focus();
+          }, 50);
+        }
+
+        return;
+      }
+
+      // ========================================================
+      // OUTPUT
+      // ========================================================
+
+      if (event === 'output') {
+        const eventCompileId =
+          data?.compile_id ??
+          data?.compileId ??
+          data?.execution_id ??
+          data?.executionId ??
+          null;
+
+        /*
+        * If backend sends a compile ID, make sure the event
+        * belongs to this Agent execution.
+        *
+        * If the backend does not provide one, we still accept
+        * the event while this Agent execution is active.
+        */
+        if (
+          eventCompileId &&
+          activeExecution.compileId &&
+          String(eventCompileId) !==
+            String(activeExecution.compileId)
+        ) {
+          console.log(
+            '⏭️ Ignoring output from another compile:',
+            eventCompileId
+          );
+
+          return;
+        }
+
+        const output =
+          data?.output ??
+          data?.stdout ??
+          data?.content ??
+          data?.text ??
+          data?.message ??
+          '';
+
+        if (!output) {
+          return;
+        }
+
+        setAgentResult((previous) => {
+          if (!previous) {
+            return previous;
+          }
+
+          return {
+            ...previous,
+            output:
+              previous.output +
+              String(output),
+            status: 'running',
+          };
+        });
+
+        // Keep the terminal ready for interactive input. This is
+        // intentionally the same input control shown inside the
+        // terminal, not a separate chat input.
+        setTimeout(() => {
+          agentTerminalInputRef.current?.focus();
+        }, 50);
+
+        return;
+      }
+
+      // ========================================================
+      // ERROR
+      // ========================================================
+
+      if (
+        event === 'error' ||
+        event === 'compile_error'
+      ) {
+        const eventCompileId =
+          data?.compile_id ??
+          data?.compileId ??
+          data?.execution_id ??
+          data?.executionId ??
+          null;
+
+        if (
+          eventCompileId &&
+          activeExecution.compileId &&
+          String(eventCompileId) !==
+            String(activeExecution.compileId)
+        ) {
+          return;
+        }
+
+        const errorMessage =
+          data?.error ??
+          data?.message ??
+          data?.stderr ??
+          data?.output ??
+          String(data ?? 'Compilation failed.');
+
+        setAgentResult((previous) => {
+          if (!previous) {
+            return previous;
+          }
+
+          return {
+            ...previous,
+            output:
+              previous.output +
+              `\n❌ ${String(errorMessage)}`,
+            status: 'error',
+          };
+        });
+
+        setAgentResultLoading(false);
+        setAgentTerminalInput('');
+
+        return;
+      }
+
+      // ========================================================
+      // FINISHED
+      // ========================================================
+
+      if (
+        event === 'finished' ||
+        event === 'complete' ||
+        event === 'completed'
+      ) {
+        const eventCompileId =
+          data?.compile_id ??
+          data?.compileId ??
+          data?.execution_id ??
+          data?.executionId ??
+          null;
+
+        if (
+          eventCompileId &&
+          activeExecution.compileId &&
+          String(eventCompileId) !==
+            String(activeExecution.compileId)
+        ) {
+          console.log(
+            '⏭️ Ignoring finished event from another compile:',
+            eventCompileId
+          );
+
+          return;
+        }
+
+        const exitCode =
+          data?.exit_code ??
+          data?.exitCode ??
+          data?.return_code ??
+          data?.returnCode ??
+          0;
+
+        const success =
+          Number(exitCode) === 0;
+
+        setAgentResult((previous) => {
+          if (!previous) {
+            return previous;
+          }
+
+          const alreadyHasExitCode =
+            previous.output.includes(
+              'Process finished with exit code'
+            );
+
+          return {
+            ...previous,
+            output: alreadyHasExitCode
+              ? previous.output
+              : `${previous.output}${
+                  previous.output.endsWith('\n')
+                    ? ''
+                    : '\n'
+                }\n🏁 Process finished with exit code ${exitCode}`,
+            status: success
+              ? 'success'
+              : 'error',
+          };
+        });
+
+        setAgentResultLoading(false);
+        setAgentTerminalInput('');
+
+        console.log(
+          '🏁 Agent execution finished:',
+          {
+            executionId:
+              activeExecution.executionId,
+            compileId:
+              activeExecution.compileId,
+            exitCode,
+          }
+        );
+
+        agentExecutionRef.current = null;
+
+        return;
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    agentResultMountedRef.current = true;
+
+    let unsubscribe:
+      | (() => void)
+      | undefined;
+
+    const connect = async () => {
+      try {
+        const tokens = await getTokens();
+
+        if (!tokens?.access) {
+          console.warn(
+            '❌ No access token for Agent Compiler WS'
+          );
+
+          return;
+        }
+
+        console.log(
+          '🔌 Agent subscribing to shared Compiler WS'
+        );
+
+        unsubscribe =
+          connectCompilerSocket(
+            tokens.access,
+            handleAgentCompilerEvent
+          );
+      } catch (error) {
+        console.error(
+          '❌ Agent Compiler WS connection failed:',
+          error
+        );
+      }
+    };
+
+    connect();
+
+    return () => {
+      agentResultMountedRef.current = false;
+
+      unsubscribe?.();
+
+      agentExecutionRef.current = null;
+
+      console.log(
+        '👂 Agent Compiler WS listener removed'
+      );
+    };
+  }, [handleAgentCompilerEvent]);
+
+  const handleTestNow = useCallback(
+    (
+      code: string,
+      language: string,
+      executionId: string
+    ) => {
+      const normalizedLanguage =
+        language.toLowerCase().trim() === 'c++'
+          ? 'cpp'
+          : language.toLowerCase().trim();
+
+      const payload = {
+        executionId,
+        code,
+        language: normalizedLanguage,
+        returnPath: '/knowmato-agent',
+        createdAt: Date.now(),
+      };
+
+      console.log(
+        '🧪 Agent code → Compiler:',
+        payload
+      );
+
+      sessionStorage.setItem(
+        'knowmato_agent_compiler_payload',
+        JSON.stringify(payload)
+      );
+
+      router.push('/student/knowmato-plus/tests');
+    },
+    [router]
+  );
+
+  /**
+   * Send interactive stdin to the currently running Agent program.
+   *
+   * IMPORTANT:
+   * The existing compiler backend expects:
+   *
+   *   {
+   *     type: 'input_response',
+   *     payload: { input: '...' }
+   *   }
+   *
+   * Do NOT use `type: 'input'`.
+   * The backend already uses `input_response` for the normal
+   * CodeCompiler interactive terminal.
+   */
+  const handleAgentTerminalSubmit = useCallback(() => {
+    const activeExecution = agentExecutionRef.current;
+
+    if (!activeExecution) {
+      return;
+    }
+
+    const input = agentTerminalInput
+      .replace(/\r?\n/g, '');
+
+    // Allow an empty line because programs may legitimately
+    // wait for an empty input.
+    console.log(
+      '⌨️ Agent terminal input → Compiler WS:',
+      {
+        executionId: activeExecution.executionId,
+        compileId: activeExecution.compileId,
+        input,
+      }
+    );
+
+    // Echo exactly what the user entered into the terminal.
+    setAgentResult((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        output:
+          previous.output +
+          `> ${input}\n`,
+      };
+    });
+
+    // IMPORTANT: this is the SAME message shape used by
+    // CodeCompiler.tsx. The backend identifies the currently
+    // active execution for the authenticated user.
+    sendCompilerMessage({
+      type: 'input_response',
+      payload: {
+        input,
+      },
+    });
+
+    setAgentTerminalInput('');
+
+    // Keep the cursor inside the terminal for the next prompt.
+    setTimeout(() => {
+      agentTerminalInputRef.current?.focus();
+    }, 50);
+  }, [agentTerminalInput]);
+
+  const handleAgentTerminalKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleAgentTerminalSubmit();
+      }
+    },
+    [handleAgentTerminalSubmit]
+  );
+
+  const handleAgentTerminalChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      // Keep this as a single terminal line. Enter submits it.
+      setAgentTerminalInput(
+        event.target.value.replace(/\r?\n/g, '')
+      );
+    },
+    []
+  );
+
+  const handleShowResult = useCallback(
+    async (
+      executionId: string,
+      code: string,
+      language: string
+    ) => {
+      if (agentResultLoading) {
+        return;
+      }
+
+      const normalizedLanguage =
+        language.toLowerCase().trim() === 'c++'
+          ? 'cpp'
+          : language.toLowerCase().trim();
+
+      console.log(
+        '📊 Agent Result requested:',
+        {
+          executionId,
+          language: normalizedLanguage,
+        }
+      );
+
+      // --------------------------------------------------------
+      // Show terminal immediately
+      // --------------------------------------------------------
+
+      setAgentResult({
+        executionId,
+        code,
+        language: normalizedLanguage,
+        output:
+          '⏳ Starting program...\n',
+        status: 'running',
+      });
+
+      setAgentTerminalInput('');
+      setAgentResultLoading(true);
+
+      // --------------------------------------------------------
+      // Remember this execution
+      // --------------------------------------------------------
+
+      agentExecutionRef.current = {
+        executionId,
+        compileId: null,
+        language: normalizedLanguage,
+        code,
+      };
+
+      // --------------------------------------------------------
+      // Make sure socket is available
+      // --------------------------------------------------------
+
+      const tokens = await getTokens();
+
+      if (!tokens?.access) {
+        setAgentResult({
+          executionId,
+          code,
+          language: normalizedLanguage,
+          output:
+            '❌ Session expired. Please login again.',
+          status: 'error',
+        });
+
+        setAgentResultLoading(false);
+        setAgentTerminalInput('');
+        agentExecutionRef.current = null;
+
+        return;
+      }
+
+      // --------------------------------------------------------
+      // SEND THROUGH THE EXISTING COMPILER WEBSOCKET
+      // --------------------------------------------------------
+
+      try {
+        const compileMessage = {
+          type: 'compile',
+
+          payload: {
+            question_id: 1,
+            language: normalizedLanguage,
+            source_code: code,
+          },
+        };
+
+        console.log(
+          '📤 Agent Result → Compiler WS:',
+          compileMessage
+        );
+
+        sendCompilerMessage(
+          compileMessage
+        );
+      } catch (error: any) {
+        console.error(
+          '❌ Failed to send Agent Result compile:',
+          error
+        );
+
+        setAgentResult({
+          executionId,
+          code,
+          language: normalizedLanguage,
+          output:
+            `❌ Failed to start program: ${
+              error?.message ||
+              'Unknown error'
+            }`,
+          status: 'error',
+        });
+
+        setAgentResultLoading(false);
+        setAgentTerminalInput('');
+        agentExecutionRef.current = null;
+      }
+    },
+    [agentResultLoading]
+  );
+
 
 
 
@@ -644,9 +1386,19 @@ export default function AgentChatScreen() {
             <>
               {parseMessageContent(msg.content).map((part, idx) =>
                 part.type === 'code' ? (
-                  <CodeBlock key={idx} code={part.code!} language={part.language!} />
+                  <CodeBlock
+                    key={`${msg.id}-code-${idx}`}
+                    code={part.code || ''}
+                    language={part.language || 'text'}
+                    executionId={createCodeBlockId(msg.id, idx)}
+                    onTestNow={handleTestNow}
+                    onShowResult={handleShowResult}
+                  />
                 ) : (
-                  <span key={idx} className="text-white text-sm leading-5 whitespace-pre-wrap">
+                  <span
+                    key={`${msg.id}-text-${idx}`}
+                    className="text-white text-sm leading-5 whitespace-pre-wrap"
+                  >
                     {part.content}
                   </span>
                 )
@@ -794,7 +1546,12 @@ export default function AgentChatScreen() {
                   <div className="max-w-[80%] self-start mb-2">
                     <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md p-3 transition-all duration-200">
                       {hasReceivedToken ? (
-                        <StreamMessage content={streamingMessage} />
+                        <StreamMessage
+                          content={streamingMessage}
+                          conversationId={currentConversationId}
+                          onTestNow={handleTestNow}
+                          onShowResult={handleShowResult}
+                        />
                       ) : (
                         <SkeletonPlaceholder />
                       )}
@@ -804,6 +1561,123 @@ export default function AgentChatScreen() {
               </>
             )}
             <div ref={messagesEndRef} />
+            {agentResult && (
+              <div className="mt-4 w-full">
+                <div className="rounded-2xl border border-white/10 bg-gray-950/90 overflow-hidden shadow-xl">
+
+                  {/* Terminal Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/30">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
+
+                      <span className="text-white text-sm font-semibold">
+                        Program Result
+                      </span>
+
+                      <span className="text-white/30 text-xs">
+                        {agentResult.language}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs font-semibold ${
+                          agentResult.status === 'running'
+                            ? 'text-yellow-300'
+                            : agentResult.status === 'success'
+                              ? 'text-green-300'
+                              : 'text-red-300'
+                        }`}
+                      >
+                        {agentResult.status === 'running'
+                          ? '● Running'
+                          : agentResult.status === 'success'
+                            ? '● Completed'
+                            : '● Error'}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAgentResult(null);
+                          setAgentTerminalInput('');
+                          agentExecutionRef.current = null;
+                        }}
+                        className="text-white/40 hover:text-white text-lg transition"
+                        title="Close result"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Interactive Terminal Body */}
+                  <div
+                    className="
+                      max-h-[320px]
+                      min-h-[140px]
+                      overflow-y-auto
+                      p-4
+                      font-mono
+                      text-sm
+                      leading-6
+                      text-gray-200
+                      whitespace-pre-wrap
+                      break-words
+                    "
+                  >
+                    <div>
+                      {normalizeTerminalOutput(agentResult.output || 'No output.')}
+                    </div>
+
+                    {/* 
+                      Input lives INSIDE the terminal.
+                      It is not a separate card and it does not use
+                      the chat input at the bottom of the screen.
+                    */}
+                    {agentResult.status === 'running' && (
+                      <div className="mt-1 flex items-center min-w-0">
+                        <span className="text-green-400 mr-2 select-none">
+                          &gt;
+                        </span>
+
+                        <input
+                          ref={agentTerminalInputRef}
+                          type="text"
+                          value={agentTerminalInput}
+                          onChange={handleAgentTerminalChange}
+                          onKeyDown={handleAgentTerminalKeyDown}
+                          disabled={!agentExecutionRef.current?.compileId}
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          aria-label="Program input"
+                          placeholder={
+                            agentExecutionRef.current?.compileId
+                              ? 'Type input and press Enter...'
+                              : 'Waiting for program...'
+                          }
+                          className="
+                            flex-1
+                            min-w-0
+                            bg-transparent
+                            border-none
+                            outline-none
+                            text-gray-100
+                            font-mono
+                            text-sm
+                            placeholder:text-white/25
+                            caret-green-400
+                            p-0
+                          "
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Input area */}
