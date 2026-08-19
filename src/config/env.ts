@@ -11,6 +11,8 @@ export const BASE_URL = DEV
   ? 'http://127.0.0.1:8000/api/'
   : 'https://api.knowmato.in/api/';
 
-export const WS_BASE_URL = DEV
-  ? 'ws://127.0.0.1:8000'
-  : 'wss://api.knowmato.in';
+export const WS_BASE_URL = 'wss://api.knowmato.in';
+
+// export const WS_BASE_URL = DEV
+//   ? 'ws://127.0.0.1:8000'
+//   : 'wss://api.knowmato.in';

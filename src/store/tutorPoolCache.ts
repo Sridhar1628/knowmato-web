@@ -1,5 +1,4 @@
 export interface PoolDoubt {
-
     doubt_id: number;
 
     title: string;
@@ -16,22 +15,38 @@ export interface PoolDoubt {
 
     created_at: string;
 
-    expires_in: number;
+    expires_in: number | null;
 
-    status?: string;
+    status?: "open" | "assigned" | string;
 
-    session_id?: number;
+    // Session information
+    session_id?: number | null;
+
+    session_type?:
+        | "chat"
+        | "audio"
+        | "video_recorded"
+        | "live_video"
+        | string
+        | null;
+
+    session_status?:
+        | "scheduled"
+        | "active"
+        | "completed"
+        | "cancelled"
+        | string
+        | null;
 
     student: {
+        id?: number;
 
         name: string;
-
     };
-
 }
 
-export const tutorPoolCache = {
 
+export const tutorPoolCache = {
     openDoubts: [] as PoolDoubt[],
 
     acceptedDoubts: [] as PoolDoubt[],
@@ -41,6 +56,4 @@ export const tutorPoolCache = {
     loaded: false,
 
     loading: false,
-
 };
-

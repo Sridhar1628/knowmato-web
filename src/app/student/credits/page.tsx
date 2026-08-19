@@ -7,11 +7,13 @@ import { load } from "@cashfreepayments/cashfree-js";
 // Existing services (adjust paths as needed)
 import {
   getPlans,
-  getMyCreditBalances,
+  getMyCreditTransactions,
   createCreditOrder,
   CreditPlan,
   CreditBalance,
 } from "@/services/v1Service";
+
+import {getMyCreditBalances,} from "@/services/v2Service";
 
 // New services you’ve added
 import {
@@ -30,10 +32,11 @@ const CreditPlansPage = () => {
   const router = useRouter();
 
   // Data states
-  const [balance, setBalance] = useState<CreditBalance[]>([]);
+  const [balance, setBalance] = useState<number>(0);
   const [activePlans, setActivePlans] = useState<ActivePlan[]>([]);
   const [purchases, setPurchases] = useState<PurchaseHistory[]>([]);
   const [plans, setPlans] = useState<CreditPlan[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // UI states
   const [loading, setLoading] = useState(true);
@@ -52,18 +55,36 @@ const CreditPlansPage = () => {
       setLoading(true);
       setError(null);
 
-      const [balancesRes, activePlansRes, purchasesRes, plansRes] =
-        await Promise.all([
-          getMyCreditBalances(),
-          getMyActivePlans(),
-          getPurchaseHistory(),
-          getPlans(),
-        ]);
+      const [
+        balancesRes,
+        activePlansRes,
+        purchasesRes,
+        plansRes,
+        transactionsRes,
+      ] = await Promise.all([
+        getMyCreditBalances(),
+        getMyActivePlans(),
+        getPurchaseHistory(),
+        getPlans(),
+        getMyCreditTransactions(),
+      ]);
 
-      setBalance(balancesRes.data || null);
+      // ====================================================
+      // COMMON CREDIT BALANCE
+      // ====================================================
+      // All KnowMato services use this common balance.
+      // The backend returns:
+      // data: { balance: "9999.75" }
+      // ====================================================
+      setBalance(
+        Number(balancesRes.data?.balance || 0)
+      );
+
       setActivePlans(activePlansRes.data || []);
       setPurchases(purchasesRes.data || []);
       setPlans(plansRes.data || []);
+      setTransactions(transactionsRes.data || []);
+
     } catch (err: any) {
       console.error("Failed to load credits data:", err);
       setError("Unable to load your credits. Please try again.");
@@ -128,6 +149,73 @@ const CreditPlansPage = () => {
       year: "numeric",
     });
 
+  const renderTransaction = (transaction: any) => {
+    const isCredit =
+      transaction.transaction_type === "credit" ||
+      Number(transaction.amount) > 0;
+
+    const amount = Math.abs(Number(transaction.amount || 0));
+
+    return (
+      <div
+        key={transaction.id}
+        className="flex items-center justify-between gap-4 bg-white/5 border border-white/10 rounded-xl p-4"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              isCredit
+                ? "bg-emerald-500/20"
+                : "bg-red-500/20"
+            }`}
+          >
+            <span
+              className={
+                isCredit
+                  ? "text-emerald-400"
+                  : "text-red-400"
+              }
+            >
+              {isCredit ? "+" : "-"}
+            </span>
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-white font-medium truncate">
+              {transaction.description ||
+                (isCredit
+                  ? "Credits Added"
+                  : "Credits Used")}
+            </p>
+
+            <p className="text-white/50 text-xs mt-1">
+              {transaction.source
+                ? transaction.source.replace(/_/g, " ")
+                : "Credit Transaction"}
+            </p>
+
+            {transaction.created_at && (
+              <p className="text-white/40 text-xs mt-1">
+                {formatDate(transaction.created_at)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div
+          className={`font-semibold whitespace-nowrap ${
+            isCredit
+              ? "text-emerald-400"
+              : "text-red-400"
+          }`}
+        >
+          {isCredit ? "+" : "-"}
+          {amount.toFixed(2)}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#111827] flex items-center justify-center">
@@ -149,12 +237,6 @@ const CreditPlansPage = () => {
       </div>
     );
   }
-
-  // Total overall remaining credits across all active plans (for a quick glance)
-  const totalOverallRemaining = activePlans.reduce(
-    (sum, plan) => sum + parseFloat(plan.remaining_credits),
-    0
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e1b4b] to-[#111827]">
@@ -183,7 +265,7 @@ const CreditPlansPage = () => {
             </p>
 
             <h3 className="text-4xl font-bold text-violet-300 mt-2">
-              {balance[0]?.balance ?? 0}
+              {balance.toFixed(2)}
             </h3>
 
             <p className="text-xs text-white/40 mt-1">
@@ -320,6 +402,26 @@ const CreditPlansPage = () => {
                   </div>
                 </div>
               )}
+              {/* Credit Transactions */}
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-4">
+                    Credit Transactions
+                  </h2>
+
+                  {transactions.length > 0 ? (
+                    <div className="space-y-3">
+                      {transactions
+                        .slice(0, 20)
+                        .map(renderTransaction)}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-white/5 rounded-2xl">
+                      <p className="text-white/60">
+                        No transactions
+                      </p>
+                    </div>
+                  )}
+                </div>
             </div>
           )}
 

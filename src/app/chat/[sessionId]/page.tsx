@@ -289,8 +289,39 @@ const ChatScreen = () => {
     const fetchMessages = async () => {
       try {
         const res = await getMessages(Number(sessionId));
-        const cleaned = res.map(normalizeMessage);
+
+        // Helper to extract array from various API response shapes
+        const extractMessagesArray = (response: any): any[] => {
+          if (Array.isArray(response)) return response;
+          if (response && typeof response === "object") {
+            if (Array.isArray(response.data)) return response.data;
+            if (Array.isArray(response.messages)) return response.messages;
+            if (Array.isArray(response.results)) return response.results;
+            if (
+              response.data &&
+              typeof response.data === "object" &&
+              Array.isArray(response.data.messages)
+            )
+              return response.data.messages;
+            if (
+              response.data &&
+              typeof response.data === "object" &&
+              Array.isArray(response.data.results)
+            )
+              return response.data.results;
+          }
+          return [];
+        };
+
+        const messagesArray = extractMessagesArray(res);
+        const cleaned = messagesArray.map(normalizeMessage);
         setMessages(cleaned);
+
+        // Optionally mark messages as read (uncomment if needed)
+        // if (cleaned.length > 0) {
+        //   const messageIds = cleaned.map(m => Number(m.id));
+        //   markMessagesRead(Number(sessionId), messageIds).catch(() => {});
+        // }
       } catch (err) {
         console.error("Fetch messages error:", err);
       }
@@ -590,8 +621,35 @@ const ChatScreen = () => {
     handleSocketEvent,
   ]);
   // ----- Scroll to bottom when messages change -----
+  const isNearBottom = useCallback(() => {
+    const container = messagesEndRef.current?.parentElement;
+
+    if (!container) return true;
+
+    const distanceFromBottom =
+      container.scrollHeight -
+      container.scrollTop -
+      container.clientHeight;
+
+    return distanceFromBottom < 120;
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesEndRef.current?.parentElement;
+
+    if (!container) return;
+
+    const distanceFromBottom =
+      container.scrollHeight -
+      container.scrollTop -
+      container.clientHeight;
+
+    if (distanceFromBottom < 200) {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
   }, [messages]);
 
   // ----- Send message -----
@@ -674,14 +732,14 @@ const ChatScreen = () => {
     "⚠️ Please communicate respectfully. Abuse, harassment, offensive language, sharing personal contact information, or inappropriate behaviour may result in account suspension.";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex flex-col">
+    <div className="h-[100dvh] w-full bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden flex flex-col">
       {/* Animated background blobs */}
       <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
       <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
       <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
       {/* ---- Header ---- */}
-      <header className="relative z-10 flex items-center justify-between px-4 py-3 bg-white/5 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+      <header className="relative z-30 shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-[#15122f]/90 backdrop-blur-xl border-b border-white/10 shadow-2xl">
         <button
           onClick={() => router.back()}
           className="p-2 text-white/80 hover:text-white transition"
@@ -767,7 +825,21 @@ const ChatScreen = () => {
       </div>
 
       {/* ---- Messages ---- */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
+      <div
+        className="
+          flex-1
+          min-h-0
+          overflow-y-auto
+          overflow-x-hidden
+          overscroll-contain
+          px-3 sm:px-4
+          py-4
+          space-y-3 sm:space-y-4
+          relative
+          z-10
+          scroll-smooth
+        "
+      >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-white/50">
             <span className="text-4xl mb-3">💬</span>
@@ -783,7 +855,7 @@ const ChatScreen = () => {
                 className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-lg ${
+                  className={`max-w-[88%] sm:max-w-[75%] lg:max-w-[65%] rounded-2xl px-4 py-3 shadow-lg ${
                     isOwn
                       ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
                       : "bg-white/10 backdrop-blur-md border border-white/10 text-white"
@@ -814,12 +886,54 @@ const ChatScreen = () => {
       </div>
 
       {/* ---- Input area ---- */}
-      <div className="relative z-10 border-t border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 flex items-center gap-3">
+      <div
+        className="
+          relative
+          z-30
+          shrink-0
+          border-t
+          border-white/10
+          bg-[#15122f]/90
+          backdrop-blur-xl
+          px-3
+          sm:px-4
+          pt-2.5
+          sm:pt-3
+          pb-[calc(0.65rem+env(safe-area-inset-bottom))]
+          flex
+          items-end
+          gap-2
+          sm:gap-3
+        "
+      >
         <input
-          className="flex-1 bg-gray-900/60 border-2 border-white/20 rounded-2xl px-5 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 transition"
+          type="text"
+          className="
+            min-w-0
+            flex-1
+            h-11
+            sm:h-12
+            bg-gray-900/60
+            border
+            border-white/20
+            rounded-2xl
+            px-4
+            sm:px-5
+            text-sm
+            sm:text-base
+            text-white
+            placeholder-white/40
+            focus:outline-none
+            focus:ring-2
+            focus:ring-violet-500/50
+            focus:border-violet-400
+            transition
+          "
           value={input}
           onChange={(e) => handleTyping(e.target.value)}
           placeholder="Type a message..."
+          autoComplete="off"
+          enterKeyHint="send"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -828,10 +942,33 @@ const ChatScreen = () => {
           }}
         />
         <button
+          type="button"
           onClick={handleSend}
-          className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shadow-lg hover:scale-105 transition"
+          disabled={!input.trim()}
+          aria-label="Send message"
+          className="
+            shrink-0
+            w-11
+            h-11
+            sm:w-12
+            sm:h-12
+            rounded-full
+            bg-gradient-to-r
+            from-violet-500
+            to-fuchsia-500
+            text-white
+            flex
+            items-center
+            justify-center
+            shadow-lg
+            hover:scale-105
+            active:scale-95
+            transition
+            disabled:opacity-40
+            disabled:hover:scale-100
+          "
         >
-          ➤
+          <span className="text-lg sm:text-xl">➤</span>
         </button>
       </div>
 

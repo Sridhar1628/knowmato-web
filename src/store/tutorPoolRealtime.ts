@@ -56,7 +56,7 @@ export const setTutorPool = (
   openDoubts.forEach(doubt => {
 
     tutorPoolCache.timers[doubt.doubt_id] =
-      doubt.expires_in;
+      doubt.expires_in ?? 0;
 
   });
 
@@ -90,7 +90,7 @@ export const addPoolDoubt = (
   ];
 
   tutorPoolCache.timers[doubt.doubt_id] =
-    doubt.expires_in;
+    doubt.expires_in ?? 0;
 
   notifyTutorPool();
 
@@ -229,3 +229,5 @@ export const clearTutorPool = () => {
   notifyTutorPool();
 
 };
+
+export { tutorPoolCache };

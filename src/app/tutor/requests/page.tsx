@@ -7,7 +7,7 @@ import { getTutorRequests, handleDirectRequest } from "@/services/v1Service";
 import { subscribeSocket } from "@/services/socketEventBus";
 import { SocketEvents } from "@/services/versionSocketEvents";
 import toast from "react-hot-toast";
-import { useTranslation } from "react-i18next"; // ✅
+import { useTranslation } from "react-i18next";
 
 import {
   tutorRequestsCache,
@@ -30,9 +30,14 @@ interface TutorRequest {
   description: string;
   category: string;
   preferred_explanation: string;
-  status: string; // 'pending', 'accepted', 'countered', 'proposed'
+  status: string;
   price: number | null;
   created_at: string;
+
+  session_id?: number | null;
+  session_type?: string | null;
+  session_status?: string | null;
+
   student: {
     id: number;
     name: string;
@@ -51,7 +56,7 @@ const statusBadgeClass = (status: string) => {
 };
 
 export default function TutorRequestsPage() {
-  const { t } = useTranslation(); // ✅
+  const { t } = useTranslation();
   const router = useRouter();
   const [, forceUpdate] = useState({});
 
@@ -63,7 +68,8 @@ export default function TutorRequestsPage() {
   const [endDate, setEndDate] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [sortBy, setSortBy] = useState("newest");
-  const [requestFilter, setRequestFilter] = useState<"new" | "completed">("new");
+  // 👇 extended to include "ongoing"
+  const [requestFilter, setRequestFilter] = useState<"new" | "ongoing" | "completed">("new");
   const [statusOptions, setStatusOptions] = useState<string[]>(["All"]);
 
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -107,6 +113,7 @@ export default function TutorRequestsPage() {
     }
   }, [t]);
 
+  // 👇 updated filter logic to include "ongoing"
   const filteredRequests = tutorRequestsCache.requests
     .filter((request) => {
       if (searchStudent && !request.student.name.toLowerCase().includes(searchStudent.toLowerCase())) return false;
@@ -117,8 +124,10 @@ export default function TutorRequestsPage() {
         end.setHours(23, 59, 59, 999);
         if (new Date(request.created_at) > end) return false;
       }
+      // filter by tab
       if (requestFilter === "new" && request.status !== "pending") return false;
-      if (requestFilter === "completed" && request.status !== "accepted" && request.status !== "completed") return false;
+      if (requestFilter === "ongoing" && request.status !== "accepted") return false;
+      if (requestFilter === "completed" && request.status !== "completed") return false;
       return true;
     })
     .sort((a, b) => {
@@ -152,6 +161,38 @@ export default function TutorRequestsPage() {
       console.error("Accept error:", error);
       toast.error(t("tutorRequests.acceptError"));
     }
+  };
+
+  const handleContinueSession = (item: TutorRequest) => {
+    if (!item.session_id) {
+      toast.error("Session is not available yet.");
+      console.error("Missing session ID:", item);
+      return;
+    }
+
+    const sessionId = Number(item.session_id);
+    const sessionType = item.session_type?.toLowerCase();
+
+    if (!Number.isFinite(sessionId) || sessionId <= 0) {
+      toast.error("Invalid session.");
+      return;
+    }
+
+    if (sessionType === "chat" || sessionType === "text") {
+      router.push(`/chat/${sessionId}`);
+      return;
+    }
+
+    if (
+      sessionType === "audio" ||
+      sessionType === "video_recorded" ||
+      sessionType === "live_video"
+    ) {
+      router.push(`/videocall/${sessionId}`);
+      return;
+    }
+
+    toast.error("Unsupported session type.");
   };
 
   const handleReject = async (requestId: number) => {
@@ -234,7 +275,7 @@ export default function TutorRequestsPage() {
           </button>
         </div>
 
-        {/* Sort Chips */}
+        {/* Sort Chips – three tabs now */}
         <div className="backdrop-blur-xl bg-white/5 border-b border-white/10 px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setRequestFilter("new")}
@@ -245,6 +286,16 @@ export default function TutorRequestsPage() {
             }`}
           >
             {t("tutorRequests.newRequests")}
+          </button>
+          <button
+            onClick={() => setRequestFilter("ongoing")}
+            className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
+              requestFilter === "ongoing"
+                ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white"
+                : "bg-white/10 text-white/70 hover:bg-white/20"
+            }`}
+          >
+            {t("tutorRequests.ongoing")}
           </button>
           <button
             onClick={() => setRequestFilter("completed")}
@@ -319,7 +370,6 @@ export default function TutorRequestsPage() {
               const isPending = item.status === "pending";
               const badgeClass = statusBadgeClass(item.status);
               const statusLabel = getStatusLabel(item.status);
-              // Choose status icon based on status
               const statusIcon = {
                 pending: "⏳",
                 accepted: "✅",
@@ -352,6 +402,11 @@ export default function TutorRequestsPage() {
                     <span className="text-sm text-white/70 flex items-center gap-1">
                       💬 {getExplanationLabel(item.preferred_explanation)}
                     </span>
+                    {item.price !== null && (
+                      <span className="text-sm text-white/70 flex items-center gap-1">
+                        💰 ${item.price}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between mt-3">
@@ -374,6 +429,7 @@ export default function TutorRequestsPage() {
                         >
                           ✓ {t("tutorRequests.accept")}
                         </button>
+
                         <button
                           onClick={() => handleReject(item.request_id)}
                           className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold py-2.5 rounded-xl transition shadow-lg shadow-rose-500/25"
@@ -381,9 +437,41 @@ export default function TutorRequestsPage() {
                           ✗ {t("tutorRequests.reject")}
                         </button>
                       </div>
+                    ) : requestFilter === "ongoing" && item.status === "accepted" ? (
+                      <button
+                        onClick={() => handleContinueSession(item)}
+                        disabled={!item.session_id}
+                        className="
+                          w-full
+                          flex
+                          items-center
+                          justify-center
+                          gap-2
+                          bg-gradient-to-r
+                          from-violet-500
+                          to-fuchsia-500
+                          hover:from-violet-600
+                          hover:to-fuchsia-600
+                          active:scale-[0.98]
+                          disabled:opacity-50
+                          disabled:cursor-not-allowed
+                          text-white
+                          font-semibold
+                          py-3
+                          rounded-xl
+                          transition-all
+                          shadow-lg
+                          shadow-violet-500/25
+                        "
+                      >
+                        <span className="text-lg">▶</span>
+                        <span>Continue Your Session</span>
+                      </button>
                     ) : (
                       <div className="text-center py-3 bg-white/10 rounded-xl text-sm text-white/70 font-medium border border-white/10">
-                        {t("tutorRequests.statusPrefix", { status: statusLabel })}
+                        {t("tutorRequests.statusPrefix", {
+                          status: statusLabel,
+                        })}
                       </div>
                     )}
                   </div>
@@ -393,7 +481,7 @@ export default function TutorRequestsPage() {
           </AnimatePresence>
         </div>
 
-        {/* Filter Modal */}
+        {/* Filter Modal (unchanged) */}
         <AnimatePresence>
           {filterModalOpen && (
             <div
