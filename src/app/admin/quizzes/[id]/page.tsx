@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getQuiz, createQuiz, updateQuiz, Quiz } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 const empty: Partial<Quiz> = {
   course: 0, section: null, title: "", description: "", instructions: "",
@@ -24,7 +24,7 @@ export default function QuizFormPage() {
   useEffect(() => {
     if (!isNew) {
       setLoading(true);
-      getQuiz(Number(id)).then(setForm).catch(() => toast.error("Load failed")).finally(() => setLoading(false));
+      getQuiz(Number(id)).then(setForm).catch(() => AlertService.error("Load Failed", "Failed to load quiz")).finally(() => setLoading(false));
     }
   }, [id, isNew]);
 
@@ -40,10 +40,10 @@ export default function QuizFormPage() {
     try {
       if (isNew) await createQuiz(form);
       else await updateQuiz(Number(id), form);
-      toast.success("Saved");
+      AlertService.success(isNew ? "Quiz Created" : "Quiz Updated", isNew ? "Quiz created successfully" : "Quiz updated successfully");
       router.push("/admin/quizzes");
     } catch {
-      toast.error("Save failed");
+      AlertService.error("Save Failed", "Failed to save quiz");
     } finally {
       setSaving(false);
     }

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import AlertService from "@/services/alertService";
 import { getMyDoubts } from '@/services/v1Service';
 import { apiGet } from '@/services/apiService';
 import { myDoubtsCache } from '@/store/myDoubtsCache';
@@ -123,7 +123,10 @@ const MyDoubtsScreen = () => {
         setTotalCount(myDoubtsCache.totalCount);
       } catch (error) {
         console.error('Fetch doubts error:', error);
-        window.alert(t('myDoubts.loadError'));
+        AlertService.error(
+          t('myDoubts.loadErrorTitle', { defaultValue: 'Unable to Load Doubts' }),
+          t('myDoubts.loadError', { defaultValue: 'Failed to load your doubts. Please try again.' }),
+        );
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -208,7 +211,8 @@ const MyDoubtsScreen = () => {
       filtered = filtered.filter((item) => new Date(item.created_at) >= new Date(filters.from_date));
     }
     if (filters.to_date) {
-      filtered = filtered.filter((item) => new Date(item.created_at) <= new Date(filters.to_date));
+      const toDate = new Date(`${filters.to_date}T23:59:59.999`);
+      filtered = filtered.filter((item) => new Date(item.created_at) <= toDate);
     }
 
     setDoubts(filtered);
@@ -218,6 +222,7 @@ const MyDoubtsScreen = () => {
     activeQuickFilter,
     filters.category,
     filters.mode,
+    filters.status,
     filters.search,
     filters.from_date,
     filters.to_date,
@@ -232,8 +237,9 @@ const MyDoubtsScreen = () => {
       setLoading(false);
       return;
     }
+
     fetchDoubts(false);
-  }, []);
+  }, [fetchDoubts]);
 
   /* ---------- Helpers ---------- */
   const formatDate = (dateString: string) => {
@@ -333,6 +339,7 @@ const MyDoubtsScreen = () => {
             disabled={refreshing}
             className="absolute right-0 rounded-xl bg-white/10 backdrop-blur-md p-2 text-white/80 border border-white/10 transition hover:bg-white/20 disabled:opacity-50"
             title={t('common.refresh')}
+            aria-label={t('common.refresh')}
           >
             {refreshing ? (
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-400 border-t-transparent" />
@@ -495,7 +502,15 @@ const MyDoubtsScreen = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               if (!item.session?.session_id) {
-                                toast.error(t('myDoubts.sessionNotFound'));
+                                AlertService.warning(
+                                  t('myDoubts.sessionNotFoundTitle', {
+                                    defaultValue: 'Session Not Found',
+                                  }),
+                                  t('myDoubts.sessionNotFound', {
+                                    defaultValue: 'The session is not available yet. Please try again later.',
+                                  }),
+                                  [],
+                                );
                                 return;
                               }
                               router.push(

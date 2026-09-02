@@ -10,6 +10,7 @@ import {
   type JobApplication,
 } from '@/services/v2Service';
 import { useTranslation } from 'react-i18next';
+import AlertService from '@/services/alertService';
 
 export default function JobsPage() {
   const { t } = useTranslation();
@@ -56,8 +57,21 @@ export default function JobsPage() {
         setApplications(appsRes);
 
       } catch (err: any) {
-        setError(err?.response?.data?.detail || err?.message || t('jobs.loadError'));
-        console.error(err);
+        console.error('JOBS LOAD ERROR:', err);
+
+        const errorMessage =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          t('jobs.loadError');
+
+        setError(errorMessage);
+
+        AlertService.error(
+          'Unable to Load Jobs',
+          errorMessage,
+        );
       } finally {
         setLoading(false);
       }
@@ -110,13 +124,36 @@ export default function JobsPage() {
 
         setApplications(updatedApps);
       }
+      const successMessage = t('jobs.applicationSuccess');
+
       setApplyMessage({
         type: 'success',
-        text: t('jobs.applicationSuccess'),
+        text: successMessage,
       });
+
+      AlertService.success(
+        'Application Submitted',
+        successMessage,
+      );
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || t('jobs.somethingWentWrong');
-      setApplyMessage({ type: 'error', text: detail });
+      console.error('JOB APPLICATION ERROR:', err);
+
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        t('jobs.somethingWentWrong');
+
+      setApplyMessage({
+        type: 'error',
+        text: detail,
+      });
+
+      AlertService.error(
+        'Application Failed',
+        detail,
+      );
     } finally {
       setApplying(false);
     }
@@ -128,11 +165,43 @@ export default function JobsPage() {
     setWithdrawing(true);
     try {
       await withdrawJobApplication(selectedApplication.id);
-      setApplications((prev) => prev.filter((app) => app.id !== selectedApplication.id));
+
+      setApplications((prev) =>
+        prev.filter(
+          (app) => app.id !== selectedApplication.id,
+        ),
+      );
+
       setDetailModalOpen(false);
+      setSelectedJob(null);
+      setApplyMessage(null);
+
+      AlertService.success(
+        'Application Withdrawn',
+        t(
+          'jobs.withdrawSuccess',
+          'Your job application has been withdrawn successfully.',
+        ),
+      );
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || t('jobs.withdrawFailed');
-      setApplyMessage({ type: 'error', text: detail });
+      console.error('JOB WITHDRAW ERROR:', err);
+
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        t('jobs.withdrawFailed');
+
+      setApplyMessage({
+        type: 'error',
+        text: detail,
+      });
+
+      AlertService.error(
+        'Withdrawal Failed',
+        detail,
+      );
     } finally {
       setWithdrawing(false);
     }
@@ -406,11 +475,29 @@ export default function JobsPage() {
 
       {/* Detail / Apply / Status Modal */}
       {detailModalOpen && selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl relative">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !applying &&
+              !withdrawing
+            ) {
+              setDetailModalOpen(false);
+              setSelectedJob(null);
+              setApplyMessage(null);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 p-6 shadow-2xl backdrop-blur-xl">
             {/* Close button */}
             <button
-              onClick={() => setDetailModalOpen(false)}
+              onClick={() => {
+                if (applying || withdrawing) return;
+                setDetailModalOpen(false);
+                setSelectedJob(null);
+                setApplyMessage(null);
+              }}
               className="absolute top-4 right-4 text-white/50 hover:text-white"
             >
               ✕

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import toast, { Toaster } from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import { resetPassword } from '@/services/v1Service';
 
 // ============================================
@@ -33,24 +33,105 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleResetPassword = async (values: {
-    password: string;
-    confirmPassword: string;
-  }) => {
+  useEffect(() => {
+    if (!email || !otp) {
+      AlertService.error(
+        'Invalid Reset Link',
+        'This password reset link is incomplete or invalid. Please request a new password reset OTP.',
+      );
+    }
+  }, [email, otp]);
+
+  const handleResetPassword = async (
+    values: {
+      password: string;
+      confirmPassword: string;
+    },
+  ) => {
     try {
       setIsLoading(true);
+
+      // ========================================================
+      // RESET PASSWORD
+      // ========================================================
+
       await resetPassword({
         email,
         otp,
-        new_password: values.password,
+        new_password:
+          values.password,
       });
-      toast.success('Password reset successful 🎉');
+
+      // ========================================================
+      // SUCCESS ALERT
+      // ========================================================
+
+      AlertService.success(
+        'Password Reset Successful',
+        'Your password has been updated successfully. You can now log in with your new password.',
+      );
+
+      // ========================================================
+      // REDIRECT TO LOGIN
+      // ========================================================
+
       setTimeout(() => {
         router.push('/login');
       }, 1500);
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.error || 'Password reset failed');
+    } catch (error: unknown) {
+      console.error(
+        'Password reset error:',
+        error,
+      );
+
+      // ========================================================
+      // EXTRACT BACKEND ERROR
+      // ========================================================
+
+      let errorMessage =
+        'Password reset failed. Please try again.';
+
+      if (
+        typeof error === 'object' &&
+        error !== null
+      ) {
+        const possibleError =
+          error as {
+            response?: {
+              data?: {
+                error?: string;
+                detail?: string;
+                message?: string;
+              };
+            };
+            message?: string;
+          };
+
+        errorMessage =
+          possibleError
+            .response
+            ?.data
+            ?.error ||
+          possibleError
+            .response
+            ?.data
+            ?.detail ||
+          possibleError
+            .response
+            ?.data
+            ?.message ||
+          possibleError.message ||
+          errorMessage;
+      }
+
+      // ========================================================
+      // ERROR ALERT
+      // ========================================================
+
+      AlertService.error(
+        'Password Reset Failed',
+        errorMessage,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -65,9 +146,6 @@ export default function ResetPasswordPage() {
 
       {/* Subtle grid overlay */}
       <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(#ffffff_1px,transparent_1px),linear-gradient(to_right,#ffffff_1px,transparent_1px)] [background-size:45px_45px]" />
-
-      {/* Toast notifications */}
-      <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
 
       {/* Main content */}
       <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 relative z-10">
@@ -259,7 +337,11 @@ export default function ResetPasswordPage() {
                   {/* Submit button */}
                   <motion.button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={
+                      isLoading ||
+                      !email ||
+                      !otp
+                    }
                     whileTap={{ scale: 0.97 }}
                     className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(167,139,250,.55)] disabled:opacity-70"
                   >

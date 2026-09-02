@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getTutorApplicationDetail,
   approveTutorApplication,
@@ -93,7 +93,7 @@ export default function TutorApplicationDetailPage() {
       } catch (err) {
         console.error(err);
         setError("Failed to load application details.");
-        toast.error("Failed to load application details.");
+        AlertService.error("Load Failed", "Failed to load application details.");
       } finally {
         setLoading(false);
       }
@@ -111,7 +111,7 @@ export default function TutorApplicationDetailPage() {
 
     const appId = Number(id);
     if (isNaN(appId)) {
-      toast.error("Invalid application ID");
+      AlertService.error("Invalid Application ID", "Invalid application ID");
       setConfirmAction(null);
       return;
     }
@@ -122,16 +122,16 @@ export default function TutorApplicationDetailPage() {
 
       if (confirmAction === "approve") {
         await approveTutorApplication(appId);
-        toast.success("Tutor approved successfully!");
+        AlertService.success("Tutor Approved", "Tutor approved successfully!");
       } else {
         await rejectTutorApplication(appId);
-        toast.success("Application rejected.");
+        AlertService.success("Application Rejected", "Application rejected.");
       }
 
       router.push("/admin/tutor-applications");
     } catch (error) {
       console.error(`${confirmAction} failed:`, error);
-      toast.error(`${confirmAction === "approve" ? "Approval" : "Rejection"} failed. Please try again.`);
+      AlertService.error("Action Failed", `${confirmAction === "approve" ? "Approval" : "Rejection"} failed. Please try again.`);
     } finally {
       setActionLoading(false);
       setConfirmAction(null);

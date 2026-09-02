@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAdminVerifications,
   updateAdminVerification,
@@ -81,6 +81,7 @@ export default function AdminVerificationsPage() {
         page,
         page_size: 9,
       };
+
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter as any;
 
@@ -92,7 +93,10 @@ export default function AdminVerificationsPage() {
       setTotalPages(Math.ceil(count / 9) || 1);
     } catch (err: any) {
       setError(err?.message || "Failed to load verifications");
-      toast.error("Failed to load verifications");
+      AlertService.error(
+        "Load Failed",
+        "Failed to load verifications"
+      );
     } finally {
       setLoading(false);
     }
@@ -112,26 +116,61 @@ export default function AdminVerificationsPage() {
       newStatus === "approved"
         ? "Approve this verification?"
         : "Reject this verification?";
-    if (!window.confirm(confirmMsg)) return;
 
-    setActionLoading(verificationId);
-    try {
-      await updateAdminVerification(verificationId, {
-        status: newStatus,
-        rejection_reason: rejectionReason || "",
-      });
-      toast.success(`Verification ${newStatus}`);
-      setVerifications((prev) =>
-        prev.map((v) =>
-          v.verification_id === verificationId ? { ...v, status: newStatus } : v
-        )
-      );
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Action failed");
-    } finally {
-      setActionLoading(null);
-    }
+    AlertService.confirm(
+      newStatus === "approved"
+        ? "Approve Verification"
+        : "Reject Verification",
+      confirmMsg,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: newStatus === "approved" ? "Approve" : "Reject",
+          style: "destructive",
+          onPress: async () => {
+            setActionLoading(verificationId);
+            try {
+              await updateAdminVerification(verificationId, {
+                status: newStatus,
+                rejection_reason: rejectionReason || "",
+              });
+
+              AlertService.success(
+                "Verification Updated",
+                `Verification ${newStatus}`
+              );
+
+              setVerifications((prev) =>
+                prev.map((v) =>
+                  v.verification_id === verificationId
+                    ? { ...v, status: newStatus }
+                    : v
+                )
+              );
+            } catch (err: any) {
+              AlertService.error(
+                "Action Failed",
+                err?.response?.data?.error || "Action failed"
+              );
+            } finally {
+              setActionLoading(null);
+            }
+          },
+        },
+      ]
+    );
   };
+
+  function handleReject(verification_id: number): void {
+    handleStatusUpdate(verification_id, "rejected");
+  }
+
+  function handleApprove(verification_id: number): void {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <AdminLayout>
@@ -172,11 +211,21 @@ export default function AdminVerificationsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-gray-900/60 border-2 border-white/20 rounded-xl px-3 py-2.5 text-sm text-white focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none appearance-none cursor-pointer"
             >
-              <option value="" className="bg-gray-900">All Statuses</option>
-              <option value="pending" className="bg-gray-900">Pending</option>
-              <option value="under_review" className="bg-gray-900">Under Review</option>
-              <option value="approved" className="bg-gray-900">Approved</option>
-              <option value="rejected" className="bg-gray-900">Rejected</option>
+              <option value="" className="bg-gray-900">
+                All Statuses
+              </option>
+              <option value="pending" className="bg-gray-900">
+                Pending
+              </option>
+              <option value="under_review" className="bg-gray-900">
+                Under Review
+              </option>
+              <option value="approved" className="bg-gray-900">
+                Approved
+              </option>
+              <option value="rejected" className="bg-gray-900">
+                Rejected
+              </option>
             </select>
             <button
               onClick={() => {
@@ -216,7 +265,9 @@ export default function AdminVerificationsPage() {
               className="text-center py-20 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-lg"
             >
               <div className="text-5xl mb-4">📋</div>
-              <h2 className="text-2xl font-bold text-white">No verifications found</h2>
+              <h2 className="text-2xl font-bold text-white">
+                No verifications found
+              </h2>
               <p className="text-white/70 mt-2">
                 There are no bank verifications matching your filters.
               </p>
@@ -228,7 +279,10 @@ export default function AdminVerificationsPage() {
                   key={item.verification_id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ y: -4, borderColor: "rgba(167, 139, 250, 0.6)" }}
+                  whileHover={{
+                    y: -4,
+                    borderColor: "rgba(167, 139, 250, 0.6)",
+                  }}
                   transition={{ duration: 0.2 }}
                   className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-violet-400/40 transition-all flex flex-col shadow-xl"
                 >
@@ -237,7 +291,9 @@ export default function AdminVerificationsPage() {
                     <h3 className="font-bold text-white text-lg">
                       {item.tutor.name}
                     </h3>
-                    <p className="text-sm text-white/60 truncate">{item.tutor.email}</p>
+                    <p className="text-sm text-white/60 truncate">
+                      {item.tutor.email}
+                    </p>
                   </div>
 
                   {/* Bank Info */}
@@ -253,7 +309,8 @@ export default function AdminVerificationsPage() {
                         item.status
                       )}`}
                     >
-                      {statusIcons[item.status]} {item.status.replace("_", " ")}
+                      {statusIcons[item.status]}{" "}
+                      {item.status.replace("_", " ")}
                     </span>
                     <span className="text-xs text-white/50">
                       {new Date(item.created_at).toLocaleDateString()}
@@ -268,10 +325,23 @@ export default function AdminVerificationsPage() {
                     >
                       View Details
                     </Link>
-                    {item.status !== "approved" && item.status !== "rejected" && (
-                      <>
-                      </>
-                    )}
+                    {item.status !== "approved" &&
+                      item.status !== "rejected" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(item.verification_id)}
+                            className="flex-1 text-center px-4 py-2 bg-green-500/20 text-green-300 rounded-lg text-sm font-semibold hover:bg-green-500/30 hover:text-white transition border border-green-400/30"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleReject(item.verification_id)}
+                            className="flex-1 text-center px-4 py-2 bg-red-500/20 text-red-300 rounded-lg text-sm font-semibold hover:bg-red-500/30 hover:text-white transition border border-red-400/30"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
                   </div>
                 </motion.div>
               ))}

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAssignments,
   Assignment,
@@ -89,7 +89,7 @@ export default function AdminAssessmentDashboard() {
       );
       setAssignments(sorted);
     } catch (error) {
-      toast.error("Failed to load assignments");
+      AlertService.error("Load Failed", "Failed to load assignments");
     } finally {
       setLoading(false);
       setRefreshing(false);

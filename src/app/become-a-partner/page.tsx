@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { applyForCompany } from "@/services/v2Service";
 
 // ----------------------------------------------------------
@@ -58,22 +58,36 @@ export default function CompanyApplicationForm() {
 
     // ---------- Basic validation ----------
     if (!form.company_name.trim()) {
-      toast.error("Company name is required");
-      return;
-    }
-    if (!form.email.trim()) {
-      toast.error("Email is required");
-      return;
-    }
-    if (!form.phone.trim()) {
-      toast.error("Phone number is required");
-      return;
-    }
-    if (!form.address.trim()) {
-      toast.error("Address is required");
+      AlertService.warning(
+        "Missing Company Name",
+        "Please enter your company name before submitting the application.",[]
+      );
       return;
     }
 
+    if (!form.email.trim()) {
+      AlertService.warning(
+        "Missing Email",
+        "Please enter your company email address before submitting the application.",[]
+      );
+      return;
+    }
+
+    if (!form.phone.trim()) {
+      AlertService.warning(
+        "Missing Phone Number",
+        "Please enter your company phone number before submitting the application.",[]
+      );
+      return;
+    }
+
+    if (!form.address.trim()) {
+      AlertService.warning(
+        "Missing Address",
+        "Please enter your company address before submitting the application.",[]
+      );
+      return;
+    }
     try {
       setLoading(true);
 
@@ -88,12 +102,19 @@ export default function CompanyApplicationForm() {
       const response = await applyForCompany(formData);
       setApplicationId(response.data.id); // from the response shape (ApplyCompanyResponse)
       setSubmitted(true);
-      toast.success(response.message);
+      AlertService.success(
+        "Application Submitted",
+        response?.message ||
+          "Your company application has been submitted successfully. Our team will review your details.",
+      );
     } catch (error: any) {
       console.error(error);
       const message =
         error?.response?.data?.message || "Failed to submit application. Please try again.";
-      toast.error(message);
+      AlertService.error(
+        "Application Failed",
+        message,
+      );
     } finally {
       setLoading(false);
     }

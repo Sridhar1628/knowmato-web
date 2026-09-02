@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getJobs, getInternships, Job, Internship } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyDashboardPage() {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -26,7 +26,7 @@ export default function CompanyDashboardPage() {
         setJobs(jobsRes);
         setInternships(intRes);
       } catch {
-        toast.error("Failed to load dashboard");
+        AlertService.error("Load Failed", "Failed to load dashboard");
       } finally {
         setLoading(false);
       }

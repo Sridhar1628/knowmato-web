@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import { getAdminQuizzes, AdminQuizSummary } from '@/services/assessmentService';
 
 export default function AdminMCQListPage() {
@@ -18,7 +18,7 @@ export default function AdminMCQListPage() {
       const response = await getAdminQuizzes();
       setQuizzes(Array.isArray(response) ? response : []);
     } catch (err) {
-      toast.error('Failed to load quizzes');
+      AlertService.error('Load Failed', 'Failed to load quizzes');
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export default function AdminMCQListPage() {
                 📝 MCQ Quizzes
               </h1>
               <p className="text-white/70 mt-1">
-                Manage multiple‑choice quiz sets.
+                Manage multiple-choice quiz sets.
               </p>
             </div>
             <button

@@ -1,11 +1,16 @@
 import { WS_BASE_URL } from '../config/env';
 
+import {
+  SOUND_NOTIFICATION_EVENTS,
+} from '@/services/versionSocketEvents';
+
+import {
+  playAlertSound,
+} from '@/services/notificationSoundService';
+
 let socket: WebSocket | null = null;
-
 let currentToken: string | null = null;
-
 let reconnectTimeout: NodeJS.Timeout | null = null;
-
 let manualDisconnect = false;
 
 type MessageHandler = (
@@ -19,7 +24,6 @@ export const connectSocket = async (
   token: string,
   onMessage?: MessageHandler
 ) => {
-
   if (!token) {
     console.log('❌ Missing WS token');
     return;
@@ -32,7 +36,6 @@ export const connectSocket = async (
     globalMessageHandler = onMessage;
   }
 
-  // Prevent duplicate connection
   if (
     socket &&
     (
@@ -52,7 +55,6 @@ export const connectSocket = async (
   socket = new WebSocket(url);
 
   socket.onopen = () => {
-
     console.log('✅ WS Connected');
 
     if (reconnectTimeout) {
@@ -62,71 +64,78 @@ export const connectSocket = async (
   };
 
   socket.onmessage = (event) => {
-
     try {
-
       const parsed = JSON.parse(event.data);
 
       console.log('📩 WS Event:', parsed);
 
       if (parsed.event) {
+        const eventName = String(parsed.event);
 
+        /**
+         * ======================================================
+         * GENERAL NOTIFICATION SOUND
+         * ======================================================
+         *
+         * Play alert.mp3 only for the same events used by
+         * the Android application.
+         */
+        if (
+          SOUND_NOTIFICATION_EVENTS.has(eventName)
+        ) {
+          console.log(
+            '🔔 Playing notification sound for event:',
+            eventName
+          );
+
+          void playAlertSound();
+        }
+
+        /**
+         * Pass the event to the existing application handler.
+         */
         globalMessageHandler?.(
-          parsed.event,
+          eventName,
           parsed.data
         );
       }
-
     } catch (err) {
-
       console.log(
         '❌ WS Parse Error:',
         err
       );
-
     }
   };
 
   socket.onerror = (error) => {
-
     console.log(
       '❌ WS Error:',
       error
     );
-
   };
 
   socket.onclose = () => {
-
     console.log(
       '🔌 WS Disconnected'
     );
 
     socket = null;
 
-    // USER LOGGED OUT
     if (manualDisconnect) {
-
       console.log(
         '🚪 Manual disconnect - no reconnect'
       );
-
       return;
     }
 
-    // NO TOKEN
     if (!currentToken) {
-
       console.log(
         '🚫 No token - no reconnect'
       );
-
       return;
     }
 
-    // AUTO RECONNECT
     reconnectTimeout = setTimeout(() => {
-
       console.log(
         '🔄 Reconnecting WS...'
       );
@@ -135,21 +144,17 @@ export const connectSocket = async (
         currentToken!,
         globalMessageHandler
       );
-
     }, 3000);
   };
 };
 
 export const disconnectSocket = () => {
-
   console.log('🛑 Disconnecting WS');
 
   manualDisconnect = true;
-
   currentToken = null;
 
   if (reconnectTimeout) {
-
     clearTimeout(
       reconnectTimeout
     );
@@ -158,9 +163,7 @@ export const disconnectSocket = () => {
   }
 
   if (socket) {
-
     socket.close();
-
     socket = null;
   }
 };

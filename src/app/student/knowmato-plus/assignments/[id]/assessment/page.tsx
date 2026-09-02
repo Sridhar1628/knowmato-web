@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import CodeCompiler from '@/components/CodeCompiler';
+import AlertService from "@/services/alertService";
 import {
   getAttemptDetails,
   getQuizQuestions,
@@ -104,7 +104,15 @@ export default function AssessmentPage() {
 
   useEffect(() => {
     mounted.current = true;
-    if (!attemptId) { toast.error('Invalid assessment attempt.'); setLoading(false); return; }
+    if (!attemptId) {
+      AlertService.warning(
+        "Invalid Assessment",
+        "Invalid assessment attempt.",
+        [],
+      );
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const raw = payload<any>(await getAttemptDetails(attemptId));
@@ -163,7 +171,13 @@ export default function AssessmentPage() {
         tcResults.forEach(x => { if (x.status === 'fulfilled') tc[x.value.id] = x.value.value; });
         setTestCases(tc);
       } catch (e: any) {
-        console.error(e); toast.error(e?.message || t('codeEditor.loadFailed', 'Failed to load assessment.'));
+        console.error(e);
+
+        AlertService.error(
+          "Assessment Load Failed",
+          e?.message || t('codeEditor.loadFailed', 'Failed to load assessment.'),
+        );
+
         router.push(`/student/knowmato-plus/assignments/${attemptId}`);
       } finally { if (mounted.current) setLoading(false); }
     })();
@@ -190,8 +204,18 @@ export default function AssessmentPage() {
       await submitAssessment(attemptId);
       const r = payload<any>(await getAssessmentResult(attemptId));
       if (mounted.current) { setFinalResult(r); setSubmitted(true); }
-      toast.success(automatic ? 'Time expired. Assessment submitted.' : 'Assessment submitted successfully.');
-    } catch (e: any) { toast.error(e?.message || 'Failed to submit assessment.'); }
+      AlertService.success(
+        automatic ? "Time Expired" : "Assessment Submitted",
+        automatic
+          ? "Time expired. Assessment submitted."
+          : "Assessment submitted successfully.",
+      );
+    } catch (e: any) {
+      AlertService.error(
+        "Submission Failed",
+        e?.message || "Failed to submit assessment.",
+      );
+    }
     finally { if (mounted.current) setSubmitting(false); }
   }, [attemptId, submitting, submitted]);
 
@@ -225,15 +249,34 @@ export default function AssessmentPage() {
   }, [programs, persistCode]);
 
   const runTests = useCallback(async (q: number) => {
-    const s = programs[q]; if (!s || !s.code.trim()) { toast.error('Please write some code first.'); return; }
+    const s = programs[q]; if (!s || !s.code.trim()) {
+      AlertService.warning(
+        "Code Required",
+        "Please write some code first.",
+        [],
+      );
+      return;
+    }
     setPrograms(p => ({ ...p, [q]: { ...p[q], isRunning: true } })); setResults(r => ({ ...r, [q]: null }));
     try {
       const r = payload<any>(await runTestCases({ language: s.language, question_id: q, source_code: s.code }));
       setResults(x => ({ ...x, [q]: r })); setPrograms(p => ({ ...p, [q]: { ...p[q], testResults: r, isRunning: false, isCompiling: false } }));
       const st: Status = r.passed_cases === r.total_cases ? 'passed' : 'failed';
       setStatuses(x => { const n = { ...x, [`programming-${q}`]: st }; try { localStorage.setItem(statusKey(attemptId), JSON.stringify(n)); } catch {} return n; });
-      toast.success(`Tests completed: ${r.passed_cases}/${r.total_cases}`);
-    } catch (e: any) { toast.error(e?.message || 'Failed to run tests.'); setPrograms(p => ({ ...p, [q]: { ...p[q], isRunning: false, isCompiling: false } })); }
+      AlertService.success(
+        "Tests Completed",
+        `Tests completed: ${r.passed_cases}/${r.total_cases}`,
+      );
+    } catch (e: any) {
+      AlertService.error(
+        "Test Execution Failed",
+        e?.message || "Failed to run tests.",
+      );
+      setPrograms(p => ({
+        ...p,
+        [q]: { ...p[q], isRunning: false, isCompiling: false },
+      }));
+    }
   }, [programs, attemptId]);
 
   const selectMCQ = useCallback(async (q: number, option: number) => {
@@ -241,7 +284,12 @@ export default function AssessmentPage() {
     setAnswers(a => { const n = { ...a, [q]: option }; try { localStorage.setItem(answerKey(attemptId), JSON.stringify(n)); } catch {} return n; });
     setStatuses(s => ({ ...s, [`mcq-${q}`]: 'attempted' })); setSavingAnswer(q);
     try { await saveMCQAnswer(attemptId, { question_id: q, selected_option_id: option }); }
-    catch (e: any) { toast.error(e?.message || 'Failed to save answer.'); }
+    catch (e: any) {
+      AlertService.error(
+        "Answer Save Failed",
+        e?.message || "Failed to save answer.",
+      );
+    }
     finally { if (mounted.current) setSavingAnswer(null); }
   }, [attemptId, expired, submitted]);
 
@@ -251,7 +299,23 @@ export default function AssessmentPage() {
   const finalSubmit = async () => {
     if (expired || submitting || submitted) return;
     const msg = unanswered.length ? `You have ${unanswered.length} unanswered question${unanswered.length === 1 ? '' : 's'}. Do you still want to submit?` : 'Submit your assessment?';
-    if (window.confirm(msg)) await submit(false);
+    AlertService.confirm(
+      "Submit Assessment",
+      msg,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Submit",
+          style: "destructive",
+          onPress: () => {
+            void submit(false);
+          },
+        },
+      ],
+    );
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white"><div className="text-center"><div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-violet-400 border-t-transparent" /><p className="mt-3 text-sm text-white/60">Loading assessment...</p></div></div>;

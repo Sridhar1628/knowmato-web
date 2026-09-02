@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAdminAssignments,
   getAdminAttempts,
@@ -71,7 +71,10 @@ export default function AdminAnalyticsPage() {
       }
       setAttempts(filtered);
     } catch (err) {
-      toast.error("Failed to load analytics data");
+      AlertService.error(
+        "Analytics Error",
+        "Failed to load analytics data"
+      );
     } finally {
       setLoading(false);
     }
@@ -156,6 +159,7 @@ export default function AdminAnalyticsPage() {
               <p className="text-white/70 mt-1">Track student performance across assignments.</p>
             </div>
             <button
+              type="button"
               onClick={fetchData}
               className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-violet-300 font-medium hover:bg-white/20 mt-4 sm:mt-0"
             >

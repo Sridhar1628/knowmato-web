@@ -17,7 +17,7 @@ import {
 } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function QuizQuestionsPage() {
   const { id: quizId } = useParams();
@@ -36,7 +36,7 @@ export default function QuizQuestionsPage() {
       const qs = await getQuizQuestions(Number(quizId));
       setQuestions(qs);
     } catch {
-      toast.error("Failed to load questions");
+      AlertService.error("Load Failed", "Failed to load questions");
     } finally {
       setLoading(false);
     }
@@ -51,16 +51,16 @@ export default function QuizQuestionsPage() {
     try {
       if (selectedQuestion) {
         await updateQuestion(selectedQuestion.id, data);
-        toast.success("Question updated");
+        AlertService.success("Question Updated", "Question updated successfully");
       } else {
         await createQuestion({ ...data, quiz: Number(quizId) });
-        toast.success("Question created");
+        AlertService.success("Question Created", "Question created successfully");
       }
       setShowQuestionModal(false);
       setSelectedQuestion(null);
       fetchData();
     } catch {
-      toast.error("Failed to save question");
+      AlertService.error("Save Failed", "Failed to save question");
     }
   };
 
@@ -68,10 +68,10 @@ export default function QuizQuestionsPage() {
     if (!deleteConfirm || deleteConfirm.type !== "question") return;
     try {
       await deleteQuestion(deleteConfirm.id);
-      toast.success("Deleted");
+      AlertService.success("Question Deleted", "Question deleted successfully");
       fetchData();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Failed to delete");
     } finally {
       setDeleteConfirm(null);
     }
@@ -88,15 +88,15 @@ export default function QuizQuestionsPage() {
     try {
       if (optionForm.id) {
         await updateQuestionOption(optionForm.id, optionForm);
-        toast.success("Option updated");
+        AlertService.success("Option Updated", "Option updated successfully");
       } else {
         await createQuestionOption(optionForm);
-        toast.success("Option created");
+        AlertService.success("Option Created", "Option created successfully");
       }
       setShowOptionModal(false);
       fetchData(); // refresh questions (options not fetched separately, but you might need to refetch options inside the expanded view - we'll store options per question locally)
     } catch {
-      toast.error("Failed to save option");
+      AlertService.error("Save Failed", "Failed to save option");
     }
   };
 
@@ -104,10 +104,10 @@ export default function QuizQuestionsPage() {
     if (!deleteConfirm || deleteConfirm.type !== "option") return;
     try {
       await deleteQuestionOption(deleteConfirm.id);
-      toast.success("Option deleted");
+      AlertService.success("Option Deleted", "Option deleted successfully");
       fetchData();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Failed to delete");
     } finally {
       setDeleteConfirm(null);
     }
@@ -127,7 +127,7 @@ export default function QuizQuestionsPage() {
           const opts = await getQuestionOptions({ question: qId });
           setOptionsMap((prev) => ({ ...prev, [qId]: opts }));
         } catch {
-          toast.error("Failed to load options");
+          AlertService.error("Load Failed", "Failed to load options");
         }
       }
     }

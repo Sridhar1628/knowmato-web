@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next"; // ✅
 
@@ -114,7 +114,7 @@ export default function TutorWalletPage() {
       }
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || t("tutorWallet.txLoadError");
-      toast.error(msg);
+      AlertService.error("Error", msg);
     } finally {
       setTxLoading(false);
     }
@@ -127,7 +127,7 @@ export default function TutorWalletPage() {
       setWithdrawals(res?.data?.data || res?.data || []);
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || t("tutorWallet.wdLoadError");
-      toast.error(msg);
+      AlertService.error("Error", msg);
     } finally {
       setWdLoading(false);
     }
@@ -145,7 +145,7 @@ export default function TutorWalletPage() {
       });
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || t("tutorWallet.verifLoadError");
-      toast.error(msg);
+      AlertService.error("Error", msg);
     } finally {
       setVerifLoading(false);
     }
@@ -165,7 +165,7 @@ export default function TutorWalletPage() {
       }
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || t("tutorWallet.walletLoadError");
-      toast.error(msg);
+      AlertService.error("Error", msg);
     }
   }, [t]);
 
@@ -179,41 +179,79 @@ export default function TutorWalletPage() {
     const amount = parseFloat(withdrawAmount);
     if (!withdrawAmount || isNaN(amount) || amount <= 0) {
       setWithdrawError(t("tutorWallet.enterValidAmount"));
+      AlertService.warning("Invalid Amount", t("tutorWallet.enterValidAmount"), []);
       return false;
     }
     if (wallet && amount > wallet.real_balance) {
-      setWithdrawError(t("tutorWallet.insufficientBalance", {
+      const message = t("tutorWallet.insufficientBalance", {
         balance: wallet.real_balance.toFixed(2),
-      }));
+      });
+      setWithdrawError(message);
+      AlertService.warning("Insufficient Balance", message, []);
       return false;
     }
     setWithdrawError(null);
     return true;
   };
 
-  const handleWithdraw = async () => {
+  const handleWithdraw = () => {
     if (!validateWithdraw()) return;
+
     const amount = parseFloat(withdrawAmount);
-    setWithdrawing(true);
-    setWithdrawError(null);
-    try {
-      await createWithdrawal({ amount });
-      toast.success(t("tutorWallet.withdrawSuccess"));
-      setShowWithdrawModal(false);
-      setWithdrawAmount("");
-      setWithdrawError(null);
-      await fetchWithdrawals();
-      await fetchWallet();
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || err?.message || t("tutorWallet.withdrawFailed");
-      toast.error(msg);
-      setWithdrawError(msg);
-    } finally {
-      setWithdrawing(false);
-    }
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    AlertService.confirm(
+      "Confirm Withdrawal",
+      `Are you sure you want to withdraw ₹${amount.toFixed(2)}?`,
+      async () => {
+        setWithdrawing(true);
+        setWithdrawError(null);
+
+        try {
+          await createWithdrawal({ amount });
+          setShowWithdrawModal(false);
+          setWithdrawAmount("");
+          setWithdrawError(null);
+          await fetchWithdrawals();
+          await fetchWallet();
+
+          AlertService.success(
+            "Success",
+            t("tutorWallet.withdrawSuccess")
+          );
+        } catch (err: any) {
+          const msg =
+            err?.response?.data?.error ||
+            err?.message ||
+            t("tutorWallet.withdrawFailed");
+
+          setWithdrawError(msg);
+          AlertService.error("Error", msg);
+        } finally {
+          setWithdrawing(false);
+        }
+      },
+      "Withdraw",
+      t("common.cancel")
+    );
   };
 
   const handleCloseModal = () => {
+    if (withdrawAmount && !withdrawing) {
+      AlertService.confirm(
+        "Cancel Withdrawal",
+        "Are you sure you want to close this withdrawal form?",
+        () => {
+          setShowWithdrawModal(false);
+          setWithdrawAmount("");
+          setWithdrawError(null);
+        },
+        "Close",
+        t("common.cancel")
+      );
+      return;
+    }
+
     setShowWithdrawModal(false);
     setWithdrawAmount("");
     setWithdrawError(null);

@@ -4,11 +4,11 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { getMyReviews, updateReview, StudentReview } from "@/services/reviewService";
 import { getTokens } from "@/services/storageService";
 import { WS_BASE_URL } from "@/config/env";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next"; // ✅ added
 
 export default function StudentReviewsPage() {
-  const { t } = useTranslation(); // ✅ added
+  const { t, i18n } = useTranslation();
   const [reviews, setReviews] = useState<StudentReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,10 @@ export default function StudentReviewsPage() {
       } catch (err: any) {
         const msg = err?.response?.data?.error || err?.message || t("reviews.loadError");
         setError(msg);
-        toast.error(msg);
+        AlertService.error(
+          t("reviews.errorTitle", { defaultValue: "Unable to Load Reviews" }),
+          msg,
+        );
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -47,9 +50,29 @@ export default function StudentReviewsPage() {
       try {
         const tokens = await getTokens();
         if (!tokens?.access) return;
-        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
+        const tokenParts = tokens.access.split(".");
+        if (tokenParts.length < 2) {
+          console.error("Invalid access token.");
+          return;
+        }
+
+        let payload: { user_id?: number | string };
+        try {
+          payload = JSON.parse(atob(tokenParts[1]));
+        } catch (tokenError) {
+          console.error("Unable to decode access token.", tokenError);
+          return;
+        }
+
         const userId = payload.user_id;
-        socket = new WebSocket(`${WS_BASE_URL}/ws/user/${userId}/?token=${tokens.access}`);
+        if (userId === undefined || userId === null) {
+          console.error("User ID missing from access token.");
+          return;
+        }
+
+        socket = new WebSocket(
+          `${WS_BASE_URL}/ws/user/${userId}/?token=${encodeURIComponent(tokens.access)}`
+        );
         wsRef.current = socket;
 
         socket.onopen = () => console.log("🔥 REVIEW WS CONNECTED");
@@ -97,6 +120,16 @@ export default function StudentReviewsPage() {
 
   const handleSave = async () => {
     if (!editingReview) return;
+
+    if (editRating < 1 || editRating > 5) {
+      AlertService.warning(
+        t("reviews.invalidRatingTitle", { defaultValue: "Invalid Rating" }),
+        t("reviews.invalidRating", { defaultValue: "Please select a rating from 1 to 5." }),
+        [],
+      );
+      return;
+    }
+
     setUpdating(true);
     try {
       await updateReview(editingReview.review_id, {
@@ -110,10 +143,16 @@ export default function StudentReviewsPage() {
             : r
         )
       );
-      toast.success(t("reviews.updated"));
+      AlertService.success(
+        t("reviews.updateSuccessTitle", { defaultValue: "Review Updated" }),
+        t("reviews.updated"),
+      );
       setEditingReview(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || t("reviews.updateFailed"));
+      AlertService.error(
+        t("reviews.updateFailedTitle", { defaultValue: "Update Failed" }),
+        err?.response?.data?.error || t("reviews.updateFailed"),
+      );
     } finally {
       setUpdating(false);
     }
@@ -209,7 +248,7 @@ export default function StudentReviewsPage() {
                   </h2>
                   <div className="flex items-center gap-1 bg-amber-400/20 backdrop-blur-md px-3 py-1 rounded-full border border-amber-400/40">
                     <span className="text-amber-300 font-bold text-sm">
-                      ⭐ {review.rating}.0
+                      ⭐ {Number(review.rating).toFixed(1)}
                     </span>
                   </div>
                 </div>
@@ -222,7 +261,7 @@ export default function StudentReviewsPage() {
                 {/* Date & Edit */}
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
                   <span className="text-xs text-white/40">
-                    {new Date(review.created_at).toLocaleDateString("en-US", {
+                    {new Date(review.created_at).toLocaleDateString(i18n.language || undefined, {
                       year: "numeric",
                       month: "short",
                       day: "numeric",

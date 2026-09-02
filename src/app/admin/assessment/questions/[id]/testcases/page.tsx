@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAdminTestCases,
   createAdminTestCase,
@@ -33,7 +33,7 @@ export default function AdminTestCasesPage() {
       const data = (response as any)?.data ?? response;
       setTestCases(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error('Failed to load test cases');
+      AlertService.error('Load Failed', 'Failed to load test cases');
     } finally {
       setLoading(false);
     }
@@ -69,36 +69,51 @@ export default function AdminTestCasesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.expected_output.trim()) {
-      toast.error('Expected output is required');
+      AlertService.error('Output Required', 'Expected output is required');
       return;
     }
 
     try {
       if (editingCase) {
         await updateAdminTestCase(editingCase.id, formData);
-        toast.success('Test case updated!');
+        AlertService.success('Test Case Updated', 'Test case updated successfully!');
       } else {
         await createAdminTestCase(questionId, formData);
-        toast.success('Test case added!');
+        AlertService.success('Test Case Added', 'Test case added successfully!');
       }
       setShowForm(false);
       setEditingCase(null);
       fetchTestCases(); // refresh list
     } catch (err: any) {
-      toast.error(err?.message || 'Operation failed');
+      AlertService.error('Operation Failed', err?.message || 'Operation failed');
     }
   };
 
   // Delete a test case
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this test case?')) return;
-    try {
-      await deleteAdminTestCase(id);
-      toast.success('Test case deleted');
-      fetchTestCases();
-    } catch (err: any) {
-      toast.error(err?.message || 'Deletion failed');
-    }
+    AlertService.confirm(
+      'Delete Test Case',
+      'Are you sure you want to delete this test case?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAdminTestCase(id);
+              AlertService.success('Test Case Deleted', 'Test case deleted successfully');
+              fetchTestCases();
+            } catch (err: any) {
+              AlertService.error('Deletion Failed', err?.message || 'Deletion failed');
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {

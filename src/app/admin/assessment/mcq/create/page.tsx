@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAdminAssignments,
   createAdminQuiz,
@@ -39,7 +39,7 @@ export default function CreateQuizPage() {
         setAssignments(assignmentsData);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load assignments");
+        AlertService.error('Load Failed', 'Failed to load assignments.');
       }
     };
     loadAssignments();
@@ -62,7 +62,7 @@ export default function CreateQuizPage() {
     e.preventDefault();
 
     if (!formData.title.trim()) {
-      toast.error('Title is required');
+      AlertService.error('Title Required', 'Please enter a quiz title.');
       return;
     }
 
@@ -75,10 +75,10 @@ export default function CreateQuizPage() {
         duration_minutes: Number(formData.duration_minutes),
         total_marks: Number(formData.total_marks),
       });
-      toast.success('Quiz created!');
+      AlertService.success('Quiz Created', 'Quiz created successfully!');
       router.push('/admin/assessment/quizzes');
     } catch (err: any) {
-      toast.error(err?.message || 'Creation failed');
+      AlertService.error('Creation Failed', err?.message || 'Unable to create the quiz.');
     } finally {
       setSubmitting(false);
     }

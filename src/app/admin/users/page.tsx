@@ -9,7 +9,7 @@ import {
   adminToggleUserActive,
   adminDeleteUser,
 } from "@/services/v1Service";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import EditUserModal from "./EditUserModal"; // we'll build next
 
 // ---------- Types (same as before) ----------
@@ -37,7 +37,7 @@ export default function AdminUsersPage() {
       setUsers(data);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load users.");
+      AlertService.error("Load Failed", "Failed to load users.");
     } finally {
       setLoading(false);
     }
@@ -58,25 +58,49 @@ export default function AdminUsersPage() {
   const handleToggleActive = async (user: User) => {
     try {
       await adminToggleUserActive(user.id);
-      toast.success(`User ${user.is_active ? "suspended" : "activated"}.`);
+      AlertService.success(
+        "User Status Updated",
+        `User ${user.is_active ? "suspended" : "activated"}.`
+      );
       fetchUsers();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update user status.");
+      AlertService.error(
+        "Update Failed",
+        "Failed to update user status."
+      );
     }
   };
 
   // Delete user
   const handleDeleteUser = async (user: User) => {
-    if (!window.confirm(`Permanently delete ${user.display_name}?`)) return;
-    try {
-      await adminDeleteUser(user.id);
-      toast.success("User deleted.");
-      fetchUsers();
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete user.");
-    }
+    AlertService.confirm(
+      "Delete User",
+      `Permanently delete ${user.display_name}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await adminDeleteUser(user.id);
+              AlertService.success("User Deleted", "User deleted.");
+              fetchUsers();
+            } catch (error) {
+              console.error(error);
+              AlertService.error(
+                "Delete Failed",
+                "Failed to delete user."
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Refresh after edit modal closes
@@ -144,11 +168,21 @@ export default function AdminUsersPage() {
               onChange={(e) => setFilterRole(e.target.value)}
               className="rounded-xl border-2 border-white/20 bg-gray-900/60 px-4 py-3 text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 outline-none transition appearance-none"
             >
-              <option value="" className="bg-gray-800">All Roles</option>
-              <option value="student" className="bg-gray-800">Student</option>
-              <option value="tutor" className="bg-gray-800">Tutor</option>
-              <option value="company" className="bg-gray-800">Company</option>
-              <option value="admin" className="bg-gray-800">Admin</option>
+              <option value="" className="bg-gray-800">
+                All Roles
+              </option>
+              <option value="student" className="bg-gray-800">
+                Student
+              </option>
+              <option value="tutor" className="bg-gray-800">
+                Tutor
+              </option>
+              <option value="company" className="bg-gray-800">
+                Company
+              </option>
+              <option value="admin" className="bg-gray-800">
+                Admin
+              </option>
             </select>
           </div>
 
@@ -181,16 +215,27 @@ export default function AdminUsersPage() {
                 <thead className="bg-white/10">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Name</th>
-                    <th className="px-6 py-4 font-semibold hidden sm:table-cell">Email</th>
+                    <th className="px-6 py-4 font-semibold hidden sm:table-cell">
+                      Email
+                    </th>
                     <th className="px-6 py-4 font-semibold">Role</th>
-                    <th className="px-6 py-4 font-semibold hidden md:table-cell">Status</th>
-                    <th className="px-6 py-4 font-semibold hidden lg:table-cell">Joined</th>
-                    <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                    <th className="px-6 py-4 font-semibold hidden md:table-cell">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 font-semibold hidden lg:table-cell">
+                      Joined
+                    </th>
+                    <th className="px-6 py-4 font-semibold text-right">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-white/5 transition">
+                    <tr
+                      key={user.id}
+                      className="hover:bg-white/5 transition"
+                    >
                       <td className="px-6 py-4 font-medium text-white">
                         {user.display_name || "—"}
                       </td>
@@ -219,7 +264,9 @@ export default function AdminUsersPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => router.push(`/admin/users/${user.id}`)}
+                            onClick={() =>
+                              router.push(`/admin/users/${user.id}`)
+                            }
                             className="text-violet-400 hover:text-violet-300 font-medium text-xs uppercase tracking-wide"
                           >
                             View

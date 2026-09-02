@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getTutorEarnings,
   markTutorEarningsPaid,
@@ -48,7 +48,7 @@ export default function AdminEarningsPage() {
       setEarnings(res.data || []);
     } catch (err: any) {
       setError(err?.message || "Failed to load earnings");
-      toast.error("Failed to load earnings");
+      AlertService.error("Load Failed", "Failed to load earnings");
     } finally {
       setLoading(false);
     }
@@ -124,22 +124,38 @@ export default function AdminEarningsPage() {
 
   const handlePayModal = async () => {
     if (selectedIds.size === 0) {
-      toast.error("No earnings selected");
+      AlertService.error("No Earnings Selected", "Please select at least one earning.");
       return;
     }
-    if (!window.confirm(`Mark ${selectedIds.size} earnings as paid?`)) return;
+    AlertService.confirm(
+      "Mark Earnings as Paid",
+      `Mark ${selectedIds.size} earnings as paid?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Confirm",
+          style: "destructive",
+          onPress: async () => {
+            setPaying(true);
+            try {
+              await markTutorEarningsPaid(Array.from(selectedIds));
+              AlertService.success("Payment Successful", "Earnings marked as paid");
+              closeModal();
+              fetchEarnings();
+            } catch (err: any) {
+              AlertService.error(
+                "Payment Failed",
+                err?.response?.data?.error || "Payment failed"
+              );
+            } finally {
+              setPaying(false);
+            }
+          },
+        },
+      ],
+    );
 
-    setPaying(true);
-    try {
-      await markTutorEarningsPaid(Array.from(selectedIds));
-      toast.success("Earnings marked as paid");
-      closeModal();
-      fetchEarnings();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Payment failed");
-    } finally {
-      setPaying(false);
-    }
+
   };
 
   return (

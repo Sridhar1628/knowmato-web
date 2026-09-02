@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAdminWithdrawalDetail,
   updateAdminWithdrawal,
@@ -105,7 +105,7 @@ export default function AdminWithdrawalDetailPage() {
       setAdminNotes(data.admin_notes || "");
     } catch (err: any) {
       setError(err?.message || "Failed to load withdrawal details");
-      toast.error("Failed to load details");
+      AlertService.error("Load Failed", "Failed to load details");
     } finally {
       setLoading(false);
     }
@@ -123,37 +123,69 @@ export default function AdminWithdrawalDetailPage() {
         status: selectedStatus as any,
         admin_notes: adminNotes,
       });
-      toast.success("Withdrawal updated");
+      AlertService.success(
+        "Withdrawal Updated",
+        "Withdrawal updated"
+      );
       await fetchDetail(); // refresh
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Update failed");
+      AlertService.error(
+        "Update Failed",
+        err?.response?.data?.error || "Update failed"
+      );
     } finally {
       setUpdating(false);
     }
   };
 
   // Quick action handlers
-  const handleQuickAction = async (newStatus: "processing" | "rejected") => {
+  const handleQuickAction = async (
+    newStatus: "processing" | "rejected"
+  ) => {
     if (!withdrawal || updating) return;
+
     const confirmMsg =
       newStatus === "processing"
         ? "Start processing this withdrawal request?"
         : "Reject this withdrawal request?";
-    if (!window.confirm(confirmMsg)) return;
 
-    setUpdating(true);
-    try {
-      await updateAdminWithdrawal(withdrawalId, {
-        status: newStatus,
-        admin_notes: adminNotes, // keep existing notes
-      });
-      toast.success(`Withdrawal ${newStatus}`);
-      await fetchDetail();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Action failed");
-    } finally {
-      setUpdating(false);
-    }
+    AlertService.confirm(
+      newStatus === "processing"
+        ? "Process Withdrawal"
+        : "Reject Withdrawal",
+      confirmMsg,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: newStatus === "processing" ? "Approve" : "Reject",
+          style: "destructive",
+          onPress: async () => {
+            setUpdating(true);
+            try {
+              await updateAdminWithdrawal(withdrawalId, {
+                status: newStatus,
+                admin_notes: adminNotes, // keep existing notes
+              });
+              AlertService.success(
+                "Withdrawal Updated",
+                `Withdrawal ${newStatus}`
+              );
+              await fetchDetail();
+            } catch (err: any) {
+              AlertService.error(
+                "Action Failed",
+                err?.response?.data?.error || "Action failed"
+              );
+            } finally {
+              setUpdating(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -167,13 +199,26 @@ export default function AdminWithdrawalDetailPage() {
         <div className="relative z-10 max-w-5xl mx-auto">
           {/* Back button */}
           <motion.button
-            whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+            whileHover={{
+              scale: 1.05,
+              backgroundColor: "rgba(255,255,255,0.1)",
+            }}
             whileTap={{ scale: 0.95 }}
             onClick={() => router.push("/admin/withdrawals")}
             className="mb-6 flex items-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-md text-white font-semibold rounded-full border border-white/20 hover:border-white/40 transition-all"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             Back to Withdrawals
           </motion.button>
@@ -191,7 +236,9 @@ export default function AdminWithdrawalDetailPage() {
               </button>
             </div>
           ) : !withdrawal ? (
-            <div className="text-center py-20 text-white/60">Withdrawal not found.</div>
+            <div className="text-center py-20 text-white/60">
+              Withdrawal not found.
+            </div>
           ) : (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -207,33 +254,42 @@ export default function AdminWithdrawalDetailPage() {
                     <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
                       {withdrawal.tutor.name}
                     </h1>
-                    <p className="text-white/70">{withdrawal.tutor.email}</p>
+                    <p className="text-white/70">
+                      {withdrawal.tutor.email}
+                    </p>
                   </div>
                   <span
                     className={`inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-bold border ${statusBadge(
                       withdrawal.status
                     )}`}
                   >
-                    {statusIcons[withdrawal.status]} {withdrawal.status.replace("_", " ")}
+                    {statusIcons[withdrawal.status]}{" "}
+                    {withdrawal.status.replace("_", " ")}
                   </span>
                 </div>
 
                 {/* Amount & Wallet */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
                   <div className="bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                    <p className="text-sm text-white/70">Withdrawal Amount</p>
+                    <p className="text-sm text-white/70">
+                      Withdrawal Amount
+                    </p>
                     <p className="text-2xl font-bold text-white mt-1">
                       ₹{withdrawal.amount.toFixed(2)}
                     </p>
                   </div>
                   <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                    <p className="text-sm text-white/70">Real Balance</p>
+                    <p className="text-sm text-white/70">
+                      Real Balance
+                    </p>
                     <p className="text-2xl font-bold text-white mt-1">
                       ₹{withdrawal.wallet.real_balance.toFixed(2)}
                     </p>
                   </div>
                   <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/10">
-                    <p className="text-sm text-white/70">Bonus Balance</p>
+                    <p className="text-sm text-white/70">
+                      Bonus Balance
+                    </p>
                     <p className="text-2xl font-bold text-white mt-1">
                       ₹{withdrawal.wallet.bonus_balance.toFixed(2)}
                     </p>
@@ -244,16 +300,23 @@ export default function AdminWithdrawalDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                   <DetailItem
                     label="Created"
-                    value={new Date(withdrawal.created_at).toLocaleString()}
+                    value={new Date(
+                      withdrawal.created_at
+                    ).toLocaleString()}
                   />
                   {withdrawal.processed_at && (
                     <DetailItem
                       label="Processed"
-                      value={new Date(withdrawal.processed_at).toLocaleString()}
+                      value={new Date(
+                        withdrawal.processed_at
+                      ).toLocaleString()}
                     />
                   )}
                   {withdrawal.processed_by && (
-                    <DetailItem label="Processed By" value={withdrawal.processed_by} />
+                    <DetailItem
+                      label="Processed By"
+                      value={withdrawal.processed_by}
+                    />
                   )}
                   {withdrawal.transaction_id && (
                     <DetailItem
@@ -273,7 +336,9 @@ export default function AdminWithdrawalDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <DetailItem
                     label="Account Holder"
-                    value={withdrawal.verification.account_holder_name}
+                    value={
+                      withdrawal.verification.account_holder_name
+                    }
                   />
                   <DetailItem
                     label="Account Number"
@@ -325,7 +390,9 @@ export default function AdminWithdrawalDetailPage() {
                           alt="Bank proof"
                           className="max-h-48 rounded-xl border border-white/20 object-cover cursor-pointer hover:opacity-90 transition"
                           onClick={() =>
-                            setImageModal(withdrawal.verification.bank_proof!)
+                            setImageModal(
+                              withdrawal.verification.bank_proof!
+                            )
                           }
                         />
                       </div>
@@ -340,7 +407,9 @@ export default function AdminWithdrawalDetailPage() {
                           alt="PAN card"
                           className="max-h-48 rounded-xl border border-white/20 object-cover cursor-pointer hover:opacity-90 transition"
                           onClick={() =>
-                            setImageModal(withdrawal.verification.pan_card!)
+                            setImageModal(
+                              withdrawal.verification.pan_card!
+                            )
                           }
                         />
                       </div>
@@ -356,7 +425,9 @@ export default function AdminWithdrawalDetailPage() {
                     <span className="w-1.5 h-6 bg-gradient-to-b from-violet-400 to-fuchsia-400 rounded-full" />
                     Admin Notes
                   </h2>
-                  <p className="text-white/80 whitespace-pre-wrap">{withdrawal.admin_notes}</p>
+                  <p className="text-white/80 whitespace-pre-wrap">
+                    {withdrawal.admin_notes}
+                  </p>
                 </div>
               )}
 
@@ -381,7 +452,9 @@ export default function AdminWithdrawalDetailPage() {
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => handleQuickAction("processing")}
+                          onClick={() =>
+                            handleQuickAction("processing")
+                          }
                           disabled={updating}
                           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-500/20 text-emerald-300 font-bold rounded-2xl border border-emerald-400/30 hover:bg-emerald-500/30 hover:text-white transition disabled:opacity-50"
                         >
@@ -390,7 +463,9 @@ export default function AdminWithdrawalDetailPage() {
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => handleQuickAction("rejected")}
+                          onClick={() =>
+                            handleQuickAction("rejected")
+                          }
                           disabled={updating}
                           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-rose-500/20 text-rose-300 font-bold rounded-2xl border border-rose-400/30 hover:bg-rose-500/30 hover:text-white transition disabled:opacity-50"
                         >
@@ -406,13 +481,35 @@ export default function AdminWithdrawalDetailPage() {
                           </label>
                           <select
                             value={selectedStatus}
-                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedStatus(e.target.value)
+                            }
                             className="w-full bg-gray-900/60 border-2 border-white/20 rounded-2xl px-4 py-3 text-sm font-medium text-white focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none backdrop-blur-sm appearance-none cursor-pointer"
                           >
-                            <option value="pending" className="bg-gray-900">⏳ Pending</option>
-                            <option value="processing" className="bg-gray-900">🔄 Processing</option>
-                            <option value="completed" className="bg-gray-900">✅ Completed</option>
-                            <option value="rejected" className="bg-gray-900">❌ Rejected</option>
+                            <option
+                              value="pending"
+                              className="bg-gray-900"
+                            >
+                              ⏳ Pending
+                            </option>
+                            <option
+                              value="processing"
+                              className="bg-gray-900"
+                            >
+                              🔄 Processing
+                            </option>
+                            <option
+                              value="completed"
+                              className="bg-gray-900"
+                            >
+                              ✅ Completed
+                            </option>
+                            <option
+                              value="rejected"
+                              className="bg-gray-900"
+                            >
+                              ❌ Rejected
+                            </option>
                           </select>
                         </div>
                         <div>
@@ -421,7 +518,9 @@ export default function AdminWithdrawalDetailPage() {
                           </label>
                           <textarea
                             value={adminNotes}
-                            onChange={(e) => setAdminNotes(e.target.value)}
+                            onChange={(e) =>
+                              setAdminNotes(e.target.value)
+                            }
                             className="w-full bg-gray-900/60 border-2 border-white/20 rounded-2xl p-4 text-sm min-h-[100px] text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none backdrop-blur-sm resize-y"
                             placeholder="Add notes about this withdrawal..."
                           />
@@ -430,7 +529,9 @@ export default function AdminWithdrawalDetailPage() {
                           <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.97 }}
-                            onClick={() => router.push("/admin/withdrawals")}
+                            onClick={() =>
+                              router.push("/admin/withdrawals")
+                            }
                             className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-2xl transition-colors border border-white/20"
                           >
                             Cancel
@@ -444,9 +545,25 @@ export default function AdminWithdrawalDetailPage() {
                           >
                             {updating ? (
                               <>
-                                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                                <svg
+                                  className="animate-spin h-5 w-5"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  />
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                  />
                                 </svg>
                                 Saving...
                               </>
@@ -482,8 +599,17 @@ export default function AdminWithdrawalDetailPage() {
                 onClick={() => setImageModal(null)}
                 className="absolute top-3 right-3 bg-black/50 text-white rounded-full p-2 hover:bg-black/70 transition"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -495,7 +621,13 @@ export default function AdminWithdrawalDetailPage() {
 }
 
 // Reusable detail item (dark theme)
-const DetailItem = ({ label, value }: { label: string; value: string }) => (
+const DetailItem = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => (
   <div className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10">
     <p className="text-xs text-white/50">{label}</p>
     <p className="font-medium text-white break-all">{value}</p>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getCurrentAffairs, CurrentAffair } from "@/services/v1Service";
 import { useTranslation } from "react-i18next";
+import AlertService from "@/services/alertService";
 
 // Category colours – neon / vibrant palette
 const categoryColors: Record<string, string> = {
@@ -32,9 +33,22 @@ const StudentCurrentAffairs: React.FC = () => {
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setAffairs(sortedAffairs);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch current affairs:", err);
-      setError(t("currentAffairs.error") || "Could not load current affairs.");
+
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        t("currentAffairs.error") ||
+        "Could not load current affairs.";
+
+      setError(errorMessage);
+
+      AlertService.error(
+        "Current Affairs Error",
+        errorMessage,
+      );
     } finally {
       setLoading(false);
     }

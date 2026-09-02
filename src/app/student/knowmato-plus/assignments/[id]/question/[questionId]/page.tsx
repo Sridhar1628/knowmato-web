@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import AlertService from '@/services/alertService';
 import CodeCompiler from '@/components/CodeCompiler';
 
 import {
@@ -81,7 +81,10 @@ export default function ProgrammingQuestionPage() {
 
         const current = questions.find((q: any) => q.id === questionId);
         if (!current) {
-          toast.error(t('codeEditor.questionNotFound'));
+          AlertService.error(
+            "Question Not Found",
+            t('codeEditor.questionNotFound'),
+          );
           router.push(`/student/knowmato-plus/assignments/${attemptId}`);
           return;
         }
@@ -129,7 +132,10 @@ export default function ProgrammingQuestionPage() {
           setCode(local || STARTER_CODES[language]);
         }
       } catch (error) {
-        toast.error(t('codeEditor.loadFailed'));
+        AlertService.error(
+          "Workspace Load Failed",
+          t('codeEditor.loadFailed'),
+        );
         router.push(`/student/knowmato-plus/assignments/${attemptId}`);
       } finally {
         setLoading(false);
@@ -204,7 +210,11 @@ export default function ProgrammingQuestionPage() {
   // ── Run tests ──
   const handleRunTests = async () => {
     if (!code.trim()) {
-      toast.error(t('codeEditor.pleaseWriteCode'));
+      AlertService.warning(
+        "Code Required",
+        t('codeEditor.pleaseWriteCode'),
+        [],
+      );
       return;
     }
     setIsRunningTests(true);
@@ -232,14 +242,18 @@ export default function ProgrammingQuestionPage() {
         return updated;
       });
 
-      toast.success(
+      AlertService.success(
+        "Tests Completed",
         t('codeEditor.testsCompleted', {
           passed: result.passed_cases,
           total: result.total_cases,
-        })
+        }),
       );
     } catch (err: any) {
-      toast.error(err.message || t('codeEditor.testsRunFailed'));
+      AlertService.error(
+        "Tests Failed",
+        err.message || t('codeEditor.testsRunFailed'),
+      );
     } finally {
       setIsRunningTests(false);
     }
@@ -247,14 +261,39 @@ export default function ProgrammingQuestionPage() {
 
   // ── Submit attempt ──
   const handleSubmitAttempt = async () => {
-    if (!window.confirm(t('codeEditor.submitConfirm', 'Submit your assessment?'))) return;
-    try {
-      await submitAssessment(attemptId);
-      toast.success(t('codeEditor.submitted'));
-      router.push(`/student/knowmato-plus/assignments/${attemptId}/result`);
-    } catch (err: any) {
-      toast.error(err?.message || t('codeEditor.submitFailed'));
-    }
+    AlertService.confirm(
+      "Submit Assessment",
+      t('codeEditor.submitConfirm', 'Submit your assessment?'),
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Submit",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await submitAssessment(attemptId);
+
+              AlertService.success(
+                "Assessment Submitted",
+                t('codeEditor.submitted'),
+              );
+
+              router.push(
+                `/student/knowmato-plus/assignments/${attemptId}/result`,
+              );
+            } catch (err: any) {
+              AlertService.error(
+                "Submission Failed",
+                err?.message || t('codeEditor.submitFailed'),
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ── Navigation ──

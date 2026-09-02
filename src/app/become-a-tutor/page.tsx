@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { submitTutorApplication } from "@/services/v1Service";
 
 // Subject categories with sub-categories
@@ -132,39 +132,190 @@ export default function BecomeTutorPage() {
         : [...prev.mentor_languages, language],
     }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+  ) => {
     e.preventDefault();
-    
-    // Validation
-    if (!form.full_name || !form.email || !form.phone || !form.city_state) {
-      toast.error("Please fill in all required fields");
+
+    // ==========================================================
+    // BASIC VALIDATION
+    // ==========================================================
+
+    if (
+      !form.full_name.trim() ||
+      !form.email.trim() ||
+      !form.phone.trim() ||
+      !form.city_state.trim()
+    ) {
+      AlertService.warning(
+        "Missing Required Information",
+        "Please fill in your name, email, phone number, and city/state before submitting your tutor application.",[]
+      );
+
       return;
     }
-    
-    if (form.mentor_subjects.length === 0) {
-      toast.error("Please select at least one subject you can teach");
+
+    // ==========================================================
+    // SUBJECT VALIDATION
+    // ==========================================================
+
+    if (
+      form.mentor_subjects.length === 0
+    ) {
+      AlertService.warning(
+        "Select a Subject",
+        "Please select at least one subject that you can teach.",[]
+      );
+
+      return;
+    }
+
+    // ==========================================================
+    // PREVENT DUPLICATE SUBMISSION
+    // ==========================================================
+
+    if (loading) {
       return;
     }
 
     try {
       setLoading(true);
-      const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, String(value));
-        }
-      });
-      if (resume) formData.append("resume", resume);
 
-      const response = await submitTutorApplication(formData);
-      setApplicationId(response.application_id);
+      // ========================================================
+      // BUILD FORM DATA
+      // ========================================================
+
+      const formData =
+        new FormData();
+
+      Object.entries(form).forEach(
+        ([key, value]) => {
+          if (
+            Array.isArray(value)
+          ) {
+            formData.append(
+              key,
+              JSON.stringify(value),
+            );
+          } else {
+            formData.append(
+              key,
+              String(value),
+            );
+          }
+        },
+      );
+
+      // ========================================================
+      // RESUME
+      // ========================================================
+
+      if (resume) {
+        formData.append(
+          "resume",
+          resume,
+        );
+      }
+
+      // ========================================================
+      // SUBMIT APPLICATION
+      // ========================================================
+
+      const response =
+        await submitTutorApplication(
+          formData,
+        );
+
+      console.log(
+        "Tutor application response:",
+        response,
+      );
+
+      // ========================================================
+      // VALIDATE APPLICATION ID
+      // ========================================================
+
+      if (
+        !response?.application_id
+      ) {
+        throw new Error(
+          "The application was submitted, but no application ID was returned.",
+        );
+      }
+
+      // ========================================================
+      // UPDATE SUCCESS STATE
+      // ========================================================
+
+      setApplicationId(
+        response.application_id,
+      );
+
       setSubmitted(true);
-      toast.success("Application submitted successfully!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to submit application. Please try again.");
+
+      // ========================================================
+      // SUCCESS ALERT
+      // ========================================================
+
+      AlertService.success(
+        "Application Submitted",
+        "Your tutor application has been submitted successfully. Our team will review your profile.",
+      );
+    } catch (error: unknown) {
+      console.error(
+        "Tutor application error:",
+        error,
+      );
+
+      // ========================================================
+      // EXTRACT ERROR MESSAGE
+      // ========================================================
+
+      let message =
+        "Failed to submit your tutor application. Please try again.";
+
+      if (
+        typeof error ===
+          "object" &&
+        error !== null
+      ) {
+        const possibleError =
+          error as {
+            response?: {
+              data?: {
+                message?: string;
+                detail?: string;
+                error?: string;
+              };
+            };
+            message?: string;
+          };
+
+        message =
+          possibleError
+            .response
+            ?.data
+            ?.message ||
+          possibleError
+            .response
+            ?.data
+            ?.detail ||
+          possibleError
+            .response
+            ?.data
+            ?.error ||
+          possibleError.message ||
+          message;
+      }
+
+      // ========================================================
+      // ERROR ALERT
+      // ========================================================
+
+      AlertService.error(
+        "Application Failed",
+        message,
+      );
     } finally {
       setLoading(false);
     }

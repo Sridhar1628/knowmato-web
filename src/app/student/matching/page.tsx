@@ -8,6 +8,7 @@ import { getTokens } from "@/services/storageService";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund, cancelDoubt } from "@/services/v1Service";
 import { useTranslation } from "react-i18next";
+import AlertService from "@/services/alertService";
 
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/redux/store';
@@ -120,7 +121,11 @@ export default function MatchingScreen() {
               break;
             }
             case "DIRECT_REJECTED":
-              alert(t("matching.tutorUnavailable"));
+              AlertService.warning(
+                t("matching.tutorUnavailableTitle", { defaultValue: "Tutor Unavailable" }),
+                t("matching.tutorUnavailable"),
+                [],
+              );
               break;
             case "MATCHING_TIMEOUT":
               setError(t("matching.noTutorsFound"));
@@ -169,7 +174,10 @@ export default function MatchingScreen() {
 
   useEffect(() => {
     if (error) {
-      alert(error);
+      AlertService.error(
+        t("matching.failed"),
+        error,
+      );
       router.back();
     }
   }, [error, router]);
@@ -235,16 +243,20 @@ export default function MatchingScreen() {
 
       disconnectSocket();
 
-      alert(
+      AlertService.success(
+        t("matching.cancelledTitle", { defaultValue: "Doubt Cancelled" }),
         t("matching.doubtCancelled", {
           refund: response.refund_amount,
           fee: response.platform_fee,
-        })
+        }),
       );
 
       router.replace('/student/dashboard');
     } catch (error: any) {
-      alert(error?.message || t("matching.cancelFailed"));
+      AlertService.error(
+        t("matching.cancelFailedTitle", { defaultValue: "Cancellation Failed" }),
+        error?.message || t("matching.cancelFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -371,7 +383,13 @@ export default function MatchingScreen() {
       {/* Current Affairs button */}
       <button
         className="mb-4 px-5 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white/70 hover:bg-white/10 transition-colors z-10"
-        onClick={() => alert(t("matching.affairsMessage"))}
+        onClick={() =>
+          AlertService.warning(
+            t("matching.currentAffairsTitle", { defaultValue: "Current Affairs" }),
+            t("matching.affairsMessage"),
+            [],
+          )
+        }
       >
         📰 {t("matching.readWhileWaiting")}
       </button>
@@ -435,6 +453,16 @@ export default function MatchingScreen() {
                         popupShownRef.current = false;
                         setModalType("none");
                         await loadMatchingStatus();
+                      } catch (error: any) {
+                        AlertService.error(
+                          t("matching.waitMoreFailedTitle", {
+                            defaultValue: "Unable to Continue Waiting",
+                          }),
+                          error?.message ||
+                            t("matching.waitMoreFailed", {
+                              defaultValue: "Please try again.",
+                            }),
+                        );
                       } finally {
                         setModalLoading(false);
                       }
@@ -452,6 +480,16 @@ export default function MatchingScreen() {
                       await requestStudentRefund(Number(doubtId));
                       popupShownRef.current = false;
                       router.replace("/student/dashboard");
+                    } catch (error: any) {
+                      AlertService.error(
+                        t("matching.refundFailedTitle", {
+                          defaultValue: "Refund Failed",
+                        }),
+                        error?.message ||
+                          t("matching.refundFailed", {
+                            defaultValue: "Unable to process the refund. Please try again.",
+                          }),
+                      );
                     } finally {
                       setModalLoading(false);
                     }

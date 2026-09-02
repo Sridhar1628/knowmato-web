@@ -15,7 +15,7 @@ import { getTokens } from '@/services/storageService';
 import { dashboardCache } from '@/store/dashboardCache';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
+import AlertService from "@/services/alertService";
 import { getMyCreditBalances } from '@/services/v2Service';
 
 // Types
@@ -101,7 +101,7 @@ function PostDoubtContent() {
     if (tutorIdParam && tutorNameParam) {
       setMode('specific');
       setSelectedTutor({
-        id: parseInt(tutorIdParam, 10),
+        id: Number.parseInt(tutorIdParam, 10),
         display_name: tutorNameParam,
       });
     }
@@ -207,7 +207,14 @@ function PostDoubtContent() {
       setTutors(withPresence);
     } catch (error) {
       console.error('Failed to fetch tutors:', error);
-      toast.error(t('postDoubt.loadTutorsError'));
+      AlertService.error(
+        t('postDoubt.loadTutorsErrorTitle', {
+          defaultValue: 'Unable to Load Tutors',
+        }),
+        t('postDoubt.loadTutorsError', {
+          defaultValue: 'Failed to load tutors. Please try again.',
+        }),
+      );
     } finally {
       setLoadingTutors(false);
     }
@@ -217,7 +224,7 @@ function PostDoubtContent() {
     if (mode === 'specific' && tutors.length === 0 && !loadingTutors) {
       fetchTutors();
     }
-  }, [mode]);
+  }, [mode, tutors.length, loadingTutors]);
 
   const isSelectedTutorOnline = useCallback(() => {
     if (mode === 'specific' && selectedTutor) {
@@ -229,24 +236,54 @@ function PostDoubtContent() {
   // Submit flow – credit‑based
   const handleSubmit = async () => {
     if (mode === 'specific' && selectedTutor && !selectedTutor.is_online) {
-      toast.error(t('postDoubt.offlineError'));
+      AlertService.warning(
+        t('postDoubt.offlineTitle', {
+          defaultValue: 'Tutor Offline',
+        }),
+        t('postDoubt.offlineError'),
+        [],
+      );
       return;
     }
 
     if (!title.trim()) {
-      toast.error(t('postDoubt.enterTitle'));
+      AlertService.warning(
+        t('postDoubt.validationTitle', {
+          defaultValue: 'Required Information',
+        }),
+        t('postDoubt.enterTitle'),
+        [],
+      );
       return;
     }
     if (!description.trim()) {
-      toast.error(t('postDoubt.enterDescription'));
+      AlertService.warning(
+        t('postDoubt.validationTitle', {
+          defaultValue: 'Required Information',
+        }),
+        t('postDoubt.enterDescription'),
+        [],
+      );
       return;
     }
     if (!category) {
-      toast.error(t('postDoubt.selectCategory'));
+      AlertService.warning(
+        t('postDoubt.validationTitle', {
+          defaultValue: 'Required Information',
+        }),
+        t('postDoubt.selectCategory'),
+        [],
+      );
       return;
     }
     if (mode === 'specific' && !selectedTutor) {
-      toast.error(t('postDoubt.selectTutor'));
+      AlertService.warning(
+        t('postDoubt.validationTitle', {
+          defaultValue: 'Required Information',
+        }),
+        t('postDoubt.selectTutor'),
+        [],
+      );
       return;
     }
     if (submitting) return;
@@ -266,7 +303,10 @@ function PostDoubtContent() {
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        category,
+        category:
+          category === 'Other' && customCategory.trim()
+            ? customCategory.trim()
+            : category,
         mode,
         preferred_explanation: preferredExplanation,
       };
@@ -303,8 +343,11 @@ function PostDoubtContent() {
           router.push('/student/credits');
         }
       } else {
-        toast.error(
-          t('postDoubt.submissionFailed') + ': ' + errorMessage
+        AlertService.error(
+          t('postDoubt.submissionFailedTitle', {
+            defaultValue: 'Submission Failed',
+          }),
+          t('postDoubt.submissionFailed') + ': ' + errorMessage,
         );
       }
     } finally {
@@ -330,7 +373,13 @@ function PostDoubtContent() {
                 key={tutor.id}
                 onClick={() => {
                   if (!isOnline) {
-                    toast.error(t('postDoubt.offlineSelect'));
+                    AlertService.warning(
+                      t('postDoubt.offlineTitle', {
+                        defaultValue: 'Tutor Offline',
+                      }),
+                      t('postDoubt.offlineSelect'),
+                      [],
+                    );
                     return;
                   }
                   setSelectedTutor(tutor);

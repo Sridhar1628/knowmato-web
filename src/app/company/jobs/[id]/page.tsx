@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getJob, createJob, updateJob, Job } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyJobFormPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function CompanyJobFormPage() {
   useEffect(() => {
     if (!isNew) {
       setLoading(true);
-      getJob(Number(id)).then(setForm).catch(() => toast.error("Load failed")).finally(() => setLoading(false));
+      getJob(Number(id)).then(setForm).catch(() => AlertService.error("Load Failed", "Load failed")).finally(() => setLoading(false));
     }
   }, [id, isNew]);
 
@@ -43,16 +43,22 @@ export default function CompanyJobFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyId) { toast.error("No company associated"); return; }
+    if (!companyId) {
+      AlertService.error("Company Required", "No company associated");
+      return;
+    }
     setSaving(true);
     try {
       const data = { ...form, company: companyId }; // force company
       if (isNew) await createJob(data);
       else await updateJob(Number(id), data);
-      toast.success(isNew ? "Job created" : "Job updated");
+      AlertService.success(
+        isNew ? "Job Created" : "Job Updated",
+        isNew ? "Job created" : "Job updated"
+      );
       router.push("/company/jobs");
     } catch {
-      toast.error("Save failed");
+      AlertService.error("Save Failed", "Save failed");
     } finally {
       setSaving(false);
     }

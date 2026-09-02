@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { getInternships, deleteInternship, Internship } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyInternshipsPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function CompanyInternshipsPage() {
       const res = await getInternships({ company: companyId });
       setInternships(res);
     } catch {
-      toast.error("Failed to load internships");
+      AlertService.error("Load Failed", "Failed to load internships");
     } finally {
       setLoading(false);
     }
@@ -41,10 +41,10 @@ export default function CompanyInternshipsPage() {
     setDeleting(true);
     try {
       await deleteInternship(deleteModal.id);
-      toast.success("Internship deleted");
+      AlertService.success("Internship Deleted", "Internship deleted");
       fetchInternships();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Delete failed");
     } finally {
       setDeleting(false);
       setDeleteModal({ open: false, id: null });

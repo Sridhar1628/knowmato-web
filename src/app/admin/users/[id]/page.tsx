@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import AdminLayout from "@/app/admin/AdminLayout";
 import { getAdminUserDetail } from "@/services/v1Service";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface UserDetail {
@@ -39,7 +39,7 @@ export default function AdminUserDetailPage() {
         setUser("data" in res ? res.data : res);
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load user details.");
+        AlertService.error("Load Failed", "Failed to load user details.");
         router.push("/admin/users");
       } finally {
         setLoading(false);

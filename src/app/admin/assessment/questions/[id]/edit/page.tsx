@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAdminAssignments,
   getAdminQuestionById,
@@ -77,7 +77,7 @@ export default function EditQuestionPage() {
           assignment: question.assignment ?? undefined,
         });
       } catch (err) {
-        toast.error('Question not found');
+        AlertService.error('Question Not Found', 'Question not found');
         router.push('/admin/assessment/questions');
       } finally {
         setLoading(false);
@@ -101,7 +101,7 @@ export default function EditQuestionPage() {
     e.preventDefault();
 
     if (!formData.question.trim()) {
-      toast.error('Question text is required');
+      AlertService.error('Question Required', 'Question text is required');
       return;
     }
 
@@ -114,10 +114,10 @@ export default function EditQuestionPage() {
         status: formData.status,
         assignment: formData.assignment,
       });
-      toast.success('Question updated!');
+      AlertService.success('Question Updated', 'Question updated successfully!');
       router.push('/admin/assessment/questions');
     } catch (err: any) {
-      toast.error(err?.message || 'Update failed');
+      AlertService.error('Update Failed', err?.message || 'Update failed');
     } finally {
       setSubmitting(false);
     }

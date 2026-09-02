@@ -8,7 +8,7 @@ import {
   AdminReportFilters,
 } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface AdminReport {
@@ -123,7 +123,7 @@ export default function AdminReportsPage() {
         err?.message ||
         "Failed to load reports"
       );
-      toast.error(err?.response?.data?.error || "Failed to load reports");
+      AlertService.error("Load Failed", err?.response?.data?.error || "Failed to load reports");
     } finally {
       setLoading(false);
     }

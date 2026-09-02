@@ -12,6 +12,7 @@ import axios from "@/api/axiosInstance";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useCall } from "@/contexts/CallContext";
+import AlertService from "@/services/alertService";
 
 // ----- Agora App ID -----
 const APP_ID = "19789ef2ac6e48e89404f52c1c3231a5";
@@ -93,13 +94,6 @@ const VideoCallScreen: React.FC = () => {
   const [showChatModal, setShowChatModal] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Alert/Confirm modal
-  const [alertData, setAlertData] = useState<{
-    title: string;
-    message: string;
-    onAccept?: () => void;
-    onReject?: () => void;
-  } | null>(null);
 
   // ========== Initialisation ==========
   useEffect(() => {
@@ -139,7 +133,7 @@ const VideoCallScreen: React.FC = () => {
         }, 1000);
       } catch (err) {
         console.error("Init error:", err);
-        window.alert("Failed to start video call.");
+        AlertService.error("Video Call Error", "Failed to start video call.");
       } finally {
         setIsLoading(false);
       }
@@ -193,20 +187,26 @@ const VideoCallScreen: React.FC = () => {
   // ----- End Request via Chat Socket -----
   const handleEndRequest = () => {
     if (requestSent || ending) return;
-    setAlertData({
-      title: "End Call",
-      message: "Do you want to request to end the call?",
-      onAccept: () => {
+
+    AlertService.confirm(
+      "End Call",
+      "Do you want to request to end the call?",
+      () => {
         setRequestSent(true);
+
         sendChatMessage({
           type: "END_SESSION_REQUEST",
           session_id: sessionId ?? undefined,
         });
-        window.alert("Request Sent: Waiting for other user...");
-        setAlertData(null);
+
+        AlertService.info(
+          "Request Sent",
+          "Waiting for the other user to respond.",
+        );
       },
-      onReject: () => setAlertData(null),
-    });
+      "Request",
+      "Cancel",
+    );
   };
 
   const showCallNotification = (sessionId: number) => {
@@ -238,22 +238,34 @@ const VideoCallScreen: React.FC = () => {
 
           // END_SESSION_REQUEST
           if (data?.type === "END_SESSION_REQUEST") {
-            setAlertData({
-              title: "End Call Request",
-              message: `${data.user_name || "User"} wants to end the call.`,
-              onAccept: async () => {
-                try {
-                  sendChatMessage({ type: "END_SESSION_ACCEPTED", session_id: sessionId });
-                  await handleLeaveCall(true);
-                } finally {
-                  setAlertData(null);
-                }
-              },
-              onReject: () => {
-                sendChatMessage({ type: "END_SESSION_REJECTED", session_id: sessionId });
-                setAlertData(null);
-              },
-            });
+            AlertService.confirm(
+              "End Call Request",
+              `${data.user_name || "User"} wants to end the call.`,
+              [
+                {
+                  text: "Reject",
+                  style: "cancel",
+                  onPress: () => {
+                    sendChatMessage({
+                      type: "END_SESSION_REJECTED",
+                      session_id: sessionId,
+                    });
+                  },
+                },
+                {
+                  text: "Accept",
+                  style: "destructive",
+                  onPress: async () => {
+                    sendChatMessage({
+                      type: "END_SESSION_ACCEPTED",
+                      session_id: sessionId,
+                    });
+
+                    await handleLeaveCall(true);
+                  },
+                },
+              ],
+            );
             return;
           }
 
@@ -265,7 +277,9 @@ const VideoCallScreen: React.FC = () => {
 
           // END_SESSION_REJECTED
           if (data?.type === "END_SESSION_REJECTED") {
-            window.alert("Request Rejected: User declined to end the call.");
+            AlertService.warning("Request Rejected", "The other user declined to end the call.", [
+              { text: "OK", style: "default" },
+            ]);
             setRequestSent(false);
             return;
           }
@@ -312,7 +326,9 @@ const VideoCallScreen: React.FC = () => {
     if (joined && !remoteUid && !isLoading && !userLeftTimeoutReached) {
       const timeout = setTimeout(() => {
         setUserLeftTimeoutReached(true);
-        window.alert("No Answer: The other user did not join.");
+        AlertService.warning("No Answer", "The other user did not join the call.", [
+          { text: "OK", style: "default" },
+        ]);
         handleLeaveCall(true);
       }, 60000);
       return () => clearTimeout(timeout);
@@ -547,33 +563,6 @@ const VideoCallScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Alert Modal */}
-      {alertData && (
-        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-gradient-to-br from-[#1a1742] to-[#24243e] rounded-3xl p-6 max-w-xs w-full shadow-2xl border border-white/10">
-            <h4 className="text-white font-bold text-lg mb-2">{alertData.title}</h4>
-            <p className="text-white/80 text-sm mb-6">{alertData.message}</p>
-            <div className="flex gap-3 justify-end">
-              {alertData.onReject && (
-                <button
-                  onClick={alertData.onReject}
-                  className="px-4 py-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition"
-                >
-                  Reject
-                </button>
-              )}
-              {alertData.onAccept && (
-                <button
-                  onClick={alertData.onAccept}
-                  className="px-5 py-2 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-semibold hover:shadow-lg transition"
-                >
-                  Accept
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

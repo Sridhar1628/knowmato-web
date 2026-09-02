@@ -1,14 +1,16 @@
-"use client";
+ "use client";
 
 import { useEffect, useState } from "react";
+
 import { useParams } from "next/navigation";
+
 import {
   getInternshipApplications,
   updateInternshipApplicationStatus,
   InternshipApplication,
 } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import AdminLayout from "../../AdminLayout";
 
 export default function CompanyInternshipApplicationsPage() {
@@ -26,7 +28,7 @@ export default function CompanyInternshipApplicationsPage() {
       const res = await getInternshipApplications({ internship: Number(internshipId) });
       setApps(res);
     } catch {
-      toast.error("Failed to load applications");
+      AlertService.error("Load Failed", "Failed to load applications");
     } finally {
       setLoading(false);
     }
@@ -39,16 +41,18 @@ export default function CompanyInternshipApplicationsPage() {
   const updateStatus = async (appId: number, status: string) => {
     try {
       await updateInternshipApplicationStatus(appId, status);
-      toast.success(`Status updated to ${status}`);
+      AlertService.success("Status Updated", `Status updated to ${status}`);
+
       // Refresh applications and update selected app if modal is open
       const updatedApps = await getInternshipApplications({ internship: Number(internshipId) });
       setApps(updatedApps);
+
       if (selectedApp && selectedApp.id === appId) {
         const updated = updatedApps.find(a => a.id === appId);
         if (updated) setSelectedApp(updated);
       }
     } catch {
-      toast.error("Update failed");
+      AlertService.error("Update Failed", "Update failed");
     }
   };
 
@@ -152,6 +156,7 @@ export default function CompanyInternshipApplicationsPage() {
             <h2 className="text-2xl font-bold text-white">
               {selectedApp.student_name || `Student #${selectedApp.student}`}
             </h2>
+
             <div className="flex items-center gap-3 mt-2">
               <span
                 className={`text-xs px-3 py-1 rounded-full capitalize font-medium ${
@@ -168,6 +173,7 @@ export default function CompanyInternshipApplicationsPage() {
               >
                 {selectedApp.status}
               </span>
+
               <span className="text-xs text-white/40">
                 Applied {new Date(selectedApp.applied_at).toLocaleDateString()}
               </span>
@@ -194,8 +200,9 @@ export default function CompanyInternshipApplicationsPage() {
                   >
                     📄 Open Resume in New Tab
                   </a>
+
                   {/* PDF Preview using iframe (works best for public PDFs) */}
-                  {selectedApp.resume_url.match(/\.(pdf)$/i) ? (
+                  {selectedApp.resume_url.match(/\.pdf$/i) ? (
                     <div className="w-full h-96 rounded-xl overflow-hidden border border-white/10">
                       <iframe
                         src={`https://docs.google.com/gview?url=${encodeURIComponent(

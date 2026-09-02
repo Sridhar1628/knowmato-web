@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getInternship, createInternship, updateInternship, Internship } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyInternshipFormPage() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function CompanyInternshipFormPage() {
       setLoading(true);
       getInternship(Number(id))
         .then(setForm)
-        .catch(() => toast.error("Load failed"))
+        .catch(() => AlertService.error("Load Failed", "Load failed"))
         .finally(() => setLoading(false));
     }
   }, [id, isNew]);
@@ -65,7 +65,7 @@ export default function CompanyInternshipFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyId) {
-      toast.error("No company associated");
+      AlertService.error("Company Required", "No company associated");
       return;
     }
     setSaving(true);
@@ -73,10 +73,13 @@ export default function CompanyInternshipFormPage() {
       const data = { ...form, company: companyId }; // force company
       if (isNew) await createInternship(data);
       else await updateInternship(Number(id), data);
-      toast.success(isNew ? "Internship created" : "Internship updated");
+      AlertService.success(
+        isNew ? "Internship Created" : "Internship Updated",
+        isNew ? "Internship created" : "Internship updated"
+      );
       router.push("/company/internships");
     } catch {
-      toast.error("Save failed");
+      AlertService.error("Save Failed", "Save failed");
     } finally {
       setSaving(false);
     }

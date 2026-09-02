@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { getJobs, deleteJob, Job } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyJobsPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function CompanyJobsPage() {
       const res = await getJobs({ company: companyId });
       setJobs(res);
     } catch {
-      toast.error("Failed to load jobs");
+      AlertService.error("Load Failed", "Failed to load jobs");
     } finally {
       setLoading(false);
     }
@@ -38,10 +38,10 @@ export default function CompanyJobsPage() {
     setDeleting(true);
     try {
       await deleteJob(deleteModal.id);
-      toast.success("Job deleted");
+      AlertService.success("Job Deleted", "Job deleted");
       fetchJobs();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Delete failed");
     } finally {
       setDeleting(false);
       setDeleteModal({ open: false, id: null });

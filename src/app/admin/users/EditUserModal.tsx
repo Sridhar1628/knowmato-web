@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { adminUpdateUser, UpdateUserPayload } from "@/services/v1Service";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { motion } from "framer-motion";
 
 interface EditUserModalProps {
@@ -40,17 +40,17 @@ export default function EditUserModal({ user, onClose }: EditUserModalProps) {
       if (form.phone !== (user.phone || "")) payload.phone = form.phone;
 
       if (Object.keys(payload).length === 0) {
-        toast("No changes detected.");
+        AlertService.info("No Changes", "No changes detected.");
         setSaving(false);
         return;
       }
 
       await adminUpdateUser(user.id, payload);
-      toast.success("User updated.");
+      AlertService.success("User Updated", "User updated successfully.");
       onClose();
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update user.");
+      AlertService.error("Update Failed", "Failed to update user.");
     } finally {
       setSaving(false);
     }

@@ -8,7 +8,7 @@ import {
   type JobApplication,
 } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyJobApplicationsPage() {
   const { id: jobId } = useParams<{ id: string }>();
@@ -35,7 +35,7 @@ export default function CompanyJobApplicationsPage() {
       const msg =
         err?.response?.data?.detail || err?.message || "Failed to load applications";
       setError(msg);
-      toast.error(msg);
+      AlertService.error("Load Failed", msg);
     } finally {
       setLoading(false);
     }
@@ -57,11 +57,14 @@ export default function CompanyJobApplicationsPage() {
     setUpdateLoading(true);
     try {
       await updateJobApplicationStatus(updatingId, selectedStatus, companyNotes);
-      toast.success("Status updated successfully");
+      AlertService.success("Status Updated", "Status updated successfully");
       setUpdatingId(null);
       fetchApplications(); // refresh
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Update failed");
+      AlertService.error(
+        "Update Failed",
+        err?.response?.data?.detail || "Update failed"
+      );
     } finally {
       setUpdateLoading(false);
     }
@@ -93,7 +96,7 @@ export default function CompanyJobApplicationsPage() {
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-4 sm:p-8 relative overflow-hidden">
         {/* Background blobs */}
         <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
-        <div className="absolute top-0 -right-20 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute top-0 -right-20 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animation-delay-2000" />
 
         <div className="relative z-10">
           <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-cyan-300 mb-8">

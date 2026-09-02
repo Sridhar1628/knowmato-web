@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAdminQuizById,
   updateAdminQuiz,
@@ -68,7 +68,7 @@ export default function EditQuizPage() {
           status: q.status || 'draft',
         });
       } catch (err) {
-        toast.error('Quiz not found');
+        AlertService.error('Quiz Not Found', 'The requested quiz could not be found.');
         router.push('/admin/assessment/quizzes');
       } finally {
         setLoading(false);
@@ -107,10 +107,10 @@ export default function EditQuizPage() {
         is_active: formData.is_active,
         status: formData.status,
       });
-      toast.success('Quiz updated!');
+      AlertService.success('Quiz Updated', 'Quiz updated successfully!');
       router.push('/admin/assessment/quizzes');
     } catch (err: any) {
-      toast.error(err?.message || 'Update failed');
+      AlertService.error('Update Failed', err?.message || 'Unable to update the quiz.');
     } finally {
       setSubmitting(false);
     }

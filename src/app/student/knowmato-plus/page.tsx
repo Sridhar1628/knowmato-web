@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { RootState } from '@/redux/store';
-import { getKnowMatoPlusDashboard } from '@/services/v2Service';   // adjust import
+import { getKnowMatoPlusDashboard } from '@/services/v2Service';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
+import AlertService from "@/services/alertService";
 
 // ---------- Types (from service) ----------
 interface DashboardUserInfo {
@@ -127,7 +127,10 @@ export default function KnowMatoPlusDashboard() {
           throw new Error(res.message || 'Failed to load dashboard');
         }
       } catch (error: any) {
-        toast.error(error.message || t('dashboard.loadError'));
+        AlertService.error(
+          "Dashboard Load Failed",
+          error.message || t("dashboard.loadError"),
+        );
       } finally {
         setLoading(false);
       }

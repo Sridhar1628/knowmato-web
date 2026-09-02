@@ -7,6 +7,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import toast, { Toaster } from 'react-hot-toast';
 import { verifyForgotPasswordOTP } from '@/services/v1Service';
+import AlertService from '@/services/alertService';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -26,19 +27,89 @@ export default function VerifyForgotPasswordPage() {
   const email = searchParams.get('email') || '';
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerifyOTP = async (values: { otp: string }) => {
+  const handleVerifyOTP = async (
+    values: { otp: string },
+  ) => {
+    const normalizedOtp =
+      values.otp.trim();
+
+    if (!email) {
+      AlertService.error(
+        'Invalid Verification Request',
+        'The email address is missing from this verification link. Please request a new password reset OTP.',
+      );
+
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await verifyForgotPasswordOTP({ email, otp: values.otp });
-      toast.success('OTP verified successfully ✅');
+
+      await verifyForgotPasswordOTP({
+        email,
+        otp: normalizedOtp,
+      });
+
+      AlertService.success(
+        'OTP Verified',
+        'Your OTP has been verified successfully. You can now create a new password.',
+      );
+
       setTimeout(() => {
         router.push(
-          `/forgot-password/reset?email=${encodeURIComponent(email)}&otp=${values.otp}`
+          `/forgot-password/reset?email=${encodeURIComponent(
+            email,
+          )}&otp=${encodeURIComponent(
+            normalizedOtp,
+          )}`,
         );
       }, 1000);
-    } catch (error: any) {
-      console.error(error);
-      toast.error(error?.response?.data?.error || 'Invalid OTP');
+    } catch (error: unknown) {
+      console.error(
+        'OTP verification error:',
+        error,
+      );
+
+      let errorMessage =
+        'Invalid OTP. Please check the code and try again.';
+
+      if (
+        typeof error === 'object' &&
+        error !== null
+      ) {
+        const possibleError =
+          error as {
+            response?: {
+              data?: {
+                error?: string;
+                detail?: string;
+                message?: string;
+              };
+            };
+            message?: string;
+          };
+
+        errorMessage =
+          possibleError
+            .response
+            ?.data
+            ?.error ||
+          possibleError
+            .response
+            ?.data
+            ?.detail ||
+          possibleError
+            .response
+            ?.data
+            ?.message ||
+          possibleError.message ||
+          errorMessage;
+      }
+
+      AlertService.error(
+        'OTP Verification Failed',
+        errorMessage,
+      );
     } finally {
       setIsLoading(false);
     }
@@ -54,8 +125,6 @@ export default function VerifyForgotPasswordPage() {
       {/* Subtle grid overlay */}
       <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(#ffffff_1px,transparent_1px),linear-gradient(to_right,#ffffff_1px,transparent_1px)] [background-size:45px_45px]" />
 
-      {/* Toast notifications */}
-      <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
 
       {/* Main content */}
       <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 relative z-10">
@@ -128,10 +197,13 @@ export default function VerifyForgotPasswordPage() {
                       <Field
                         name="otp"
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
                         maxLength={6}
                         placeholder="Enter 6-digit OTP"
                         className={`block w-full rounded-xl border-2 py-3 pl-10 pr-3 text-center text-xl tracking-[8px] outline-none transition bg-gray-900/60 backdrop-blur-md text-white placeholder-white/40 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50 ${
-                          errors.otp && touched.otp
+                          errors.otp &&
+                          touched.otp
                             ? 'border-rose-400/60 bg-rose-500/10 placeholder-rose-300/50 focus:border-rose-400 focus:ring-rose-400/30'
                             : 'border-white/20'
                         }`}
@@ -200,8 +272,13 @@ export default function VerifyForgotPasswordPage() {
                   <div className="mt-6 text-center">
                     <button
                       type="button"
-                      onClick={() => router.push('/forgot-password')}
-                      className="text-sm text-white/50 transition hover:text-violet-300"
+                      disabled={isLoading}
+                      onClick={() =>
+                        router.push(
+                          '/forgot-password',
+                        )
+                      }
+                      className="text-sm text-white/50 transition hover:text-violet-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       ← Back
                     </button>

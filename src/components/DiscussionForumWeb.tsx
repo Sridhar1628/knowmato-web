@@ -20,7 +20,7 @@ import {
   type DiscussionThread,
 } from "@/services/courseService";
 
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 
 // ============================================================
@@ -1182,8 +1182,7 @@ export default function DiscussionForumWeb({
             error,
           );
 
-          toast.error(
-            "Unable to load discussions.",
+          AlertService.error("Error", "Unable to load discussions.",
           );
         } finally {
           if (
@@ -1250,9 +1249,7 @@ export default function DiscussionForumWeb({
             error,
           );
 
-          toast.error(
-            "Unable to load replies.",
-          );
+          AlertService.error("Error", "Unable to load replies.",);
         }
       },
       [],
@@ -2591,9 +2588,7 @@ export default function DiscussionForumWeb({
         !cleanTitle ||
         !cleanContent
       ) {
-        toast.error(
-          "Title and question are required.",
-        );
+        AlertService.error("Error", "Title and question are required.",);
 
         return;
       }
@@ -2647,8 +2642,7 @@ export default function DiscussionForumWeb({
         setContent("");
 
 
-        toast.success(
-          "Discussion posted.",
+        AlertService.success("Success", "Discussion posted.",
         );
 
       } catch (
@@ -2659,15 +2653,13 @@ export default function DiscussionForumWeb({
           error,
         );
 
-        toast.error(
-          error?.response
+        AlertService.error("Error", error?.response
             ?.data
             ?.detail ||
             error?.response
               ?.data
               ?.message ||
-            "Unable to create discussion.",
-        );
+            "Unable to create discussion.",);
       } finally {
         setCreating(false);
       }
@@ -2687,8 +2679,7 @@ export default function DiscussionForumWeb({
 
 
       if (!cleanReply) {
-        toast.error(
-          "Reply cannot be empty.",
+        AlertService.error("Error", "Reply cannot be empty.",
         );
 
         return;
@@ -2706,9 +2697,7 @@ export default function DiscussionForumWeb({
       if (
         thread?.is_closed
       ) {
-        toast.error(
-          "This discussion is closed.",
-        );
+        AlertService.error("Error", "This discussion is closed.",);
 
         return;
       }
@@ -2793,9 +2782,7 @@ export default function DiscussionForumWeb({
           threadId;
 
 
-        toast.success(
-          "Reply posted.",
-        );
+        AlertService.success("Success", "Reply posted.",);
 
       } catch (
         error: any
@@ -2805,15 +2792,13 @@ export default function DiscussionForumWeb({
           error,
         );
 
-        toast.error(
-          error?.response
+        AlertService.error("Error", error?.response
             ?.data
             ?.detail ||
             error?.response
               ?.data
               ?.message ||
-            "Unable to post reply.",
-        );
+            "Unable to post reply.",);
       } finally {
         setReplyLoading(
           null,
@@ -2881,9 +2866,7 @@ export default function DiscussionForumWeb({
           error,
         );
 
-        toast.error(
-          "Unable to update vote.",
-        );
+        AlertService.error("Error", "Unable to update vote.",);
       }
     };
 
@@ -2957,9 +2940,7 @@ export default function DiscussionForumWeb({
           error,
         );
 
-        toast.error(
-          "Unable to update vote.",
-        );
+        AlertService.error("Error", "Unable to update vote.",);
       }
     };
 

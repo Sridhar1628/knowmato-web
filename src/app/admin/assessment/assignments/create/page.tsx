@@ -4,8 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
-import { createAdminAssignment, CreateAdminAssignmentPayload } from '@/services/assessmentService';
+import AlertService from '@/services/alertService';
+import {
+  createAdminAssignment,
+  CreateAdminAssignmentPayload,
+} from '@/services/assessmentService';
 
 type AssignmentFormData = CreateAdminAssignmentPayload & {
   pass_percentage: string;
@@ -22,37 +25,58 @@ export default function CreateAssignmentPage() {
     time: '',
     status: '',
   });
+
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.batch) {
-      toast.error('Batch is required');
+      AlertService.error(
+        'Batch Required',
+        'Batch is required'
+      );
       return;
     }
+
     if (!formData.date_of_expiry) {
-      toast.error('Expiry date is required');
+      AlertService.error(
+        'Expiry Date Required',
+        'Expiry date is required'
+      );
       return;
     }
 
     setSubmitting(true);
+
     try {
       await createAdminAssignment({
         ...formData,
         batch: Number(formData.batch),
       });
-      toast.success('Assignment created successfully!');
+
+      AlertService.success(
+        'Success',
+        'Assignment created successfully!'
+      );
+
       router.push('/admin/assessment/assignments');
     } catch (err: any) {
-      toast.error(err?.message || 'Creation failed');
+      AlertService.error(
+        'Creation Failed',
+        err?.message || 'Creation failed'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -62,7 +86,9 @@ export default function CreateAssignmentPage() {
     <AdminLayout>
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
         <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+
         <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
         <div className="relative z-10 p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
@@ -71,15 +97,22 @@ export default function CreateAssignmentPage() {
             animate={{ opacity: 1, y: 0 }}
           >
             <button
-              onClick={() => router.push('/admin/assessment/assignments')}
+              type="button"
+              onClick={() =>
+                router.push('/admin/assessment/assignments')
+              }
               className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200"
             >
               ← Back to Assignments
             </button>
+
             <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 mb-2">
               ➕ Create Assignment
             </h1>
-            <p className="text-white/70 mb-8">Fill in the details for a new assignment.</p>
+
+            <p className="text-white/70 mb-8">
+              Fill in the details for a new assignment.
+            </p>
           </motion.div>
 
           <motion.form
@@ -94,6 +127,7 @@ export default function CreateAssignmentPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Batch ID <span className="text-red-400">*</span>
               </label>
+
               <input
                 type="number"
                 name="batch"
@@ -110,6 +144,7 @@ export default function CreateAssignmentPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Total Score
               </label>
+
               <input
                 type="text"
                 name="total_marks"
@@ -120,16 +155,20 @@ export default function CreateAssignmentPage() {
               />
             </div>
 
+            {/* Pass Percentage */}
             <div>
-              <label>Pass Percentage</label>
+              <label className="block text-sm font-medium text-white/80 mb-1">
+                Pass Percentage
+              </label>
 
-                <input
-                  type="number"
-                  name="pass_percentage"
-                  value={formData.pass_percentage}
-                  onChange={handleChange}
-                  placeholder="e.g. 40"
-                />
+              <input
+                type="number"
+                name="pass_percentage"
+                value={formData.pass_percentage}
+                onChange={handleChange}
+                placeholder="e.g. 40"
+                className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-white placeholder-white/40 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/50 transition"
+              />
             </div>
 
             {/* Date of Expiry */}
@@ -137,6 +176,7 @@ export default function CreateAssignmentPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Date of Expiry <span className="text-red-400">*</span>
               </label>
+
               <input
                 type="date"
                 name="date_of_expiry"
@@ -152,6 +192,7 @@ export default function CreateAssignmentPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Time (optional)
               </label>
+
               <input
                 type="time"
                 name="time"
@@ -166,6 +207,7 @@ export default function CreateAssignmentPage() {
               <label className="block text-sm font-medium text-white/80 mb-1">
                 Status
               </label>
+
               <select
                 name="status"
                 value={formData.status}
@@ -178,6 +220,7 @@ export default function CreateAssignmentPage() {
               </select>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}

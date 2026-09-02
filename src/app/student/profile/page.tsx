@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next"; // ✅ added
 import {
   getStudentProfile,
@@ -251,9 +251,43 @@ export default function StudentProfilePage() {
         const res = await getStudentProfile();
         const response = res as any;
         const data = response?.data?.data ?? response?.data ?? res;
-        setProfile(data);
+
+        if (data) {
+          setProfile({
+            ...data,
+            preferred_languages: Array.isArray(data.preferred_languages)
+              ? data.preferred_languages
+              : [],
+            subjects: Array.isArray(data.subjects) ? data.subjects : [],
+            learning_goals: Array.isArray(data.learning_goals)
+              ? data.learning_goals
+              : [],
+            session_types: Array.isArray(data.session_types)
+              ? data.session_types
+              : [],
+            preferred_time: Array.isArray(data.preferred_time)
+              ? data.preferred_time
+              : [],
+            full_name: data.full_name ?? "",
+            email: data.email ?? "",
+            mobile_number: data.mobile_number ?? "",
+            education_level: data.education_level ?? "",
+            grade_year: data.grade_year ?? "",
+            stream_category: data.stream_category ?? "",
+            stream: data.stream ?? "",
+            skill_level: data.skill_level ?? "",
+            about_learning: data.about_learning ?? "",
+          });
+        }
       } catch (err: any) {
-        toast.error(t("studentProfile.loadError"));
+        AlertService.error(
+          t("studentProfile.loadErrorTitle", {
+            defaultValue: "Unable to Load Profile",
+          }),
+          t("studentProfile.loadError", {
+            defaultValue: "Failed to load your profile. Please try again.",
+          }),
+        );
       } finally {
         setLoading(false);
       }
@@ -268,27 +302,42 @@ export default function StudentProfilePage() {
     try {
       const formData = buildStudentProfileFormData(
         {
-          full_name: profile.full_name,
-          email: profile.email,
-          mobile_number: profile.mobile_number,
-          education_level: profile.education_level,
-          grade_year: profile.grade_year,
-          stream_category: profile.stream_category,
-          stream: profile.stream,
+          full_name: profile.full_name.trim(),
+          email: profile.email.trim(),
+          mobile_number: profile.mobile_number.trim(),
+          education_level: profile.education_level.trim(),
+          grade_year: profile.grade_year.trim(),
+          stream_category: profile.stream_category.trim(),
+          stream: profile.stream.trim(),
           preferred_languages: profile.preferred_languages,
           subjects: profile.subjects,
           learning_goals: profile.learning_goals,
           session_types: profile.session_types,
           preferred_time: profile.preferred_time,
-          skill_level: profile.skill_level,
-          about_learning: profile.about_learning,
+          skill_level: profile.skill_level.trim(),
+          about_learning: profile.about_learning.trim(),
         },
         profilePhoto
       );
       await updateStudentProfile(formData);
-      toast.success(t("studentProfile.updated"));
+      AlertService.success(
+        t("studentProfile.updateSuccessTitle", {
+          defaultValue: "Profile Updated",
+        }),
+        t("studentProfile.updated", {
+          defaultValue: "Your profile has been updated successfully.",
+        }),
+      );
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || t("studentProfile.updateFailed"));
+      AlertService.error(
+        t("studentProfile.updateFailedTitle", {
+          defaultValue: "Update Failed",
+        }),
+        err?.response?.data?.error ||
+          t("studentProfile.updateFailed", {
+            defaultValue: "Failed to update your profile. Please try again.",
+          }),
+      );
     } finally {
       setSaving(false);
     }
@@ -427,7 +476,7 @@ export default function StudentProfilePage() {
             <div className="mt-6 space-y-6">
               <AutocompleteChipInput
                 label={t("studentProfile.languagesLabel")}
-                items={profile.preferred_languages}
+                items={profile.preferred_languages || []}
                 onChange={(items) => setProfile({ ...profile, preferred_languages: items })}
                 suggestions={LANGUAGE_OPTIONS}
                 placeholder={t("studentProfile.languagesPlaceholder")}
@@ -435,7 +484,7 @@ export default function StudentProfilePage() {
               />
               <AutocompleteChipInput
                 label={t("studentProfile.subjectsLabel")}
-                items={profile.subjects}
+                items={profile.subjects || []}
                 onChange={(items) => setProfile({ ...profile, subjects: items })}
                 suggestions={SUBJECT_OPTIONS}
                 placeholder={t("studentProfile.subjectsPlaceholder")}
@@ -443,7 +492,7 @@ export default function StudentProfilePage() {
               />
               <AutocompleteChipInput
                 label={t("studentProfile.goalsLabel")}
-                items={profile.learning_goals}
+                items={profile.learning_goals || []}
                 onChange={(items) => setProfile({ ...profile, learning_goals: items })}
                 suggestions={LEARNING_GOAL_OPTIONS}
                 placeholder={t("studentProfile.goalsPlaceholder")}
@@ -451,7 +500,7 @@ export default function StudentProfilePage() {
               />
               <AutocompleteChipInput
                 label={t("studentProfile.sessionTypesLabel")}
-                items={profile.session_types}
+                items={profile.session_types || []}
                 onChange={(items) => setProfile({ ...profile, session_types: items })}
                 suggestions={SESSION_TYPE_OPTIONS}
                 placeholder={t("studentProfile.sessionTypesPlaceholder")}
@@ -459,7 +508,7 @@ export default function StudentProfilePage() {
               />
               <AutocompleteChipInput
                 label={t("studentProfile.preferredTimeLabel")}
-                items={profile.preferred_time}
+                items={profile.preferred_time || []}
                 onChange={(items) => setProfile({ ...profile, preferred_time: items })}
                 suggestions={PREFERRED_TIME_OPTIONS}
                 placeholder={t("studentProfile.preferredTimePlaceholder")}

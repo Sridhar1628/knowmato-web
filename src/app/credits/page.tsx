@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { load } from "@cashfreepayments/cashfree-js";
-
+import AlertService from "@/services/alertService";
 // Existing services (adjust paths as needed)
 import {
   getPlans,
@@ -73,51 +73,209 @@ const CreditPlansPage = () => {
   };
 
   const handlePurchase = async () => {
-    if (!selectedPlan) return;
+    // ==========================================================
+    // VALIDATE SELECTED PLAN
+    // ==========================================================
+
+    if (!selectedPlan) {
+      AlertService.warning(
+        "No Plan Selected",
+        "Please select a credit plan before continuing.",[]
+      );
+
+      return;
+    }
+
+    // ==========================================================
+    // PREVENT DUPLICATE PURCHASE
+    // ==========================================================
+
+    if (
+      purchasingPlanId ===
+      selectedPlan.id
+    ) {
+      return;
+    }
 
     try {
-      setPurchasingPlanId(selectedPlan.id);
+      setPurchasingPlanId(
+        selectedPlan.id,
+      );
 
-      const response = await createCreditOrder(selectedPlan.id);
+      // ========================================================
+      // CREATE CASHFREE ORDER
+      // ========================================================
 
-      console.log("CREATE ORDER RESPONSE:", response);
+      const response =
+        await createCreditOrder(
+          selectedPlan.id,
+        );
 
-      if (!response.success) {
-        alert(response.message || "Unable to create payment.");
+      console.log(
+        "CREATE ORDER RESPONSE:",
+        response,
+      );
+
+      // ========================================================
+      // CHECK ORDER CREATION
+      // ========================================================
+
+      if (
+        !response?.success
+      ) {
+        AlertService.error(
+          "Payment Unavailable",
+          response?.message ||
+            "Unable to create the payment order. Please try again.",
+        );
+
         return;
       }
 
-      const paymentData = response.data;
+      const paymentData =
+        response?.data;
 
-      console.log("ORDER ID:", paymentData.order_id);
-      console.log("PAYMENT SESSION:", paymentData.payment_session_id);
+      // ========================================================
+      // VALIDATE PAYMENT DATA
+      // ========================================================
+
+      if (
+        !paymentData?.order_id ||
+        !paymentData
+          ?.payment_session_id
+      ) {
+        AlertService.error(
+          "Payment Unavailable",
+          "The payment session could not be created. Please try again.",
+        );
+
+        return;
+      }
+
+      console.log(
+        "ORDER ID:",
+        paymentData.order_id,
+      );
+
+      console.log(
+        "PAYMENT SESSION:",
+        paymentData.payment_session_id,
+      );
+
+      // ========================================================
+      // SAVE ORDER ID
+      // ========================================================
 
       localStorage.setItem(
         "credit_order_id",
-        paymentData.order_id
+        paymentData.order_id,
       );
 
-      const cashfree = await load({
-        mode:
-          process.env.NEXT_PUBLIC_CASHFREE_ENV === "PRODUCTION"
-            ? "production"
-            : "sandbox",
-      });
+      // ========================================================
+      // LOAD CASHFREE
+      // ========================================================
+
+      const cashfree =
+        await load({
+          mode:
+            process.env
+              .NEXT_PUBLIC_CASHFREE_ENV ===
+            "PRODUCTION"
+              ? "production"
+              : "sandbox",
+        });
+
+      // ========================================================
+      // CASHFREE LOAD FAILURE
+      // ========================================================
 
       if (!cashfree) {
-        alert("Unable to load Cashfree.");
+        AlertService.error(
+          "Payment Unavailable",
+          "The payment service could not be loaded. Please try again.",
+        );
+
         return;
       }
 
+      // ========================================================
+      // CLOSE OUR CONFIRMATION MODAL
+      // ========================================================
+
+      setShowPurchaseModal(
+        false,
+      );
+
+      // ========================================================
+      // OPEN CASHFREE CHECKOUT
+      // ========================================================
+
       await cashfree.checkout({
-        paymentSessionId: paymentData.payment_session_id,
-        redirectTarget: "_self",
+        paymentSessionId:
+          paymentData.payment_session_id,
+
+        redirectTarget:
+          "_self",
       });
-    } catch (error: any) {
-      console.error(error);
-      alert(error?.message || "Unable to start payment.");
+    } catch (error: unknown) {
+      console.error(
+        "Credit purchase error:",
+        error,
+      );
+
+      // ========================================================
+      // EXTRACT ERROR MESSAGE
+      // ========================================================
+
+      let message =
+        "Unable to start payment. Please try again.";
+
+      if (
+        typeof error ===
+          "object" &&
+        error !== null
+      ) {
+        const possibleError =
+          error as {
+            response?: {
+              data?: {
+                message?: string;
+                detail?: string;
+                error?: string;
+              };
+            };
+            message?: string;
+          };
+
+        message =
+          possibleError
+            .response
+            ?.data
+            ?.message ||
+          possibleError
+            .response
+            ?.data
+            ?.detail ||
+          possibleError
+            .response
+            ?.data
+            ?.error ||
+          possibleError.message ||
+          message;
+      }
+
+      // ========================================================
+      // ERROR ALERT
+      // ========================================================
+
+      AlertService.error(
+        "Payment Failed",
+        message,
+      );
     } finally {
-      setPurchasingPlanId(null);
+      setPurchasingPlanId(
+        null,
+      );
     }
   };
   // Helper to format date

@@ -6,7 +6,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { getReportAnalytics } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface ReasonBreakdown {
@@ -139,7 +139,7 @@ export default function ReportAnalyticsPage() {
       setAnalytics(data);
     } catch (err: any) {
       setError(err?.message || "Failed to load analytics");
-      toast.error("Failed to load analytics");
+      AlertService.error("Load Failed", "Failed to load analytics");
     } finally {
       setLoading(false);
     }

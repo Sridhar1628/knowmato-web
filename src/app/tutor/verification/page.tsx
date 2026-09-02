@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next"; // ✅
 
 import {
@@ -133,7 +133,7 @@ export default function TutorVerificationPage() {
         setEditing(true);
       }
     } catch {
-      toast.error(t("bankVerification.loadError"));
+      AlertService.error("Error", t("bankVerification.loadError"));
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,7 @@ export default function TutorVerificationPage() {
     if (file) {
       const error = validateFile(file);
       if (error) {
-        toast.error(error);
+        AlertService.error("Invalid File", error);
         return;
       }
       if (bankProofPreview.startsWith("blob:")) URL.revokeObjectURL(bankProofPreview);
@@ -174,7 +174,7 @@ export default function TutorVerificationPage() {
     if (file) {
       const error = validateFile(file);
       if (error) {
-        toast.error(error);
+        AlertService.error("Invalid File", error);
         return;
       }
       if (panCardPreview.startsWith("blob:")) URL.revokeObjectURL(panCardPreview);
@@ -187,62 +187,62 @@ export default function TutorVerificationPage() {
   // ---------- Form Validation ----------
   const validateForm = (): boolean => {
     if (!form.account_holder_name.trim()) {
-      toast.error(t("bankVerification.holderNameRequired"));
+      AlertService.error("Validation Error", t("bankVerification.holderNameRequired"));
       return false;
     }
     if (!form.account_number.trim()) {
-      toast.error(t("bankVerification.accountRequired"));
+      AlertService.error("Validation Error", t("bankVerification.accountRequired"));
       return false;
     }
     if (form.account_number !== form.confirm_account_number) {
-      toast.error(t("bankVerification.accountMismatch"));
+      AlertService.error("Validation Error", t("bankVerification.accountMismatch"));
       return false;
     }
     if (!IFSC_REGEX.test(form.ifsc_code.toUpperCase())) {
-      toast.error(t("bankVerification.ifscInvalid"));
+      AlertService.error("Validation Error", t("bankVerification.ifscInvalid"));
       return false;
     }
     if (!form.bank_name.trim()) {
-      toast.error(t("bankVerification.bankRequired"));
+      AlertService.error("Validation Error", t("bankVerification.bankRequired"));
       return false;
     }
     if (!form.branch_name.trim()) {
-      toast.error(t("bankVerification.branchRequired"));
+      AlertService.error("Validation Error", t("bankVerification.branchRequired"));
       return false;
     }
     if (!PAN_REGEX.test(form.pan_number.toUpperCase())) {
-      toast.error(t("bankVerification.panInvalid"));
+      AlertService.error("Validation Error", t("bankVerification.panInvalid"));
       return false;
     }
     if (form.aadhaar_number && !AADHAAR_REGEX.test(form.aadhaar_number)) {
-      toast.error(t("bankVerification.aadhaarInvalid"));
+      AlertService.error("Validation Error", t("bankVerification.aadhaarInvalid"));
       return false;
     }
     if (!MOBILE_REGEX.test(form.mobile_number)) {
-      toast.error(t("bankVerification.mobileInvalid"));
+      AlertService.error("Validation Error", t("bankVerification.mobileInvalid"));
       return false;
     }
     if (!submitted) {
       if (!bankProof) {
-        toast.error(t("bankVerification.bankProofRequired"));
+        AlertService.error("Documents Required", t("bankVerification.bankProofRequired"));
         return false;
       }
       if (!panCard) {
-        toast.error(t("bankVerification.panCardRequired"));
+        AlertService.error("Documents Required", t("bankVerification.panCardRequired"));
         return false;
       }
     } else {
       if (!bankProof && !bankProofPreview) {
-        toast.error(t("bankVerification.bankProofRequired"));
+        AlertService.error("Documents Required", t("bankVerification.bankProofRequired"));
         return false;
       }
       if (!panCard && !panCardPreview) {
-        toast.error(t("bankVerification.panCardRequired"));
+        AlertService.error("Documents Required", t("bankVerification.panCardRequired"));
         return false;
       }
     }
     if (!form.agreed) {
-      toast.error(t("bankVerification.agreementRequired"));
+      AlertService.error("Agreement Required", t("bankVerification.agreementRequired"));
       return false;
     }
     return true;
@@ -270,20 +270,30 @@ export default function TutorVerificationPage() {
     if (panCard) formData.append("pan_card", panCard);
 
     try {
+      const successMessage = !submitted
+        ? t("bankVerification.submitted")
+        : t("bankVerification.updated");
+
       if (!submitted) {
         await submitTutorBankVerification(formData);
-        toast.success(t("bankVerification.submitted"));
       } else {
         await updateTutorBankVerification(formData);
-        toast.success(t("bankVerification.updated"));
       }
-      setTimeout(async () => {
-        await fetchVerification();
-        router.replace("/tutor/wallet");
-      }, 2000);
+
+      setSaving(false);
+      AlertService.confirm(
+        "Success",
+        successMessage,
+        async () => {
+          await fetchVerification();
+          router.replace("/tutor/wallet");
+        },
+        "Continue",
+        "Stay"
+      );
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || t("bankVerification.error");
-      toast.error(msg);
+      AlertService.error("Error", msg);
       setSaving(false);
     }
   };

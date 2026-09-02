@@ -8,7 +8,7 @@ import {
   InternshipApplication,
 } from "@/services/v2Service";
 import CompanyLayout from "@/app/company/layout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function CompanyInternshipApplicationsPage() {
   const { id: internshipId } = useParams();
@@ -21,7 +21,7 @@ export default function CompanyInternshipApplicationsPage() {
       const res = await getInternshipApplications({ internship: Number(internshipId) });
       setApps(res);
     } catch {
-      toast.error("Failed to load applications");
+      AlertService.error("Load Failed", "Failed to load applications");
     } finally {
       setLoading(false);
     }
@@ -34,10 +34,10 @@ export default function CompanyInternshipApplicationsPage() {
   const updateStatus = async (appId: number, status: string) => {
     try {
       await updateInternshipApplicationStatus(appId, status);
-      toast.success("Status updated");
+      AlertService.success("Status Updated", "Status updated");
       fetchApps();
     } catch {
-      toast.error("Update failed");
+      AlertService.error("Update Failed", "Update failed");
     }
   };
 

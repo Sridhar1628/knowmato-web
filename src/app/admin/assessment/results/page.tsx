@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAdminAssignments,
   getAdminAttempts,
@@ -31,7 +31,7 @@ export default function AdminResultsPage() {
         const data = await getAdminAssignments();
         setAssignments(data || []);
       } catch {
-        toast.error('Failed to load assignments');
+        AlertService.error('Load Failed', 'Failed to load assignments');
       }
     };
     fetchAssignments();
@@ -48,7 +48,7 @@ export default function AdminResultsPage() {
       const data = await getAdminAttempts(filters);
       setAttempts(data || []);
     } catch (err) {
-      toast.error('Failed to load results');
+      AlertService.error('Load Failed', 'Failed to load results');
     } finally {
       setLoading(false);
     }

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next";
 
 export default function HelpSupportPage() {
@@ -31,13 +31,19 @@ export default function HelpSupportPage() {
   const handleTicketSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!ticket.subject || !ticket.category || !ticket.description) {
-      toast.error(t("helpSupport.toast.fillAllFields"));
+      AlertService.error(
+        "Missing Information",
+        t("helpSupport.toast.fillAllFields")
+      );
       return;
     }
     setSubmitting(true);
     // Simulate API call
     setTimeout(() => {
-      toast.success(t("helpSupport.toast.ticketRaised"));
+      AlertService.success(
+        "Ticket Raised",
+        t("helpSupport.toast.ticketRaised")
+      );
       setTicket({ subject: "", category: "", description: "" });
       setSubmitting(false);
     }, 1500);
@@ -45,7 +51,10 @@ export default function HelpSupportPage() {
 
   const copyEmail = () => {
     navigator.clipboard.writeText("support@knowmato.in");
-    toast.success(t("helpSupport.toast.emailCopied"));
+    AlertService.success(
+      "Email Copied",
+      t("helpSupport.toast.emailCopied")
+    );
   };
 
   return (
@@ -185,7 +194,10 @@ export default function HelpSupportPage() {
                     category: "technical",
                     description: "Describe the bug...",
                   });
-                  toast.success(t("helpSupport.toast.bugReportPreFilled"));
+                  AlertService.success(
+                    "Bug Report",
+                    t("helpSupport.toast.bugReportPreFilled")
+                  );
                 }}
                 className="rounded-xl bg-red-500/10 border border-red-400/30 text-red-300 font-semibold py-3 px-4 hover:bg-red-500/20 transition text-left"
               >
@@ -198,7 +210,10 @@ export default function HelpSupportPage() {
                     category: "other",
                     description: "I'd like to suggest...",
                   });
-                  toast.success(t("helpSupport.toast.featureRequestPreFilled"));
+                  AlertService.success(
+                    "Feature Request",
+                    t("helpSupport.toast.featureRequestPreFilled")
+                  );
                 }}
                 className="rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 font-semibold py-3 px-4 hover:bg-cyan-500/20 transition text-left"
               >
@@ -211,7 +226,10 @@ export default function HelpSupportPage() {
                     category: "abuse",
                     description: "User ID or details...",
                   });
-                  toast.success(t("helpSupport.toast.reportAbusePreFilled"));
+                  AlertService.success(
+                    "Report Abuse",
+                    t("helpSupport.toast.reportAbusePreFilled")
+                  );
                 }}
                 className="rounded-xl bg-yellow-500/10 border border-yellow-400/30 text-yellow-300 font-semibold py-3 px-4 hover:bg-yellow-500/20 transition text-left"
               >
@@ -219,9 +237,26 @@ export default function HelpSupportPage() {
               </button>
               <button
                 onClick={() => {
-                  if (window.confirm(t("helpSupport.toast.deleteAccountConfirm"))) {
-                    toast.success(t("helpSupport.toast.deleteAccountSent"));
-                  }
+                  AlertService.confirm(
+                    "Delete Account",
+                    t("helpSupport.toast.deleteAccountConfirm"),
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel",
+                      },
+                      {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => {
+                          AlertService.success(
+                            "Request Sent",
+                            t("helpSupport.toast.deleteAccountSent")
+                          );
+                        },
+                      },
+                    ]
+                  );
                 }}
                 className="rounded-xl bg-pink-500/10 border border-pink-400/30 text-pink-300 font-semibold py-3 px-4 hover:bg-pink-500/20 transition text-left"
               >

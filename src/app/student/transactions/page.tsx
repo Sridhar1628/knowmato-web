@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getTransactionHistory } from "@/services/v1Service";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getTokens } from "@/services/storageService";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { apiGet } from "@/services/apiService";
 import { motion } from "framer-motion";
 
@@ -41,13 +41,21 @@ interface Section {
   data: Transaction[];
 }
 
-const filters = ["All", "Added", "Spent", "Bonus"];
+type TransactionFilter = "All" | "Added" | "Spent" | "Bonus";
+
+const filters: TransactionFilter[] = [
+  "All",
+  "Added",
+  "Spent",
+  "Bonus",
+];
 
 export default function TransactionHistoryPage() {
   const router = useRouter();
   const [, forceUpdate] = useState({});
 
-  const [selectedFilter, setSelectedFilter] = useState("All");
+  const [selectedFilter, setSelectedFilter] =
+    useState<TransactionFilter>("All");
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -76,7 +84,10 @@ export default function TransactionHistoryPage() {
     }));
   };
 
-  const filterTransactions = (transactions: Transaction[], filter: string) => {
+  const filterTransactions = (
+    transactions: Transaction[],
+    filter: TransactionFilter,
+  ) => {
     if (filter === "Added") return transactions.filter((tx) => tx.type === "credit");
     if (filter === "Spent") return transactions.filter((tx) => tx.type === "debit");
     if (filter === "Bonus")
@@ -91,7 +102,10 @@ export default function TransactionHistoryPage() {
     try {
       setRefreshing(true);
       const res = await getTransactionHistory();
-      const data: Transaction[] = res.results.transactions;
+      const data: Transaction[] =
+        Array.isArray(res?.results?.transactions)
+          ? res.results.transactions
+          : [];
       const filtered = filterTransactions(data, selectedFilter);
       const grouped = groupByMonth(filtered);
 
@@ -121,7 +135,10 @@ export default function TransactionHistoryPage() {
       }, res.next || null);
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      toast.error("Failed to load transactions.");
+      AlertService.error(
+        "Transaction History Error",
+        "Failed to load transactions. Please try again.",
+      );
     } finally {
       setRefreshing(false);
     }
@@ -142,7 +159,10 @@ export default function TransactionHistoryPage() {
     try {
       setLoadingMore(true);
       const res = await apiGet(transactionCache.nextPage);
-      const more: Transaction[] = res.results.transactions;
+      const more: Transaction[] =
+        Array.isArray(res?.results?.transactions)
+          ? res.results.transactions
+          : [];
       const updated = [...transactionCache.transactions, ...more];
       const filtered = filterTransactions(updated, selectedFilter);
       const grouped = groupByMonth(filtered);
@@ -173,7 +193,10 @@ export default function TransactionHistoryPage() {
       }, res.next || null);
     } catch (err) {
       console.error("Load more error:", err);
-      toast.error("Failed to load more transactions.");
+      AlertService.error(
+        "Load More Failed",
+        "Failed to load more transactions. Please try again.",
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -221,6 +244,7 @@ export default function TransactionHistoryPage() {
         {/* Header */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 flex items-center justify-between mb-6 shadow-2xl">
           <button
+            type="button"
             onClick={() => router.back()}
             className="p-2 rounded-xl hover:bg-white/10 transition text-white/80 hover:text-white"
           >
@@ -250,7 +274,7 @@ export default function TransactionHistoryPage() {
               className={`rounded-2xl p-4 backdrop-blur-md border shadow-lg text-center ${card.bg}`}
             >
               <p className="text-xs text-white/50">{card.label}</p>
-              <p className={`text-lg font-bold mt-1 ${card.color}`}>₹{card.value}</p>
+              <p className={`text-lg font-bold mt-1 ${card.color}`}>₹{Number(card.value || 0).toFixed(2)}</p>
             </motion.div>
           ))}
         </div>
@@ -268,6 +292,7 @@ export default function TransactionHistoryPage() {
             return (
               <button
                 key={f}
+                type="button"
                 onClick={() => setSelectedFilter(f)}
                 className={`flex items-center gap-1 px-4 py-2 rounded-2xl font-semibold text-sm transition whitespace-nowrap ${
                   active
@@ -406,6 +431,7 @@ export default function TransactionHistoryPage() {
         {/* Load more */}
         {transactionCache.nextPage && (
           <button
+            type="button"
             onClick={loadMore}
             disabled={loadingMore}
             className="w-full mt-6 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold py-3 rounded-xl disabled:opacity-70 transition shadow-lg shadow-violet-500/25"

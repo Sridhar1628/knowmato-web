@@ -17,12 +17,12 @@ import type {
 } from "@/services/v2Service";
 import CourseVideoPlayer from "@/components/CourseVideoPlayer";
 import DiscussionForumWeb from "@/components/DiscussionForumWeb";
-import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import type {
   CourseProgressResponse,
 } from "@/services/courseService";
 import {getCourseProgress,completeLecture,} from "@/services/courseService";
+import AlertService from "@/services/alertService";
 
 interface Lecture {
   id: number;
@@ -368,7 +368,11 @@ export default function CourseDetailPage() {
 
   const selectLecture = async (lecture: Lecture, sectionId: number) => {
     if (!isEnrolled && !lecture.is_preview) {
-      toast.error(t("courseDetail.enrollToAccessMessage"));
+      AlertService.warning(
+        "Enrollment Required",
+        t("courseDetail.enrollToAccessMessage"),
+        [],
+      );
       return;
     }
 
@@ -409,7 +413,11 @@ export default function CourseDetailPage() {
 
   const selectQuiz = async (quiz: Quiz, sectionId: number) => {
     if (!isEnrolled) {
-      toast.error(t("courseDetail.enrollToAccessMessage"));
+      AlertService.warning(
+        "Enrollment Required",
+        t("courseDetail.enrollToAccessMessage"),
+        [],
+      );
       return;
     }
 
@@ -435,7 +443,10 @@ export default function CourseDetailPage() {
       setQuizQuestions(normalizeQuizQuestions(questions));
     } catch (err) {
       console.error("Quiz load failed:", err);
-      toast.error(t("courseDetail.quizLoadError"));
+      AlertService.error(
+        "Quiz Error",
+        t("courseDetail.quizLoadError"),
+      );
     } finally {
       setQuizLoading(false);
     }
@@ -450,15 +461,19 @@ export default function CourseDetailPage() {
       await purchaseCourse(course.id);
 
       setIsEnrolled(true);
-      toast.success(t("courseDetail.enrollSuccess"));
+      AlertService.success(
+        "Enrollment Successful",
+        t("courseDetail.enrollSuccess"),
+      );
 
       await loadCourseProgress();
     } catch (err: any) {
-      toast.error(
+      AlertService.error(
+        "Enrollment Failed",
         err?.response?.data?.detail ||
           err?.response?.data?.message ||
           err?.message ||
-          t("courseDetail.enrollFailed"),
+          t("courseDetail.enrollFailed")
       );
     } finally {
       setEnrollLoading(false);
@@ -586,7 +601,10 @@ export default function CourseDetailPage() {
         );
       }
 
-      toast.success("Lecture completed.");
+      AlertService.success(
+        "Lecture Completed",
+        "Lecture completed.",
+      );
 
       await loadCourseProgress();
     } catch (err) {
@@ -595,7 +613,10 @@ export default function CourseDetailPage() {
   };
 
   const handleVideoError = () => {
-    toast.error("Video could not be loaded.");
+    AlertService.error(
+      "Video Error",
+      "Video could not be loaded.",
+    );
   };
 
   const handleQuizOption = (optionId: number) => {
@@ -606,7 +627,11 @@ export default function CourseDetailPage() {
     const question = quizQuestions[currentQuestionIndex];
 
     if (!question || selectedOption === null) {
-      toast.error(t("courseDetail.pleaseSelectOption"));
+      AlertService.warning(
+        "Option Required",
+        t("courseDetail.pleaseSelectOption"),
+        [],
+      );
       return;
     }
 

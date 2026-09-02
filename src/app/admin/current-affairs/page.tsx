@@ -12,7 +12,7 @@ import {
   UpdateCurrentAffairPayload,
 } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 const CATEGORIES = [
   "technology",
@@ -47,7 +47,7 @@ export default function AdminCurrentAffairsPage() {
       const res = await getAdminCurrentAffairs();
       setAffairs(res.data || res?.data || []);
     } catch (error) {
-      toast.error("Failed to load current affairs.");
+      AlertService.error("Load Failed", "Failed to load current affairs.");
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export default function AdminCurrentAffairsPage() {
           ...(form.image ? { image: form.image } : {}),
         };
         await updateCurrentAffair(editingId, payload);
-        toast.success("Current affair updated.");
+        AlertService.success("Current Affair Updated", "Current affair updated.");
       } else {
         // Create
         const payload: CreateCurrentAffairPayload = {
@@ -109,13 +109,13 @@ export default function AdminCurrentAffairsPage() {
           ...(form.image ? { image: form.image } : {}),
         };
         await createCurrentAffair(payload);
-        toast.success("Current affair created.");
+        AlertService.success("Current Affair Created", "Current affair created.");
       }
       closeModal();
       fetchAffairs();
     } catch (error: any) {
       const msg = error?.response?.data?.error || "Operation failed.";
-      toast.error(msg);
+      AlertService.error("Operation Failed", msg);
     } finally {
       setSubmitting(false);
     }
@@ -123,14 +123,26 @@ export default function AdminCurrentAffairsPage() {
 
   // ---------- delete ----------
   const handleDelete = async (id: number, title: string) => {
-    if (!window.confirm(`Delete "${title}"?`)) return;
-    try {
-      await deleteCurrentAffair(id);
-      toast.success("Deleted successfully.");
-      fetchAffairs();
-    } catch (error) {
-      toast.error("Deletion failed.");
-    }
+    AlertService.confirm(
+      "Delete Current Affair",
+      `Are you sure you want to delete "${title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteCurrentAffair(id);
+              AlertService.success("Deleted Successfully", "Current affair deleted successfully.");
+              fetchAffairs();
+            } catch (error) {
+              AlertService.error("Deletion Failed", "Deletion failed.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ---------- image preview ----------

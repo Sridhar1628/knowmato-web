@@ -6,6 +6,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { verifyCreditPayment } from "@/services/v1Service";
+import AlertService from "@/services/alertService";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -176,8 +177,15 @@ const PaymentSuccessPage: React.FC = () => {
         searchParams.get("source");
 
       if (!orderId) {
+        const errorMessage = "Order ID not found.";
+
         setSuccess(false);
-        setMessage("Order ID not found.");
+        setMessage(errorMessage);
+
+        AlertService.error(
+          "Payment Verification Failed",
+          errorMessage
+        );
 
         scheduleRedirect(
           "/student/credits",
@@ -213,6 +221,11 @@ const PaymentSuccessPage: React.FC = () => {
       setMessage(res.message);
 
       if (!res.success) {
+        AlertService.error(
+          "Payment Failed",
+          res.message || "Unable to complete the credit purchase."
+        );
+
         scheduleRedirect(
           "/student/credits",
           FAILURE_REDIRECT_DELAY_MS
@@ -260,17 +273,45 @@ const PaymentSuccessPage: React.FC = () => {
         REDIRECT_DELAY_MS
       );
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(
         "PAYMENT VERIFICATION ERROR:",
         err
       );
 
+      let errorMessage =
+        "Unable to verify payment.";
+
+      if (
+        typeof err === "object" &&
+        err !== null
+      ) {
+        const possibleError = err as {
+          response?: {
+            data?: {
+              message?: string;
+              detail?: string;
+              error?: string;
+            };
+          };
+          message?: string;
+        };
+
+        errorMessage =
+          possibleError.response?.data?.message ||
+          possibleError.response?.data?.detail ||
+          possibleError.response?.data?.error ||
+          possibleError.message ||
+          errorMessage;
+      }
+
       setSuccess(false);
 
-      setMessage(
-        err?.response?.data?.message ||
-          "Unable to verify payment."
+      setMessage(errorMessage);
+
+      AlertService.error(
+        "Payment Verification Failed",
+        errorMessage
       );
 
       scheduleRedirect(

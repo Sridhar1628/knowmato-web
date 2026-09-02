@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { getTutorProfile, updateTutorProfile } from "@/services/v1Service";
-import { useTranslation } from "react-i18next"; // ✅ added
+import { useTranslation } from "react-i18next";
 
 // ---------- Types (matching real API) ----------
 interface TutorProfileData {
@@ -40,16 +40,21 @@ interface TutorProfileData {
 // ---------- Helper: get user name from JWT ----------
 function getUserNameFromToken(): string {
   try {
-    const token = JSON.parse(localStorage.getItem("access_token") || "null") as string;
+    const token = JSON.parse(
+      localStorage.getItem("access_token") || "null"
+    ) as string;
+
     if (!token) return "Tutor";
+
     const payload = JSON.parse(atob(token.split(".")[1]));
+
     return payload.display_name || payload.email || "Tutor";
   } catch {
     return "Tutor";
   }
 }
 
-// ---------- Chip Input Component (dark themed) ----------
+// ---------- Chip Input Component ----------
 const ChipInput = ({
   items,
   onChange,
@@ -63,9 +68,11 @@ const ChipInput = ({
 
   const addItem = () => {
     const trimmed = input.trim();
+
     if (trimmed && !items.includes(trimmed)) {
       onChange([...items, trimmed]);
     }
+
     setInput("");
   };
 
@@ -73,7 +80,7 @@ const ChipInput = ({
     onChange(items.filter((i) => i !== item));
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
       addItem();
@@ -86,19 +93,22 @@ const ChipInput = ({
     <div className="flex flex-wrap items-center gap-2 border-2 border-white/20 rounded-xl px-3 py-2 bg-gray-900/60 focus-within:ring-4 focus-within:ring-violet-500/50 focus-within:border-violet-400 transition">
       {items.map((item, idx) => (
         <span
-          key={idx}
+          key={`${item}-${idx}`}
           className="inline-flex items-center gap-1 bg-violet-500/20 text-violet-300 px-2.5 py-0.5 rounded-full text-sm border border-violet-400/30"
         >
           {item}
+
           <button
             type="button"
             onClick={() => removeItem(item)}
             className="hover:text-rose-400 transition"
+            aria-label={`Remove ${item}`}
           >
             ×
           </button>
         </span>
       ))}
+
       <input
         type="text"
         value={input}
@@ -112,15 +122,17 @@ const ChipInput = ({
   );
 };
 
-// ---------- Skeleton Loader (dark) ----------
+// ---------- Skeleton Loader ----------
 const ProfileSkeleton = () => (
   <div className="space-y-6 animate-pulse p-2">
     <div className="h-10 w-2/3 bg-white/10 rounded-xl" />
+
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="h-24 bg-white/10 rounded-2xl" />
       ))}
     </div>
+
     {[...Array(5)].map((_, i) => (
       <div key={i} className="h-40 bg-white/10 rounded-2xl" />
     ))}
@@ -128,68 +140,125 @@ const ProfileSkeleton = () => (
 );
 
 export default function TutorProfilePage() {
-  const { t } = useTranslation(); // ✅
+  const { t } = useTranslation();
+
   const [profile, setProfile] = useState<TutorProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+
   const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const displayName = getUserNameFromToken();
 
+  // ---------- Fetch Profile ----------
   useEffect(() => {
-    const fetch = async () => {
+    const fetchProfile = async () => {
       try {
         const res = await getTutorProfile();
         setProfile(res.data);
-      } catch (err: any) {
-        toast.error(t("tutorProfile.loadError"));
+      } catch (error) {
+        console.error("Failed to load tutor profile:", error);
+
+        AlertService.error(
+          t("common.error"),
+          t("tutorProfile.loadError")
+        );
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+
+    fetchProfile();
   }, [t]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // ---------- Update Profile ----------
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!profile) return;
+
+    if (!profile || saving) return;
+
     setSaving(true);
+
     const formData = new FormData();
+
     formData.append("bio", profile.bio || "");
     formData.append("skills", profile.skills || "");
     formData.append("experience", String(profile.experience || 0));
     formData.append("phone_number", profile.phone_number || "");
     formData.append("city_state", profile.city_state || "");
     formData.append("linkedin_profile", profile.linkedin_profile || "");
-    formData.append("highest_qualification", profile.highest_qualification || "");
+    formData.append(
+      "highest_qualification",
+      profile.highest_qualification || ""
+    );
     formData.append("degree", profile.degree || "");
     formData.append("college_name", profile.college_name || "");
-    formData.append("year_of_completion", String(profile.year_of_completion || ""));
+    formData.append(
+      "year_of_completion",
+      profile.year_of_completion
+        ? String(profile.year_of_completion)
+        : ""
+    );
     formData.append("expertise_level", profile.expertise_level || "");
     formData.append("current_status", profile.current_status || "");
     formData.append("organization", profile.organization || "");
-    formData.append("professional_summary", profile.professional_summary || "");
-    formData.append("mentor_subjects", JSON.stringify(profile.mentor_subjects || []));
-    formData.append("mentor_languages", JSON.stringify(profile.mentor_languages || []));
-    if (resumeFile) formData.append("resume", resumeFile);
+    formData.append(
+      "professional_summary",
+      profile.professional_summary || ""
+    );
+    formData.append(
+      "mentor_subjects",
+      JSON.stringify(profile.mentor_subjects || [])
+    );
+    formData.append(
+      "mentor_languages",
+      JSON.stringify(profile.mentor_languages || [])
+    );
+
+    if (resumeFile) {
+      formData.append("resume", resumeFile);
+    }
 
     try {
       await updateTutorProfile(formData);
-      toast.success(t("tutorProfile.updateSuccess"));
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || t("tutorProfile.updateFailed"));
+
+      AlertService.success(
+        t("common.success"),
+        t("tutorProfile.updateSuccess")
+      );
+
+      setResumeFile(null);
+
+      if (resumeInputRef.current) {
+        resumeInputRef.current.value = "";
+      }
+    } catch (error: any) {
+      console.error("Failed to update tutor profile:", error);
+
+      const message =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        t("tutorProfile.updateFailed");
+
+      AlertService.error(
+        t("common.error"),
+        message
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  // ---------- Loading ----------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden p-6">
         <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
         <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
         <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+
         <div className="max-w-4xl mx-auto relative z-10">
           <ProfileSkeleton />
         </div>
@@ -197,6 +266,7 @@ export default function TutorProfilePage() {
     );
   }
 
+  // ---------- Profile Not Found ----------
   if (!profile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center text-white/70">
@@ -225,22 +295,35 @@ export default function TutorProfilePage() {
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
                 {displayName.charAt(0).toUpperCase()}
               </div>
+
               <div className="text-center sm:text-left">
                 <h1 className="text-2xl font-extrabold text-white">
                   {displayName}
                 </h1>
-                <p className="text-white/50">{t("tutorProfile.tutorId", { id: profile.id })}</p>
+
+                <p className="text-white/50">
+                  {t("tutorProfile.tutorId", {
+                    id: profile.id,
+                  })}
+                </p>
+
                 <div className="flex gap-2 mt-2 justify-center sm:justify-start flex-wrap">
                   {profile.is_verified && (
                     <span className="px-2 py-0.5 bg-emerald-400/20 text-emerald-300 rounded-full text-xs font-semibold border border-emerald-400/30">
                       {t("studentHome.verified")}
                     </span>
                   )}
+
                   <span className="px-2 py-0.5 bg-amber-400/20 text-amber-300 rounded-full text-xs font-semibold border border-amber-400/30">
-                    {t("tutorProfile.ratingBadge", { rating: profile.average_rating.toFixed(1) })}
+                    {t("tutorProfile.ratingBadge", {
+                      rating: profile.average_rating.toFixed(1),
+                    })}
                   </span>
+
                   <span className="px-2 py-0.5 bg-sky-400/20 text-sky-300 rounded-full text-xs font-semibold border border-sky-400/30">
-                    {t("tutorProfile.reviewsBadge", { reviews: profile.total_reviews })}
+                    {t("tutorProfile.reviewsBadge", {
+                      reviews: profile.total_reviews,
+                    })}
                   </span>
                 </div>
               </div>
@@ -253,17 +336,28 @@ export default function TutorProfilePage() {
               label={t("tutorProfile.label.averageRating")}
               value={`⭐ ${profile.average_rating.toFixed(1)}`}
             />
+
             <Card
               label={t("tutorProfile.label.totalReviews")}
               value={`📝 ${profile.total_reviews}`}
             />
+
             <Card
               label={t("tutorProfile.label.verified")}
-              value={profile.is_verified ? t("tutorProfile.verifiedYes") : t("tutorProfile.verifiedNo")}
+              value={
+                profile.is_verified
+                  ? t("tutorProfile.verifiedYes")
+                  : t("tutorProfile.verifiedNo")
+              }
             />
+
             <Card
               label={t("tutorProfile.label.online")}
-              value={profile.is_online ? t("tutorProfile.onlineStatus") : t("tutorProfile.offlineStatus")}
+              value={
+                profile.is_online
+                  ? t("tutorProfile.onlineStatus")
+                  : t("tutorProfile.offlineStatus")
+              }
             />
           </div>
 
@@ -272,18 +366,35 @@ export default function TutorProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
                 label={t("tutorProfile.field.phoneNumber")}
-                value={profile.phone_number}
-                onChange={(v) => setProfile({ ...profile, phone_number: v })}
+                value={profile.phone_number || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    phone_number: v,
+                  })
+                }
               />
+
               <Field
                 label={t("tutorProfile.field.cityState")}
-                value={profile.city_state}
-                onChange={(v) => setProfile({ ...profile, city_state: v })}
+                value={profile.city_state || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    city_state: v,
+                  })
+                }
               />
+
               <Field
                 label={t("tutorProfile.field.linkedin")}
-                value={profile.linkedin_profile}
-                onChange={(v) => setProfile({ ...profile, linkedin_profile: v })}
+                value={profile.linkedin_profile || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    linkedin_profile: v,
+                  })
+                }
               />
             </div>
           </Section>
@@ -293,14 +404,27 @@ export default function TutorProfilePage() {
             <textarea
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
               placeholder={t("tutorProfile.placeholder.bio")}
-              value={profile.bio}
-              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+              value={profile.bio || ""}
+              onChange={(e) =>
+                setProfile({
+                  ...profile,
+                  bio: e.target.value,
+                })
+              }
             />
+
             <textarea
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] mt-3 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
-              placeholder={t("tutorProfile.placeholder.professionalSummary")}
-              value={profile.professional_summary}
-              onChange={(e) => setProfile({ ...profile, professional_summary: e.target.value })}
+              placeholder={t(
+                "tutorProfile.placeholder.professionalSummary"
+              )}
+              value={profile.professional_summary || ""}
+              onChange={(e) =>
+                setProfile({
+                  ...profile,
+                  professional_summary: e.target.value,
+                })
+              }
             />
           </Section>
 
@@ -308,78 +432,166 @@ export default function TutorProfilePage() {
           <Section title={t("tutorProfile.section.education")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
-                label={t("tutorProfile.field.highestQualification")}
-                value={profile.highest_qualification}
-                onChange={(v) => setProfile({ ...profile, highest_qualification: v })}
+                label={t(
+                  "tutorProfile.field.highestQualification"
+                )}
+                value={profile.highest_qualification || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    highest_qualification: v,
+                  })
+                }
               />
+
               <Field
                 label={t("tutorProfile.field.degree")}
-                value={profile.degree}
-                onChange={(v) => setProfile({ ...profile, degree: v })}
+                value={profile.degree || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    degree: v,
+                  })
+                }
               />
+
               <Field
                 label={t("tutorProfile.field.collegeName")}
-                value={profile.college_name}
-                onChange={(v) => setProfile({ ...profile, college_name: v })}
-              />
-              <Field
-                label={t("tutorProfile.field.yearOfCompletion")}
-                value={profile.year_of_completion ? String(profile.year_of_completion) : ""}
+                value={profile.college_name || ""}
                 onChange={(v) =>
-                  setProfile({ ...profile, year_of_completion: v ? parseInt(v) : null })
+                  setProfile({
+                    ...profile,
+                    college_name: v,
+                  })
+                }
+              />
+
+              <Field
+                label={t(
+                  "tutorProfile.field.yearOfCompletion"
+                )}
+                value={
+                  profile.year_of_completion
+                    ? String(profile.year_of_completion)
+                    : ""
+                }
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    year_of_completion: v
+                      ? parseInt(v, 10)
+                      : null,
+                  })
                 }
                 type="number"
               />
             </div>
           </Section>
 
-          {/* Professional */}
-          <Section title={t("tutorProfile.section.professionalInfo")}>
+          {/* Professional Information */}
+          <Section
+            title={t(
+              "tutorProfile.section.professionalInfo"
+            )}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
                 label={t("tutorProfile.field.skills")}
-                value={profile.skills}
-                onChange={(v) => setProfile({ ...profile, skills: v })}
+                value={profile.skills || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    skills: v,
+                  })
+                }
               />
+
               <Field
-                label={t("tutorProfile.field.experienceYears")}
-                value={String(profile.experience)}
-                onChange={(v) => setProfile({ ...profile, experience: parseInt(v) || 0 })}
+                label={t(
+                  "tutorProfile.field.experienceYears"
+                )}
+                value={String(profile.experience ?? 0)}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    experience: parseInt(v, 10) || 0,
+                  })
+                }
                 type="number"
               />
+
               <Field
-                label={t("tutorProfile.field.expertiseLevel")}
-                value={profile.expertise_level}
-                onChange={(v) => setProfile({ ...profile, expertise_level: v })}
+                label={t(
+                  "tutorProfile.field.expertiseLevel"
+                )}
+                value={profile.expertise_level || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    expertise_level: v,
+                  })
+                }
               />
+
               <Field
-                label={t("tutorProfile.field.currentStatus")}
-                value={profile.current_status}
-                onChange={(v) => setProfile({ ...profile, current_status: v })}
+                label={t(
+                  "tutorProfile.field.currentStatus"
+                )}
+                value={profile.current_status || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    current_status: v,
+                  })
+                }
               />
+
               <Field
-                label={t("tutorProfile.field.organization")}
-                value={profile.organization}
-                onChange={(v) => setProfile({ ...profile, organization: v })}
+                label={t(
+                  "tutorProfile.field.organization"
+                )}
+                value={profile.organization || ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    organization: v,
+                  })
+                }
               />
             </div>
           </Section>
 
           {/* Mentor Subjects */}
-          <Section title={t("tutorProfile.section.mentorSubjects")}>
+          <Section
+            title={t("tutorProfile.section.mentorSubjects")}
+          >
             <ChipInput
-              items={profile.mentor_subjects}
-              onChange={(items) => setProfile({ ...profile, mentor_subjects: items })}
-              placeholder={t("tutorProfile.placeholder.addSubject")}
+              items={profile.mentor_subjects || []}
+              onChange={(items) =>
+                setProfile({
+                  ...profile,
+                  mentor_subjects: items,
+                })
+              }
+              placeholder={t(
+                "tutorProfile.placeholder.addSubject"
+              )}
             />
           </Section>
 
           {/* Languages */}
           <Section title={t("tutorProfile.section.languages")}>
             <ChipInput
-              items={profile.mentor_languages}
-              onChange={(items) => setProfile({ ...profile, mentor_languages: items })}
-              placeholder={t("tutorProfile.placeholder.addLanguage")}
+              items={profile.mentor_languages || []}
+              onChange={(items) =>
+                setProfile({
+                  ...profile,
+                  mentor_languages: items,
+                })
+              }
+              placeholder={t(
+                "tutorProfile.placeholder.addLanguage"
+              )}
             />
           </Section>
 
@@ -396,16 +608,24 @@ export default function TutorProfilePage() {
                   {t("tutorProfile.viewResume")}
                 </a>
               )}
+
               <input
                 type="file"
                 accept=".pdf,.doc,.docx"
                 ref={resumeInputRef}
-                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                onChange={(e) =>
+                  setResumeFile(
+                    e.target.files?.[0] || null
+                  )
+                }
                 className="block w-full text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-violet-500/20 file:text-violet-300 file:font-semibold hover:file:bg-violet-500/30 file:transition"
               />
+
               {resumeFile && (
                 <p className="text-xs text-white/50">
-                  {t("tutorProfile.newFile", { name: resumeFile.name })}
+                  {t("tutorProfile.newFile", {
+                    name: resumeFile.name,
+                  })}
                 </p>
               )}
             </div>
@@ -416,11 +636,17 @@ export default function TutorProfilePage() {
             <motion.button
               type="submit"
               disabled={saving}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-xl transition disabled:opacity-60 flex items-center gap-2"
+              whileHover={
+                saving ? undefined : { scale: 1.02 }
+              }
+              whileTap={
+                saving ? undefined : { scale: 0.98 }
+              }
+              className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-xl transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {saving ? t("tutorProfile.saving") : t("tutorProfile.saveProfile")}
+              {saving
+                ? t("tutorProfile.saving")
+                : t("tutorProfile.saveProfile")}
             </motion.button>
           </div>
         </motion.form>
@@ -429,8 +655,14 @@ export default function TutorProfilePage() {
   );
 }
 
-// ---------- Reusable Components (dark themed) ----------
-const Card = ({ label, value }: { label: string; value: string }) => (
+// ---------- Reusable Components ----------
+const Card = ({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) => (
   <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-lg text-center">
     <p className="text-sm text-white/50">{label}</p>
     <p className="text-lg font-bold text-white">{value}</p>
@@ -449,6 +681,7 @@ const Section = ({
       <span className="w-1.5 h-6 bg-gradient-to-b from-violet-400 to-fuchsia-400 rounded-full" />
       {title}
     </h2>
+
     {children}
   </div>
 );
@@ -462,10 +695,13 @@ const Field = ({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: string;
+  type?: React.HTMLInputTypeAttribute;
 }) => (
   <div>
-    <label className="block text-sm font-semibold text-white/70 mb-1">{label}</label>
+    <label className="block text-sm font-semibold text-white/70 mb-1">
+      {label}
+    </label>
+
     <input
       type={type}
       value={value}

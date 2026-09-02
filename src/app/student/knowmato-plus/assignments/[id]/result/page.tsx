@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import {
   getAssessmentResult,
 } from '@/services/assessmentService';
@@ -41,7 +41,10 @@ export default function AssessmentResultPage() {
 
   useEffect(() => {
     if (!assignmentId || isNaN(assignmentId)) {
-      toast.error(t('result.invalidAttempt'));
+      AlertService.error(
+        "Invalid Attempt",
+        t('result.invalidAttempt')
+      );
       router.push('/student/knowmato-plus/assignments');
       return;
     }
@@ -52,7 +55,10 @@ export default function AssessmentResultPage() {
         const data = res?.data ?? res; // unwrap if wrapped
         setResult(data);
       } catch (err: any) {
-        toast.error(t('result.loadError'));
+        AlertService.error(
+          "Load Error",
+          t('result.loadError')
+        );
         router.push('/student/knowmato-plus/assignments');
       } finally {
         setLoading(false);

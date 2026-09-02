@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast, { Toaster } from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import { verifyOtpLogin, resendOtp } from '@/services/authService';
 import { saveTokens } from '@/services/storageService';
 import { useDispatch } from 'react-redux';
@@ -13,8 +13,13 @@ import { connectSocket } from '@/services/socketService';
 
 const OTP_LENGTH = 6;
 
-const showError = (message: string) => toast.error(message);
-const showSuccess = (message: string) => toast.success(message);
+const showError = (message: string) => {
+  AlertService.error('Verification Failed', message);
+};
+
+const showSuccess = (message: string) => {
+  AlertService.success('Success', message);
+};
 
 function OTPContent() {
   const searchParams = useSearchParams();
@@ -158,18 +163,6 @@ function OTPContent() {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] px-4">
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          style: {
-            background: '#1e1b4b',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(8px)',
-          },
-        }}
-      />
-
       {/* Animated background blobs */}
       <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
       <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />

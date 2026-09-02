@@ -7,6 +7,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import toast, { Toaster } from 'react-hot-toast';
 import { forgotPassword } from '@/services/v1Service';
+import AlertService from '@/services/alertService';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -24,20 +25,64 @@ export default function ForgotPasswordPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleForgotPassword = async (values: { email: string }) => {
+  const handleForgotPassword = async (
+    values: { email: string },
+  ) => {
     try {
       setIsLoading(true);
-      await forgotPassword({ email: values.email });
-      toast.success('OTP sent successfully 📧');
+
+      await forgotPassword({
+        email: values.email.trim(),
+      });
+
+      AlertService.success(
+        'OTP Sent',
+        'A verification OTP has been sent to your registered email address.',
+      );
+
       setTimeout(() => {
         router.push(
-          `/forgot-password/verify?email=${encodeURIComponent(values.email)}`
+          `/forgot-password/verify?email=${encodeURIComponent(
+            values.email.trim(),
+          )}`,
         );
       }, 1000);
-    } catch (error: any) {
-      console.error(error);
-      toast.error(
-        error?.response?.data?.error || 'Failed to send OTP'
+    } catch (error: unknown) {
+      console.error(
+        'Forgot password error:',
+        error,
+      );
+
+      let errorMessage =
+        'Failed to send OTP. Please try again.';
+
+      if (
+        typeof error === 'object' &&
+        error !== null
+      ) {
+        const possibleError =
+          error as {
+            response?: {
+              data?: {
+                error?: string;
+                detail?: string;
+                message?: string;
+              };
+            };
+            message?: string;
+          };
+
+        errorMessage =
+          possibleError.response?.data?.error ||
+          possibleError.response?.data?.detail ||
+          possibleError.response?.data?.message ||
+          possibleError.message ||
+          errorMessage;
+      }
+
+      AlertService.error(
+        'Unable to Send OTP',
+        errorMessage,
       );
     } finally {
       setIsLoading(false);
@@ -54,8 +99,6 @@ export default function ForgotPasswordPage() {
       {/* Subtle grid overlay */}
       <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(#ffffff_1px,transparent_1px),linear-gradient(to_right,#ffffff_1px,transparent_1px)] [background-size:45px_45px]" />
 
-      {/* Toast notifications */}
-      <Toaster position="bottom-center" toastOptions={{ duration: 4000 }} />
 
       {/* Main content */}
       <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8 relative z-10">

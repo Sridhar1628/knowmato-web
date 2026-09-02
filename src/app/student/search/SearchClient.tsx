@@ -6,7 +6,7 @@ import {
   getMyDoubts,
   getAvailableTutors,
 } from '@/services/v1Service';
-import toast from 'react-hot-toast';
+import AlertService from "@/services/alertService";
 import { useTranslation } from 'react-i18next'; // ✅ added
 
 interface SearchDoubt {
@@ -41,8 +41,20 @@ export default function SearchPage() {
   const [tutors, setTutors] = useState<SearchTutor[]>([]);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('recent_searches') || '[]');
-    setRecentSearches(stored);
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("recent_searches") || "[]",
+      );
+
+      setRecentSearches(
+        Array.isArray(stored)
+          ? stored.filter((item): item is string => typeof item === "string")
+          : [],
+      );
+    } catch (error) {
+      console.error("Failed to load recent searches:", error);
+      setRecentSearches([]);
+    }
   }, []);
 
   const fetchResults = useCallback(async () => {
@@ -65,19 +77,29 @@ export default function SearchPage() {
       console.log('Tutors:', tutorsRes);
 
       const doubtsData =
-        doubtsRes?.results?.data || doubtsRes?.data || doubtsRes?.results || [];
-      const tutorsData = tutorsRes?.data || [];
+        (Array.isArray(doubtsRes?.results?.data) && doubtsRes.results.data) ||
+        (Array.isArray(doubtsRes?.data) && doubtsRes.data) ||
+        (Array.isArray(doubtsRes?.results) && doubtsRes.results) ||
+        [];
 
-      const filteredDoubts = doubtsData.filter(
-        (d: SearchDoubt) =>
-          d.title?.toLowerCase().includes(query.toLowerCase()) ||
-          d.category?.toLowerCase().includes(query.toLowerCase())
-      );
+      const tutorsData =
+        (Array.isArray(tutorsRes?.data) && tutorsRes.data) ||
+        (Array.isArray(tutorsRes?.results) && tutorsRes.results) ||
+        [];
+
+      const search = query.toLowerCase();
+
+      const filteredDoubts = doubtsData.filter((d: SearchDoubt) => {
+        const title = d.title?.toLowerCase() || "";
+        const category = d.category?.toLowerCase() || "";
+
+        return title.includes(search) || category.includes(search);
+      });
 
       const filteredTutors = tutorsData.filter((t: SearchTutor) => {
-        const name = t.name?.toLowerCase() || '';
-        const skills = t.skills?.toLowerCase() || '';
-        const search = query.toLowerCase();
+        const name = t.name?.toLowerCase() || "";
+        const skills = t.skills?.toLowerCase() || "";
+
         return name.includes(search) || skills.includes(search);
       });
 
@@ -85,7 +107,12 @@ export default function SearchPage() {
       setTutors(filteredTutors);
     } catch (error) {
       console.error('Search error:', error);
-      toast.error(t('search.loadError')); // ✅ translated
+      AlertService.error(
+        t("search.loadErrorTitle", { defaultValue: "Search Failed" }),
+        t("search.loadError", {
+          defaultValue: "Unable to load search results. Please try again.",
+        }),
+      );
     } finally {
       setLoading(false);
     }
@@ -215,8 +242,10 @@ export default function SearchPage() {
                         disabled={!tutor.is_online}
                         onClick={() =>
                           router.push(
-                            `/student/post-doubt?tutorId=${tutor.id}&tutorName=${encodeURIComponent(
-                              tutor.name
+                            `/student/post-doubt?tutorId=${encodeURIComponent(
+                              String(tutor.id)
+                            )}&tutorName=${encodeURIComponent(
+                              tutor.name || ""
                             )}`
                           )
                         }

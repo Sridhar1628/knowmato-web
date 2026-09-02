@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { getStudentDashboard } from '@/services/assessmentService';
+import AlertService from '@/services/alertService';
 
 // ---------- Type definitions for the new dashboard response ----------
 export interface DashboardSummary {
@@ -103,9 +103,10 @@ export default function AssessmentDashboard() {
       setDashboard(data as StudentDashboardData);
     } catch (error: any) {
       console.error('Dashboard fetch error:', error);
-      toast.error(
+      AlertService.error(
+        "Dashboard Error",
         error?.response?.data?.message ??
-          t('assessmentDashboard.loadError', 'Failed to load dashboard')
+          t('assessmentDashboard.loadError', 'Failed to load dashboard'),
       );
     } finally {
       setLoading(false);

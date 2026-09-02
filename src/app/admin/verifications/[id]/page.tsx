@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAdminVerificationDetail,
   updateAdminVerification,
@@ -115,7 +115,7 @@ export default function AdminVerificationDetailPage() {
       setRejectionReason(data.rejection_reason || "");
     } catch (err: any) {
       setError(err?.message || "Failed to load verification details");
-      toast.error("Failed to load details");
+      AlertService.error("Load Failed", "Failed to load details");
     } finally {
       setLoading(false);
     }
@@ -128,29 +128,52 @@ export default function AdminVerificationDetailPage() {
   // ---------- Quick Approve / Reject ----------
   const handleQuickUpdate = async (newStatus: "approved" | "rejected") => {
     if (!verification || actionLoading) return;
-    let reason = "";
-    if (newStatus === "rejected") {
-      reason = window.prompt("Rejection reason (optional):") || "";
-      if (reason === null) return; // cancelled
-    }
-    const confirmed = window.confirm(
-      `Confirm ${newStatus} this verification?`
-    );
-    if (!confirmed) return;
 
-    setActionLoading(true);
-    try {
-      await updateAdminVerification(verificationId, {
-        status: newStatus,
-        rejection_reason: reason,
-      });
-      toast.success(`Verification ${newStatus}`);
-      fetchDetail(); // refresh
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Action failed");
-    } finally {
-      setActionLoading(false);
+    let reason = "";
+
+    if (newStatus === "rejected") {
+      AlertService.info(
+        "Rejection Reason",
+        "Please enter the rejection reason before rejecting this verification."
+      );
+      return;
     }
+
+    AlertService.confirm(
+      `Confirm ${newStatus}`,
+      `Confirm ${newStatus} this verification?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: newStatus === "approved" ? "Approve" : "Reject",
+          style: "destructive",
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              await updateAdminVerification(verificationId, {
+                status: newStatus,
+                rejection_reason: reason,
+              });
+              AlertService.success(
+                "Verification Updated",
+                `Verification ${newStatus}`
+              );
+              fetchDetail();
+            } catch (err: any) {
+              AlertService.error(
+                "Action Failed",
+                err?.response?.data?.error || "Action failed"
+              );
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleUpdate = async () => {
@@ -161,10 +184,16 @@ export default function AdminVerificationDetailPage() {
         status: selectedStatus as any,
         rejection_reason: rejectionReason,
       });
-      toast.success("Verification updated");
+      AlertService.success(
+        "Verification Updated",
+        "Verification updated"
+      );
       await fetchDetail();
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Update failed");
+      AlertService.error(
+        "Update Failed",
+        err?.response?.data?.error || "Update failed"
+      );
     } finally {
       setUpdating(false);
     }

@@ -9,7 +9,7 @@ import {
   approveCompanyApplication,
   rejectCompanyApplication,
 } from "@/services/v2Service";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { API_HOST } from "@/config/env";
 
 // --------------------------------------------------
@@ -91,7 +91,7 @@ export default function AdminCompanyApplicationDetailPage() {
         setApplication(res.data);
       } catch (error) {
         console.error(error);
-        toast.error("Failed to load application detail");
+        AlertService.error("Load Failed", "Failed to load application detail");
         router.push("/admin/company-applications");
       } finally {
         setLoading(false);
@@ -105,13 +105,13 @@ export default function AdminCompanyApplicationDetailPage() {
     try {
       setProcessing(true);
       const res = await approveCompanyApplication(application.id);
-      toast.success(res.message);
+      AlertService.success("Application Approved", res.message);
       // Refresh detail
       const updated = await getAdminCompanyApplication(application.id);
       setApplication(updated.data);
     } catch (error: any) {
       const msg = error?.response?.data?.message || "Approval failed";
-      toast.error(msg);
+      AlertService.error("Approval Failed", msg);
     } finally {
       setProcessing(false);
     }
@@ -119,20 +119,20 @@ export default function AdminCompanyApplicationDetailPage() {
 
   const handleReject = async () => {
     if (!application || !rejectionReason.trim()) {
-      toast.error("Please provide a rejection reason");
+      AlertService.error("Rejection Reason Required", "Please provide a rejection reason");
       return;
     }
     try {
       setProcessing(true);
       const res = await rejectCompanyApplication(application.id, rejectionReason.trim());
-      toast.success(res.message);
+      AlertService.success("Application Rejected", res.message);
       setShowRejectModal(false);
       setRejectionReason("");
       const updated = await getAdminCompanyApplication(application.id);
       setApplication(updated.data);
     } catch (error: any) {
       const msg = error?.response?.data?.message || "Rejection failed";
-      toast.error(msg);
+      AlertService.error("Rejection Failed", msg);
     } finally {
       setProcessing(false);
     }

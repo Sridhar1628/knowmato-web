@@ -8,7 +8,7 @@ import {
   updateAdminReport,
 } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface ReportDetail {
@@ -81,7 +81,7 @@ export default function ReportDetailPage() {
       setSelectedStatus(report.status);
       setAdminNotes(report.admin_notes ?? "");
     } catch (err: any) {
-      toast.error("Failed to load report details");
+      AlertService.error("Load Failed", "Failed to load report details");
     } finally {
       setLoading(false);
     }
@@ -99,12 +99,12 @@ export default function ReportDetailPage() {
         status: selectedStatus as any,
         admin_notes: adminNotes,
       });
-      toast.success("Report updated!");
+      AlertService.success("Report Updated", "Report updated successfully");
       setReport((prev) =>
         prev ? { ...prev, status: selectedStatus, admin_notes: adminNotes } : prev
       );
     } catch (err: any) {
-      toast.error(err?.message || "Update failed");
+      AlertService.error("Update Failed", err?.message || "Update failed");
     } finally {
       setUpdating(false);
     }

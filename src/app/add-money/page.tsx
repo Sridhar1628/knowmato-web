@@ -1,13 +1,20 @@
-"use client";
+'use client';
 
-import React, { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { load } from "@cashfreepayments/cashfree-js";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import { useRouter } from 'next/navigation';
+
+import { load } from '@cashfreepayments/cashfree-js';
+
 import {
   createCashfreeOrder,
   getAvailableWalletOffers,
   getTransactionHistory,
-} from "@/services/v1Service";
+} from '@/services/v1Service';
 
 import {
   connectSocket,
@@ -17,6 +24,8 @@ import {
 import {
   getTokens,
 } from '@/services/storageService';
+
+import AlertService from '@/services/alertService';
 
 /* -------------------------------------------------------------------------- */
 /* TYPES */
@@ -31,323 +40,832 @@ interface WalletOffer {
   max_bonus: number;
 }
 
-const PRESET_AMOUNTS = [100, 250, 500, 1000, 2000];
+/* -------------------------------------------------------------------------- */
+/* CONSTANTS */
+/* -------------------------------------------------------------------------- */
+
+const PRESET_AMOUNTS = [
+  100,
+  250,
+  500,
+  1000,
+  2000,
+];
+
+/* -------------------------------------------------------------------------- */
+/* COMPONENT */
+/* -------------------------------------------------------------------------- */
 
 const AddMoneyPage = () => {
   const router = useRouter();
 
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
   /* STATE */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
 
-  const [selectedAmount, setSelectedAmount] = useState<number>(500);
-  const [customAmount, setCustomAmount] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [offers, setOffers] = useState<WalletOffer[]>([]);
-  const [selectedOffer, setSelectedOffer] = useState<WalletOffer | null>(null);
-  const [showValidation, setShowValidation] = useState(false);
+  const [
+    selectedAmount,
+    setSelectedAmount,
+  ] = useState<number>(500);
 
-  const params = new URLSearchParams(
-    typeof window !== "undefined" ? window.location.search : ""
-  );
-  const fromApp = params.get("from_app");
+  const [
+    customAmount,
+    setCustomAmount,
+  ] = useState('');
 
-  if (fromApp === "true") {
-    localStorage.setItem("from_app", "true");
-  }
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-  /* -------------------------------------------------------------------------- */
-  /* FETCH DATA */
-  /* -------------------------------------------------------------------------- */
+  const [
+    walletBalance,
+    setWalletBalance,
+  ] = useState(0);
+
+  const [
+    offers,
+    setOffers,
+  ] = useState<WalletOffer[]>([]);
+
+  const [
+    selectedOffer,
+    setSelectedOffer,
+  ] = useState<WalletOffer | null>(null);
+
+  const [
+    showValidation,
+    setShowValidation,
+  ] = useState(false);
+
+  /* ------------------------------------------------------------------------ */
+  /* APP REDIRECT PARAMETER */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
+    const params = new URLSearchParams(
+      window.location.search,
+    );
+
+    const fromApp =
+      params.get('from_app');
+
+    if (fromApp === 'true') {
+      localStorage.setItem(
+        'from_app',
+        'true',
+      );
+    }
+  }, []);
+
+  /* ------------------------------------------------------------------------ */
+  /* SOCKET */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    let mounted = true;
+
     const initSocket = async () => {
       try {
-        const tokens = await getTokens();
-        if (!tokens?.access) return;
+        const tokens =
+          await getTokens();
 
-        connectSocket(tokens.access, (event: string, data: any) => {
-          if (event === 'WALLET_UPDATE') {
-            setWalletBalance(
-              Number(data.real_balance || 0) + Number(data.bonus_balance || 0)
-            );
-          }
-        });
+        if (
+          !mounted ||
+          !tokens?.access
+        ) {
+          return;
+        }
+
+        connectSocket(
+          tokens.access,
+          (
+            event: string,
+            data: any,
+          ) => {
+            if (
+              !mounted
+            ) {
+              return;
+            }
+
+            if (
+              event ===
+              'WALLET_UPDATE'
+            ) {
+              setWalletBalance(
+                Number(
+                  data?.real_balance ||
+                    0,
+                ) +
+                  Number(
+                    data?.bonus_balance ||
+                      0,
+                  ),
+              );
+            }
+          },
+        );
       } catch (err) {
-        console.log('Socket Error:', err);
+        console.log(
+          'Socket Error:',
+          err,
+        );
       }
     };
 
     initSocket();
-    return () => disconnectSocket();
+
+    return () => {
+      mounted = false;
+      disconnectSocket();
+    };
   }, []);
 
+  /* ------------------------------------------------------------------------ */
+  /* LOAD PAGE DATA */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
-    const loadPage = async () => {
-      await Promise.all([fetchWalletData(), fetchOffers()]);
-    };
+    const loadPage =
+      async () => {
+        await Promise.all([
+          fetchWalletData(),
+          fetchOffers(),
+        ]);
+      };
+
     loadPage();
   }, []);
 
-  useEffect(() => {
-    if (offers.length > 0) {
-      findBestOffer(selectedAmount, offers);
-    }
-  }, [selectedAmount, offers]);
+  /* ------------------------------------------------------------------------ */
+  /* FIND BEST OFFER WHEN AMOUNT CHANGES */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    if (
+      offers.length > 0
+    ) {
+      findBestOffer(
+        selectedAmount,
+        offers,
+      );
+    } else {
+      setSelectedOffer(null);
+    }
+  }, [
+    selectedAmount,
+    offers,
+  ]);
+
+  /* ------------------------------------------------------------------------ */
+  /* HANDLE PAYMENT TOKEN FROM APP */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    const params =
+      new URLSearchParams(
+        window.location.search,
+      );
+
+    const token =
+      params.get('token');
+
     if (token) {
-      localStorage.setItem("access_token", token);
-      console.log("TOKEN SAVED");
+      localStorage.setItem(
+        'access_token',
+        token,
+      );
+
+      console.log(
+        'TOKEN SAVED',
+      );
     }
   }, []);
 
-  const fetchWalletData = async () => {
-    try {
-      const res = await getTransactionHistory();
-      console.log('💰 WALLET RESPONSE:', res);
-      const data = res?.results || res;
-      console.log('💰 WALLET DATA:', data);
+  /* ------------------------------------------------------------------------ */
+  /* FETCH WALLET */
+  /* ------------------------------------------------------------------------ */
 
-      if (!data?.wallet) {
-        console.log('Invalid wallet response:', res);
-        return;
+  const fetchWalletData =
+    async () => {
+      try {
+        const res =
+          await getTransactionHistory();
+
+        console.log(
+          '💰 WALLET RESPONSE:',
+          res,
+        );
+
+        const data =
+          res?.results || res;
+
+        console.log(
+          '💰 WALLET DATA:',
+          data,
+        );
+
+        if (
+          !data?.wallet
+        ) {
+          console.log(
+            'Invalid wallet response:',
+            res,
+          );
+
+          return;
+        }
+
+        setWalletBalance(
+          Number(
+            data.wallet
+              .total_balance ||
+              0,
+          ),
+        );
+      } catch (err) {
+        console.log(
+          'Wallet Fetch Error:',
+          err,
+        );
       }
+    };
 
-      setWalletBalance(Number(data.wallet.total_balance || 0));
-    } catch (err) {
-      console.log('Wallet Fetch Error:', err);
-    }
-  };
+  /* ------------------------------------------------------------------------ */
+  /* FETCH OFFERS */
+  /* ------------------------------------------------------------------------ */
 
-  const fetchOffers = async () => {
-    try {
-      const res = await getAvailableWalletOffers();
-      const data = res.data || [];
-      setOffers(data);
-    } catch (err) {
-      console.log("Offer Fetch Error:", err);
-    }
-  };
+  const fetchOffers =
+    async () => {
+      try {
+        const res =
+          await getAvailableWalletOffers();
 
-  /* -------------------------------------------------------------------------- */
+        const data =
+          res?.data || [];
+
+        setOffers(data);
+      } catch (err) {
+        console.log(
+          'Offer Fetch Error:',
+          err,
+        );
+      }
+    };
+
+  /* ------------------------------------------------------------------------ */
   /* SELECT BEST OFFER */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
 
-  const findBestOffer = (amount: number, availableOffers: WalletOffer[]) => {
-    const validOffers = availableOffers.filter(
-      (offer) => amount >= offer.min_amount
+  const findBestOffer = (
+    amount: number,
+    availableOffers: WalletOffer[],
+  ) => {
+    const validOffers =
+      availableOffers.filter(
+        (offer) =>
+          amount >=
+          offer.min_amount,
+      );
+
+    if (
+      validOffers.length === 0
+    ) {
+      setSelectedOffer(
+        null,
+      );
+
+      return;
+    }
+
+    validOffers.sort(
+      (a, b) =>
+        b.bonus_percentage -
+        a.bonus_percentage,
     );
-    if (validOffers.length === 0) {
-      setSelectedOffer(null);
-      return;
+
+    setSelectedOffer(
+      validOffers[0],
+    );
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* PRESET AMOUNT */
+  /* ------------------------------------------------------------------------ */
+
+  const handlePresetClick = (
+    amount: number,
+  ) => {
+    setSelectedAmount(
+      amount,
+    );
+
+    setCustomAmount('');
+
+    findBestOffer(
+      amount,
+      offers,
+    );
+  };
+
+  /* ------------------------------------------------------------------------ */
+  /* CUSTOM AMOUNT */
+  /* ------------------------------------------------------------------------ */
+
+  const handleCustomAmount = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value =
+      event.target.value;
+
+    setCustomAmount(
+      value,
+    );
+
+    const parsed =
+      Number(value);
+
+    if (
+      Number.isFinite(parsed) &&
+      parsed > 0
+    ) {
+      setSelectedAmount(
+        parsed,
+      );
+
+      findBestOffer(
+        parsed,
+        offers,
+      );
     }
-    validOffers.sort((a, b) => b.bonus_percentage - a.bonus_percentage);
-    setSelectedOffer(validOffers[0]);
   };
 
-  /* -------------------------------------------------------------------------- */
-  /* HANDLE AMOUNT CHANGE */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* BONUS */
+  /* ------------------------------------------------------------------------ */
 
-  const handlePresetClick = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmount("");
-    findBestOffer(amount, offers);
-  };
+  const calculatedBonus =
+    useMemo(() => {
+      if (
+        !selectedOffer
+      ) {
+        return 0;
+      }
 
-  const handleCustomAmount = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomAmount(value);
-    const parsed = Number(value);
-    if (!isNaN(parsed) && parsed > 0) {
-      setSelectedAmount(parsed);
-      findBestOffer(parsed, offers);
-    }
-  };
+      const percentageBonus =
+        (selectedAmount *
+          selectedOffer.bonus_percentage) /
+        100;
 
-  /* -------------------------------------------------------------------------- */
-  /* BONUS CALCULATION */
-  /* -------------------------------------------------------------------------- */
+      return Math.min(
+        percentageBonus,
+        selectedOffer.max_bonus,
+      );
+    }, [
+      selectedAmount,
+      selectedOffer,
+    ]);
 
-  const calculatedBonus = useMemo(() => {
-    if (!selectedOffer) return 0;
-    const percentageBonus =
-      (selectedAmount * selectedOffer.bonus_percentage) / 100;
-    return Math.min(percentageBonus, selectedOffer.max_bonus);
-  }, [selectedAmount, selectedOffer]);
+  const totalCredit =
+    selectedAmount +
+    calculatedBonus;
 
-  const totalCredit = selectedAmount + calculatedBonus;
-
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
   /* VALIDATION */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
 
-  const isValidAmount = selectedAmount >= 10 && selectedAmount <= 50000;
+  const isValidAmount =
+    Number.isFinite(
+      selectedAmount,
+    ) &&
+    selectedAmount >= 10 &&
+    selectedAmount <= 50000;
 
-  /* -------------------------------------------------------------------------- */
-  /* HANDLE PAYMENT */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /* PAYMENT */
+  /* ------------------------------------------------------------------------ */
 
-  const handlePayment = async () => {
-    if (!isValidAmount) {
-      setShowValidation(true);
-      setTimeout(() => setShowValidation(false), 1000);
-      return;
-    }
+  const handlePayment =
+    async () => {
+      /* --------------------------------------
+         VALIDATE AMOUNT
+         -------------------------------------- */
 
-    try {
-      setLoading(true);
-      const res = await createCashfreeOrder({ amount: selectedAmount });
-      console.log("Cashfree Order:", res);
+      if (
+        !isValidAmount
+      ) {
+        setShowValidation(
+          true,
+        );
 
-      if (!res?.payment_session_id) {
-        alert("Failed to create payment session");
+        setTimeout(
+          () =>
+            setShowValidation(
+              false,
+            ),
+          1000,
+        );
+
+        AlertService.warning(
+          'Invalid Amount',
+          'Please enter an amount between ₹10 and ₹50,000.',[]
+        );
+
         return;
       }
 
-      localStorage.setItem("wallet_amount", String(selectedAmount));
+      /* --------------------------------------
+         PREVENT DUPLICATE PAYMENT
+         -------------------------------------- */
 
-      const cashfree = await load({ mode: "sandbox" });
+      if (loading) {
+        return;
+      }
 
-      await cashfree.checkout({
-        paymentSessionId: res.payment_session_id,
-        redirectTarget: "_self",
-      });
-    } catch (err) {
-      console.log("Payment Error:", err);
-      alert("Payment initialization failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(
+          true,
+        );
 
-  /* -------------------------------------------------------------------------- */
+        /* ------------------------------------
+           CREATE CASHFREE ORDER
+           ------------------------------------ */
+
+        const res =
+          await createCashfreeOrder({
+            amount:
+              selectedAmount,
+          });
+
+        console.log(
+          'Cashfree Order:',
+          res,
+        );
+
+        /* ------------------------------------
+           VALIDATE PAYMENT SESSION
+           ------------------------------------ */
+
+        if (
+          !res?.payment_session_id
+        ) {
+          AlertService.error(
+            'Payment Unavailable',
+            'We could not create your payment session. Please try again.',
+          );
+
+          return;
+        }
+
+        /* ------------------------------------
+           SAVE WALLET AMOUNT
+           ------------------------------------ */
+
+        localStorage.setItem(
+          'wallet_amount',
+          String(
+            selectedAmount,
+          ),
+        );
+
+        /* ------------------------------------
+           LOAD CASHFREE
+           ------------------------------------ */
+
+        const cashfree =
+          await load({
+            mode: 'sandbox',
+          });
+
+        if (!cashfree) {
+          AlertService.error(
+            'Payment Unavailable',
+            'The payment service could not be loaded. Please try again.',
+          );
+
+          return;
+        }
+
+        /* ------------------------------------
+           OPEN CASHFREE CHECKOUT
+           ------------------------------------ */
+
+        await cashfree.checkout({
+          paymentSessionId:
+            res.payment_session_id,
+
+          redirectTarget:
+            '_self',
+        });
+      } catch (err) {
+        console.log(
+          'Payment Error:',
+          err,
+        );
+
+        /* ------------------------------------
+           PAYMENT ERROR ALERT
+           ------------------------------------ */
+
+        let message =
+          'Payment initialization failed. Please try again.';
+
+        if (
+          typeof err ===
+            'object' &&
+          err !== null
+        ) {
+          const possibleError =
+            err as {
+              response?: {
+                data?: {
+                  error?: string;
+                  detail?: string;
+                  message?: string;
+                };
+              };
+              message?: string;
+            };
+
+          message =
+            possibleError
+              .response
+              ?.data
+              ?.error ||
+            possibleError
+              .response
+              ?.data
+              ?.detail ||
+            possibleError
+              .response
+              ?.data
+              ?.message ||
+            possibleError.message ||
+            message;
+        }
+
+        AlertService.error(
+          'Payment Failed',
+          message,
+        );
+      } finally {
+        setLoading(
+          false,
+        );
+      }
+    };
+
+  /* ------------------------------------------------------------------------ */
   /* RENDER */
-  /* -------------------------------------------------------------------------- */
+  /* ------------------------------------------------------------------------ */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
+
       {/* Animated blobs */}
+
       <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
+
       <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
+
       <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
 
       <div className="relative z-10 max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
         {/* Header */}
+
         <div className="flex items-center gap-4">
+
           <button
-            onClick={() => router.back()}
+            type="button"
+            onClick={() =>
+              router.back()
+            }
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition"
           >
             ←
           </button>
+
           <div>
+
             <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
               Add Money
             </h1>
-            <p className="text-white/60 text-sm">Secure wallet top‑up</p>
+
+            <p className="text-white/60 text-sm">
+              Secure wallet top-up
+            </p>
+
           </div>
+
         </div>
 
-        {/* Desktop two‑column layout */}
+        {/* Desktop two-column layout */}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           {/* LEFT COLUMN */}
+
           <div className="space-y-6">
+
             {/* Balance Card */}
+
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
-              <p className="text-sm text-white/50">Current Balance</p>
+
+              <p className="text-sm text-white/50">
+                Current Balance
+              </p>
+
               <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300 mt-1">
-                ₹{walletBalance.toFixed(2)}
+                ₹
+                {walletBalance.toFixed(
+                  2,
+                )}
               </h2>
+
             </div>
 
             {/* Select Amount */}
+
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
-              <h3 className="text-lg font-semibold text-white mb-4">Select Amount</h3>
+
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Select Amount
+              </h3>
+
               <div className="flex flex-wrap gap-3">
-                {PRESET_AMOUNTS.map((amount) => (
-                  <button
-                    type="button"
-                    key={amount}
-                    onClick={() => handlePresetClick(amount)}
-                    className={`px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 ${
-                      selectedAmount === amount && customAmount === ""
-                        ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25"
-                        : "bg-white/10 border border-white/20 text-white hover:bg-white/20"
-                    }`}
-                  >
-                    ₹{amount}
-                  </button>
-                ))}
+
+                {PRESET_AMOUNTS.map(
+                  (
+                    amount,
+                  ) => (
+                    <button
+                      type="button"
+                      key={amount}
+                      onClick={() =>
+                        handlePresetClick(
+                          amount,
+                        )
+                      }
+                      className={`px-5 py-3 rounded-2xl font-bold text-sm transition-all duration-300 ${
+                        selectedAmount ===
+                          amount &&
+                        customAmount ===
+                          ''
+                          ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25'
+                          : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      ₹
+                      {amount}
+                    </button>
+                  ),
+                )}
+
               </div>
+
             </div>
 
             {/* Custom Amount */}
+
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
-              <h3 className="text-lg font-semibold text-white mb-4">Custom Amount</h3>
+
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Custom Amount
+              </h3>
+
               <input
                 type="number"
+                min="0"
+                step="1"
                 placeholder="Enter amount"
-                value={customAmount}
-                onChange={handleCustomAmount}
-                className="w-full rounded-2xl border-2 border-white/20 bg-gray-900/60 p-4 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+                value={
+                  customAmount
+                }
+                onChange={
+                  handleCustomAmount
+                }
+                disabled={
+                  loading
+                }
+                className="w-full rounded-2xl border-2 border-white/20 bg-gray-900/60 p-4 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition disabled:opacity-60"
               />
+
             </div>
+
           </div>
 
           {/* RIGHT COLUMN */}
+
           <div className="space-y-6">
+
             {/* Offer Card */}
+
             {selectedOffer && (
               <div className="bg-amber-400/10 backdrop-blur-md border border-amber-400/30 rounded-3xl p-6 shadow-xl">
+
                 <p className="text-lg font-semibold text-amber-300">
-                  🎁 {selectedOffer.title}
+                  🎁{' '}
+                  {
+                    selectedOffer.title
+                  }
                 </p>
+
                 <p className="text-white/80 text-sm mt-1">
-                  Get {selectedOffer.bonus_percentage}% bonus up to ₹
-                  {selectedOffer.max_bonus}
+                  Get{' '}
+                  {
+                    selectedOffer.bonus_percentage
+                  }
+                  % bonus up to ₹
+                  {
+                    selectedOffer.max_bonus
+                  }
                 </p>
+
               </div>
             )}
 
             {/* Summary Card */}
+
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
+
               <div className="flex justify-between text-white/70 text-sm mb-2">
-                <span>Amount</span>
-                <span>₹{selectedAmount}</span>
-              </div>
-              <div className="flex justify-between text-emerald-300 text-sm mb-2">
-                <span>Bonus</span>
-                <span>+ ₹{calculatedBonus.toFixed(2)}</span>
-              </div>
-              <div className="border-b border-white/10 my-3" />
-              <div className="flex justify-between text-white font-bold text-lg">
-                <span>Total Credit</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
-                  ₹{totalCredit.toFixed(2)}
+
+                <span>
+                  Amount
                 </span>
+
+                <span>
+                  ₹
+                  {
+                    selectedAmount
+                  }
+                </span>
+
               </div>
+
+              <div className="flex justify-between text-emerald-300 text-sm mb-2">
+
+                <span>
+                  Bonus
+                </span>
+
+                <span>
+                  + ₹
+                  {calculatedBonus.toFixed(
+                    2,
+                  )}
+                </span>
+
+              </div>
+
+              <div className="border-b border-white/10 my-3" />
+
+              <div className="flex justify-between text-white font-bold text-lg">
+
+                <span>
+                  Total Credit
+                </span>
+
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-fuchsia-300">
+                  ₹
+                  {totalCredit.toFixed(
+                    2,
+                  )}
+                </span>
+
+              </div>
+
             </div>
 
             {/* Validation Error */}
-            {!isValidAmount && showValidation && (
-              <p className="text-rose-400 text-sm font-medium animate-pulse text-center">
-                Amount should be between ₹10 and ₹50,000
-              </p>
-            )}
+
+            {!isValidAmount &&
+              showValidation && (
+                <p className="text-rose-400 text-sm font-medium animate-pulse text-center">
+                  Amount should be
+                  between ₹10 and
+                  ₹50,000
+                </p>
+              )}
 
             {/* Pay Button */}
+
             <button
-              disabled={!isValidAmount || loading}
-              onClick={handlePayment}
+              type="button"
+              disabled={
+                !isValidAmount ||
+                loading
+              }
+              onClick={
+                handlePayment
+              }
               className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-300 ${
-                loading || !isValidAmount
-                  ? "bg-gray-500/30 cursor-not-allowed text-gray-300"
-                  : "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600"
+                loading ||
+                !isValidAmount
+                  ? 'bg-gray-500/30 cursor-not-allowed text-gray-300'
+                  : 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600'
               }`}
             >
               {loading ? (
@@ -358,12 +876,18 @@ const AddMoneyPage = () => {
             </button>
 
             {/* Security */}
+
             <div className="flex items-center justify-center gap-2 text-white/50 text-sm">
-              🔒 100% Secure payments powered by Cashfree
+              🔒 100% Secure payments
+              powered by Cashfree
             </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 };

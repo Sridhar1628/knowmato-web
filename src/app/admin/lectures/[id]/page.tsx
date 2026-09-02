@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getLecture, createLecture, updateLecture, Lecture } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 const emptyLecture: Partial<Lecture> = {
   title: "",
@@ -36,7 +36,7 @@ export default function LectureFormPage() {
       setLoading(true);
       getLecture(Number(id))
         .then(setForm)
-        .catch(() => toast.error("Failed to load"))
+        .catch(() => AlertService.error("Load Failed", "Failed to load lecture"))
         .finally(() => setLoading(false));
     }
   }, [id, isNew]);
@@ -53,10 +53,13 @@ export default function LectureFormPage() {
     try {
       if (isNew) await createLecture(form);
       else await updateLecture(Number(id), form);
-      toast.success(isNew ? "Created" : "Updated");
+      AlertService.success(
+        isNew ? "Lecture Created" : "Lecture Updated",
+        isNew ? "Lecture created successfully" : "Lecture updated successfully",
+      );
       router.push("/admin/lectures");
     } catch {
-      toast.error("Failed to save");
+      AlertService.error("Save Failed", "Failed to save lecture");
     } finally {
       setSaving(false);
     }

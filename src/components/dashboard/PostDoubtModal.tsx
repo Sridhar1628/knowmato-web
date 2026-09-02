@@ -7,7 +7,7 @@ import {
 } from '@/services/v1Service';
 
 import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { getOnlineTutors } from '@/services/v1Service';
@@ -90,15 +90,15 @@ export default function PostDoubtModal({
   const handleSubmit = async () => {
     // VALIDATION
     if (!title.trim()) {
-      toast.error(t('postDoubt.enterTitle'));
+      AlertService.error('⚠️', t('postDoubt.enterTitle'));
       return;
     }
     if (!category) {
-      toast.error(t('postDoubt.selectCategory'));
+      AlertService.error('⚠️', t('postDoubt.selectCategory'));
       return;
     }
     if (mode === 'specific' && !selectedTutor) {
-      toast.error(t('postDoubt.selectTutor'));
+      AlertService.error('⚠️', t('postDoubt.selectTutor'));
       return;
     }
 
@@ -110,9 +110,16 @@ export default function PostDoubtModal({
       const price = priceRes?.data?.price || priceRes?.price || 10;
 
       // CONFIRM
-      const confirmed = window.confirm(
-        t('postDoubt.paymentMessage', { price })
-      );
+      const confirmed = await new Promise<boolean>((resolve) => {
+        AlertService.confirm(
+          '💳',
+          t('postDoubt.paymentMessage', { price }),
+          () => resolve(true),
+          t('common.confirm'),
+          t('common.cancel')
+        );
+      });
+
       if (!confirmed) {
         setSubmitting(false);
         return;
@@ -140,7 +147,7 @@ export default function PostDoubtModal({
       await paymentSuccess({ doubt_id: doubtId });
 
       // SUCCESS
-      toast.success(t('postDoubt.findingExperts'));
+      AlertService.success('🚀', t('postDoubt.findingExperts'));
 
       onClose();
       setTitle('');
@@ -150,7 +157,10 @@ export default function PostDoubtModal({
       router.push(`/student/matching?doubtId=${doubtId}`);
     } catch (error: any) {
       console.error(error);
-      toast.error(error?.response?.data?.message || t('postDoubt.submissionFailed'));
+      AlertService.error(
+        '❌',
+        error?.response?.data?.message || t('postDoubt.submissionFailed')
+      );
     } finally {
       setSubmitting(false);
     }

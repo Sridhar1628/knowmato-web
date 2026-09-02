@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getDoubtDetails } from "@/services/v1Service";
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getTokens } from "@/services/storageService";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next"; // ✅ added
 
 // ---------- Types ----------
@@ -60,24 +60,37 @@ export default function MyDoubtsDetailsPage() {
       setDoubt(data);
     } catch (error) {
       console.error("Fetch details error:", error);
-      toast.error(t("doubtDetails.loadError"));
+      AlertService.error(
+        t("doubtDetails.loadErrorTitle", { defaultValue: "Unable to Load Doubt" }),
+        t("doubtDetails.loadError"),
+      );
     } finally {
       setLoading(false);
     }
   }, [doubtId, t]);
 
   useEffect(() => {
+    if (!doubtId || Number.isNaN(doubtId)) {
+      AlertService.error(
+        t("doubtDetails.invalidIdTitle", { defaultValue: "Invalid Doubt" }),
+        t("doubtDetails.invalidId", { defaultValue: "The requested doubt could not be found." }),
+      );
+      setLoading(false);
+      return;
+    }
+
     fetchDetails();
-  }, [fetchDetails]);
+  }, [doubtId, fetchDetails, t]);
 
   useEffect(() => {
     let mounted = true;
 
     const initSocket = async () => {
-      const tokens = await getTokens();
-      if (!tokens?.access) return;
+      try {
+        const tokens = await getTokens();
+        if (!tokens?.access) return;
 
-      connectSocket(tokens.access, (event, data) => {
+        connectSocket(tokens.access, (event, data) => {
         if (!mounted) return;
         console.log("📡 DOUBT DETAILS EVENT:", event, data);
 
@@ -86,15 +99,19 @@ export default function MyDoubtsDetailsPage() {
             fetchDetails();
           }
         }
-        if (event === "REQUEST_UPDATED") {
-          if (data?.doubt_id === doubtId) {
-            fetchDetails();
+          if (event === "REQUEST_UPDATED") {
+            if (data?.doubt_id === doubtId) {
+              fetchDetails();
+            }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error("Doubt details socket error:", error);
+      }
     };
 
     initSocket();
+
     return () => {
       mounted = false;
       disconnectSocket();
@@ -102,7 +119,14 @@ export default function MyDoubtsDetailsPage() {
   }, [doubtId, fetchDetails]);
 
   const joinSession = () => {
-    if (!doubt?.session?.id) return;
+    if (!doubt?.session?.id) {
+      AlertService.warning(
+        t("doubtDetails.sessionNotReadyTitle", { defaultValue: "Session Not Ready" }),
+        t("doubtDetails.sessionNotReady", { defaultValue: "The session is not ready yet. Please try again shortly." }),
+        [],
+      );
+      return;
+    }
     const sessionType = doubt.session.session_type;
     if (sessionType === "live_video") {
       router.push(`/videocall/${doubt.session.id}`);
@@ -197,6 +221,7 @@ export default function MyDoubtsDetailsPage() {
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 mb-6 shadow-2xl flex items-center justify-between">
           <button
             onClick={() => router.back()}
+            aria-label={t("common.goBack", { defaultValue: "Go back" })}
             className="p-2 rounded-xl hover:bg-white/10 transition text-white/80 hover:text-white"
           >
             <span className="text-lg">←</span>
@@ -238,7 +263,7 @@ export default function MyDoubtsDetailsPage() {
             <div>
               <span className="text-white/50">{t("doubtDetails.priceLabel")}</span>{" "}
               <span className="font-bold text-emerald-300">
-                {doubt.price ? `₹${doubt.price}` : t("doubtDetails.free")}
+                {doubt.price !== null && doubt.price !== undefined ? `₹${doubt.price}` : t("doubtDetails.free")}
               </span>
             </div>
             <div className="sm:col-span-2">
@@ -321,7 +346,19 @@ export default function MyDoubtsDetailsPage() {
             <h3 className="text-xl font-bold text-violet-300">{t("doubtDetails.completedTitle")}</h3>
             <p className="mt-2 text-violet-200/80">{t("doubtDetails.completedFeedbackDesc")}</p>
             <button
-              onClick={() => router.push(`/student/submit-review/${doubt.session?.id}`)}
+              onClick={() => {
+                if (!doubt.session?.id) {
+                  AlertService.warning(
+                    t("doubtDetails.sessionNotReadyTitle", { defaultValue: "Session Not Ready" }),
+                    t("doubtDetails.sessionNotReady", {
+                      defaultValue: "The session information is not available yet.",
+                    }),
+                    [],
+                  );
+                  return;
+                }
+                router.push(`/student/submit-review/${doubt.session.id}`);
+              }}
               className="mt-4 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-3 font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition"
             >
               {t("submitReview.submitReview")}

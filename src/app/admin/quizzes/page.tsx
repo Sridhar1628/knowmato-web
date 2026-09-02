@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { getQuizzes, deleteQuiz, Quiz } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function QuizzesPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function QuizzesPage() {
       const res = await getQuizzes(params);
       setQuizzes(res);
     } catch {
-      toast.error("Failed to load quizzes");
+      AlertService.error("Load Failed", "Failed to load quizzes");
     } finally {
       setLoading(false);
     }
@@ -40,10 +40,10 @@ export default function QuizzesPage() {
     setDeleting(true);
     try {
       await deleteQuiz(deleteModal.id);
-      toast.success("Quiz deleted");
+      AlertService.success("Quiz Deleted", "Quiz deleted successfully");
       fetchQuizzes();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Failed to delete quiz");
     } finally {
       setDeleting(false);
       setDeleteModal({ open: false, id: null });

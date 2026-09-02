@@ -14,6 +14,7 @@ import {
 } from "@/services/v1Service";
 
 import {getMyCreditBalances,} from "@/services/v2Service";
+import AlertService from "@/services/alertService";
 
 // New services you’ve added
 import {
@@ -87,7 +88,19 @@ const CreditPlansPage = () => {
 
     } catch (err: any) {
       console.error("Failed to load credits data:", err);
-      setError("Unable to load your credits. Please try again.");
+
+      const errorMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Unable to load your credits. Please try again.";
+
+      setError(errorMessage);
+
+      AlertService.error(
+        "Unable to Load Credits",
+        errorMessage,
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +117,10 @@ const CreditPlansPage = () => {
       console.log("CREATE ORDER RESPONSE:", response);
 
       if (!response.success) {
-        alert(response.message || "Unable to create payment.");
+        AlertService.error(
+          "Payment Error",
+          response.message || "Unable to create payment.",
+        );
         return;
       }
 
@@ -126,7 +142,10 @@ const CreditPlansPage = () => {
       });
 
       if (!cashfree) {
-        alert("Unable to load Cashfree.");
+        AlertService.error(
+          "Payment Gateway Error",
+          "Unable to load Cashfree.",
+        );
         return;
       }
 
@@ -136,7 +155,10 @@ const CreditPlansPage = () => {
       });
     } catch (error: any) {
       console.error(error);
-      alert(error?.message || "Unable to start payment.");
+      AlertService.error(
+        "Payment Error",
+        error?.message || "Unable to start payment.",
+      );
     } finally {
       setPurchasingPlanId(null);
     }

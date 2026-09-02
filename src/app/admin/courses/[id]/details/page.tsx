@@ -23,7 +23,7 @@ import {
 
 import AdminLayout from "@/app/admin/AdminLayout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ────────────────────────────────────────────────────────────
 //  MODALS
@@ -387,7 +387,7 @@ export default function CourseDetailsPage() {
       );
       setLecturesMap(map);
     } catch (err) {
-      toast.error("Failed to load course details");
+      AlertService.error("Load Failed", "Failed to load course details");
     } finally {
       setLoading(false);
     }
@@ -403,16 +403,16 @@ export default function CourseDetailsPage() {
       if (sectionModal.initial?.id) {
         // Edit existing section
         await updateSection(sectionModal.initial.id, data);
-        toast.success("Section updated");
+        AlertService.success("Section Updated", "Section updated successfully");
       } else {
         // Create new section
         await createSection({ ...data, course: courseId });
-        toast.success("Section created");
+        AlertService.success("Section Created", "Section created successfully");
       }
       setSectionModal({ open: false });
       fetchAll();
     } catch {
-      toast.error("Failed to save section");
+      AlertService.error("Save Failed", "Failed to save section");
     }
   };
 
@@ -434,20 +434,20 @@ export default function CourseDetailsPage() {
       if (lectureModal.initial?.id) {
         // Edit lecture
         await updateLecture(lectureModal.initial.id, data);
-        toast.success("Lecture updated");
+        AlertService.success("Lecture Updated", "Lecture updated successfully");
       } else {
         // New lecture
         if (!lectureModal.sectionId) {
-          toast.error("Section missing");
+          AlertService.error("Section Missing", "Section is missing");
           return;
         }
         await createLecture({ ...data, section: lectureModal.sectionId });
-        toast.success("Lecture created");
+        AlertService.success("Lecture Created", "Lecture created successfully");
       }
       setLectureModal({ open: false });
       fetchAll();
     } catch {
-      toast.error("Failed to save lecture");
+      AlertService.error("Save Failed", "Failed to save lecture");
     }
   };
 
@@ -458,14 +458,14 @@ export default function CourseDetailsPage() {
     try {
       if (deleteTarget.type === "section") {
         await deleteSection(deleteTarget.id);
-        toast.success("Section deleted");
+        AlertService.success("Section Deleted", "Section deleted successfully");
       } else {
         await deleteLecture(deleteTarget.id);
-        toast.success("Lecture deleted");
+        AlertService.success("Lecture Deleted", "Lecture deleted successfully");
       }
       fetchAll();
     } catch {
-      toast.error("Delete failed");
+      AlertService.error("Delete Failed", "Delete failed");
     } finally {
       setDeleting(false);
       setDeleteTarget(null);

@@ -10,6 +10,7 @@ import {
   type InternshipApplication,
 } from '@/services/v2Service';
 import { useTranslation } from 'react-i18next';
+import AlertService from '@/services/alertService';
 
 export default function InternshipsPage() {
   const { t } = useTranslation();
@@ -60,8 +61,21 @@ export default function InternshipsPage() {
         setInternships(internshipArray);
         setApplications(applicationsArray);
       } catch (err: any) {
-        setError(err?.response?.data?.detail || err?.message || t('internships.loadError'));
-        console.error(err);
+        console.error('INTERNSHIPS LOAD ERROR:', err);
+
+        const errorMessage =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          t('internships.loadError');
+
+        setError(errorMessage);
+
+        AlertService.error(
+          'Unable to Load Internships',
+          errorMessage,
+        );
       } finally {
         setLoading(false);
       }
@@ -114,13 +128,36 @@ export default function InternshipsPage() {
 
         setApplications(updatedApps);
       }
+      const successMessage = t('internships.applicationSuccess');
+
       setApplyMessage({
         type: 'success',
-        text: t('internships.applicationSuccess'),
+        text: successMessage,
       });
+
+      AlertService.success(
+        'Application Submitted',
+        successMessage,
+      );
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || t('internships.somethingWentWrong');
-      setApplyMessage({ type: 'error', text: detail });
+      console.error('INTERNSHIP APPLICATION ERROR:', err);
+
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        t('internships.somethingWentWrong');
+
+      setApplyMessage({
+        type: 'error',
+        text: detail,
+      });
+
+      AlertService.error(
+        'Application Failed',
+        detail,
+      );
     } finally {
       setApplying(false);
     }
@@ -132,11 +169,41 @@ export default function InternshipsPage() {
     setWithdrawing(true);
     try {
       await withdrawInternshipApplication(selectedApplication.id);
-      setApplications((prev) => prev.filter((app) => app.id !== selectedApplication.id));
+
+      setApplications((prev) =>
+        prev.filter(
+          (app) => app.id !== selectedApplication.id,
+        ),
+      );
+
       setDetailModalOpen(false);
+
+      AlertService.success(
+        'Application Withdrawn',
+        t(
+          'internships.withdrawSuccess',
+          'Your internship application has been withdrawn successfully.',
+        ),
+      );
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || t('internships.withdrawFailed');
-      setApplyMessage({ type: 'error', text: detail });
+      console.error('INTERNSHIP WITHDRAW ERROR:', err);
+
+      const detail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        t('internships.withdrawFailed');
+
+      setApplyMessage({
+        type: 'error',
+        text: detail,
+      });
+
+      AlertService.error(
+        'Withdrawal Failed',
+        detail,
+      );
     } finally {
       setWithdrawing(false);
     }
@@ -389,11 +456,29 @@ export default function InternshipsPage() {
 
       {/* Detail / Apply / Status Modal */}
       {detailModalOpen && selectedInternship && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl relative">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !applying &&
+              !withdrawing
+            ) {
+              setDetailModalOpen(false);
+              setSelectedInternship(null);
+              setApplyMessage(null);
+            }
+          }}
+        >
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl">
             {/* Close button */}
             <button
-              onClick={() => setDetailModalOpen(false)}
+              onClick={() => {
+                if (applying || withdrawing) return;
+                setDetailModalOpen(false);
+                setSelectedInternship(null);
+                setApplyMessage(null);
+              }}
               className="absolute top-4 right-4 text-white/50 hover:text-white text-xl leading-none"
             >
               ✕

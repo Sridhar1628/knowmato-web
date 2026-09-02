@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 import {
   getAdminWithdrawals,
   updateAdminWithdrawal,
@@ -91,7 +91,7 @@ export default function AdminWithdrawalsPage() {
       setTotalPages(Math.ceil(count / 9) || 1);
     } catch (err: any) {
       setError(err?.message || "Failed to load withdrawals");
-      toast.error("Failed to load withdrawals");
+      AlertService.error("Load Failed", "Failed to load withdrawals");
     } finally {
       setLoading(false);
     }
@@ -113,7 +113,10 @@ export default function AdminWithdrawalsPage() {
         status: newStatus,
         admin_notes: adminNotes || "",
       });
-      toast.success(`Withdrawal ${newStatus}`);
+      AlertService.success(
+        "Withdrawal Updated",
+        `Withdrawal ${newStatus}`
+      );
       // Optimistic update
       setWithdrawals((prev) =>
         prev.map((w) =>
@@ -121,7 +124,10 @@ export default function AdminWithdrawalsPage() {
         )
       );
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Action failed");
+      AlertService.error(
+        "Action Failed",
+        err?.response?.data?.error || "Action failed"
+      );
     } finally {
       setActionLoading(null);
     }

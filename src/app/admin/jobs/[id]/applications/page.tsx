@@ -8,7 +8,7 @@ import {
   type JobApplication,
 } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function AdminJobApplicationsPage() {
   const { id: jobId } = useParams<{ id: string }>();
@@ -38,7 +38,7 @@ export default function AdminJobApplicationsPage() {
       const msg =
         err?.response?.data?.detail || err?.message || "Failed to load applications";
       setError(msg);
-      toast.error(msg);
+      AlertService.error("Load Failed", msg);
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export default function AdminJobApplicationsPage() {
     setUpdateLoading(true);
     try {
       await updateJobApplicationStatus(selectedApp.id, statusToSet, companyNotes);
-      toast.success("Status updated successfully");
+      AlertService.success("Status Updated", "Status updated successfully");
       // Update local state to reflect new status
       setApplications((prev) =>
         prev.map((app) =>
@@ -94,7 +94,7 @@ export default function AdminJobApplicationsPage() {
       );
       setUpdatingStatus(false);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Update failed");
+      AlertService.error("Update Failed", err?.response?.data?.detail || "Update failed");
     } finally {
       setUpdateLoading(false);
     }

@@ -11,7 +11,6 @@ import {
   CurrentAffair,
   getMyDoubts,
 } from '@/services/v1Service';
-import toast from 'react-hot-toast';
 import { dashboardCache } from '@/store/dashboardCache';
 import { subscribeDashboard } from '@/store/dashboardRealtime';
 import PostDoubtModal from '@/components/dashboard/PostDoubtModal';
@@ -19,6 +18,7 @@ import { connectSocket } from '@/services/versionSocketService';
 import { updateDashboardCache } from '@/store/dashboardEvents';
 import { getStudentProfile } from "@/services/v1Service";
 import { useTranslation } from 'react-i18next'; // ✅ added
+import AlertService from '@/services/alertService';
 
 interface OnlineTutor {
   id: number;
@@ -75,7 +75,10 @@ export default function DashboardPage() {
         }
         fetchDashboardData();
       } catch (err) {
-        toast.error(t('studentHome.profileError') || "Unable to verify your profile.");
+        AlertService.error(
+          "Profile Verification Failed",
+          t('studentHome.profileError') || "Unable to verify your profile.",
+        );
         router.replace("/student/profile");
       } finally {
         setCheckingProfile(false);
@@ -124,7 +127,10 @@ export default function DashboardPage() {
       setOnlineTutors(tutorsData);
     } catch (error) {
       console.error('Dashboard fetch error:', error);
-      toast.error(t('studentHome.dashboardError') || 'Could not load dashboard data.');
+      AlertService.error(
+        "Dashboard Error",
+        t('studentHome.dashboardError') || 'Could not load dashboard data.',
+      );
     } finally {
       setLoading(false);
     }
@@ -262,7 +268,11 @@ export default function DashboardPage() {
                   <button
                     onClick={() => {
                       if (!quickDoubt.trim()) {
-                        toast.error(t('studentHome.pleaseDescribeDoubt'));
+                        AlertService.warning(
+                          "Doubt Required",
+                          t('studentHome.pleaseDescribeDoubt'),
+                          [],
+                        );
                         return;
                       }
                       setShowPostModal(true);

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { getTutorApplications } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,7 +106,7 @@ export default function TutorApplicationsPage() {
     } catch (err: any) {
       const message = err?.message || "Failed to load applications";
       setError(message);
-      toast.error(message);
+      AlertService.error("Load Failed", message);
     } finally {
       setLoading(false);
     }

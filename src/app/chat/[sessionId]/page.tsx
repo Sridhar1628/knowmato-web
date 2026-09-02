@@ -14,7 +14,11 @@ import { getTokens } from "@/services/storageService";
 import { endSession } from "@/services/sessionService";
 import axiosInstance from "@/api/axiosInstance";
 import { createReport } from "@/services/v1Service";
-
+import AlertService from "@/services/alertService";
+import {
+  playChatSound,
+  preloadNotificationSounds,
+} from "@/services/notificationSoundService";
 /* ----- Types ----- */
 interface Message {
   id: number | string;
@@ -69,6 +73,7 @@ const ChatScreen = () => {
   const socketInitialized = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const receivedMessageIdsRef = useRef<Set<number>>(new Set());
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
@@ -137,16 +142,76 @@ const ChatScreen = () => {
         return;
       }
 
+      // ========================================================
       // MESSAGE
+      // ========================================================
       if (data?.id) {
         const cleaned = normalizeMessage(data);
+        const messageId = Number(cleaned.id);
+
+        /**
+         * Ignore messages that were already received.
+         */
+        if (
+          receivedMessageIdsRef.current.has(messageId)
+        ) {
+          console.log(
+            "⚠️ Duplicate chat message ignored:",
+            messageId,
+          );
+
+          return;
+        }
+
+        /**
+         * Register the message BEFORE updating React state.
+         *
+         * This guarantees that a duplicate WebSocket event
+         * cannot trigger another sound.
+         */
+        receivedMessageIdsRef.current.add(messageId);
+
         setMessages((prev) => {
-          if (prev.some((m) => Number(m.id) === Number(cleaned.id))) return prev;
+          if (
+            prev.some(
+              (message) =>
+                Number(message.id) === messageId,
+            )
+          ) {
+            return prev;
+          }
+
           return [...prev, cleaned];
         });
-        if (cleaned.sender_id !== currentUserId) {
-          sendReadReceipt([Number(cleaned.id)]);
+
+        /**
+         * Check whether this is an incoming message.
+         */
+        const isIncomingMessage =
+          currentUserId !== null &&
+          Number(cleaned.sender_id) !==
+            Number(currentUserId);
+
+        if (isIncomingMessage) {
+          console.log(
+            "💬🔊 Incoming chat message — playing sound",
+            {
+              messageId,
+              senderId: cleaned.sender_id,
+            },
+          );
+
+          /**
+           * Mark message as read.
+           */
+          sendReadReceipt([messageId]);
+
+          /**
+           * Play chat notification sound.
+           */
+          void playChatSound();
         }
+
         return;
       }
 
@@ -179,7 +244,10 @@ const ChatScreen = () => {
               navigateAfterEnd();
             } catch (err: any) {
               const msg = err?.response?.data?.error || "Unable to end session.";
-              window.alert("End Session Failed: " + msg);
+              AlertService.error(
+                "End Session Failed",
+                msg,
+              );
               setRequestSent(false);
             } finally {
               setEnding(false);
@@ -205,7 +273,10 @@ const ChatScreen = () => {
 
       // END SESSION REJECTED
       if (data?.type === "END_SESSION_REJECTED") {
-        window.alert("Request Rejected: User declined.");
+        AlertService.info(
+          "Request Rejected",
+          "The other user declined your request to end the session.",
+        );
         setRequestSent(false);
         return;
       }
@@ -223,6 +294,10 @@ const ChatScreen = () => {
     },
     [currentUserId, otherUserId, sessionId]
   );
+
+  useEffect(() => {
+    preloadNotificationSounds();
+  }, []);
 
   // ----- Lifecycle: Load user and session -----
   useEffect(() => {
@@ -315,6 +390,11 @@ const ChatScreen = () => {
 
         const messagesArray = extractMessagesArray(res);
         const cleaned = messagesArray.map(normalizeMessage);
+        receivedMessageIdsRef.current = new Set(
+          cleaned
+            .map((message) => Number(message.id))
+            .filter((id) => Number.isFinite(id)),
+        );
         setMessages(cleaned);
 
         // Optionally mark messages as read (uncomment if needed)
@@ -670,20 +750,54 @@ const ChatScreen = () => {
 
   // ----- End session request -----
   const handleEndSession = () => {
-    if (requestSent || ending) return;
-    if (!window.confirm("Do you want to request to end the session?")) return;
-
-    try {
-      setRequestSent(true);
-      sendChatMessage({
-        type: "END_SESSION_REQUEST",
-        session_id: sessionId,
-      });
-      window.alert("Request Sent: Waiting for other user...");
-    } catch {
-      setRequestSent(false);
-      window.alert("Failed to send request. Please try again.");
+    if (
+      requestSent ||
+      ending
+    ) {
+      return;
     }
+
+    AlertService.confirm(
+      "End Session?",
+      "Do you want to send a request to end this session?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "End Session",
+          style: "destructive",
+          onPress: () => {
+            try {
+              setRequestSent(true);
+
+              sendChatMessage({
+                type: "END_SESSION_REQUEST",
+                session_id: sessionId,
+              });
+
+              AlertService.info(
+                "Request Sent",
+                "Your request has been sent. Waiting for the other user to respond.",
+              );
+            } catch (error) {
+              console.error(
+                "Failed to send end-session request:",
+                error,
+              );
+
+              setRequestSent(false);
+
+              AlertService.error(
+                "Request Failed",
+                "Failed to send the end-session request. Please try again.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   // ----- Render loading state -----
@@ -695,38 +809,136 @@ const ChatScreen = () => {
     );
   }
 
-  const handleSubmitReport = async () => {
-    if (!reportReason) {
-      window.alert("Please select a reason.");
-      return;
-    }
-    if (!reportDescription.trim()) {
-      window.alert("Please enter a description.");
-      return;
-    }
-    if (reportDescription.trim().length < 10) {
-      window.alert("Please provide a little more detail.");
-      return;
-    }
+  const handleSubmitReport =
+    async () => {
+      // ========================================================
+      // REASON VALIDATION
+      // ========================================================
 
-    try {
-      setReportLoading(true);
-      await createReport({
-        session_id: Number(sessionId),
-        reason: reportReason as any,
-        description: reportDescription.trim(),
-      });
-      window.alert("✅ Your report has been submitted successfully.");
-      setShowReportModal(false);
-      setReportReason("");
-      setReportDescription("");
-    } catch (error: any) {
-      console.log("REPORT ERROR", error.response);
-      window.alert(JSON.stringify(error.response?.data, null, 2));
-    } finally {
-      setReportLoading(false);
-    }
-  };
+      if (!reportReason) {
+        AlertService.warning(
+          "Reason Required",
+          "Please select a reason for reporting this tutor.",[]
+        );
+
+        return;
+      }
+
+      // ========================================================
+      // DESCRIPTION VALIDATION
+      // ========================================================
+
+      if (
+        !reportDescription.trim()
+      ) {
+        AlertService.warning(
+          "Description Required",
+          "Please enter a description explaining what happened.",[]
+        );
+
+        return;
+      }
+
+      // ========================================================
+      // DESCRIPTION LENGTH
+      // ========================================================
+
+      if (
+        reportDescription.trim()
+          .length < 10
+      ) {
+        AlertService.warning(
+          "More Details Needed",
+          "Please provide a little more detail so our moderation team can properly review your report.",[]
+        );
+
+        return;
+      }
+
+      try {
+        setReportLoading(true);
+
+        // ======================================================
+        // SUBMIT REPORT
+        // ======================================================
+
+        await createReport({
+          session_id:
+            Number(sessionId),
+          reason:
+            reportReason as any,
+          description:
+            reportDescription.trim(),
+        });
+
+        // ======================================================
+        // SUCCESS
+        // ======================================================
+
+        AlertService.success(
+          "Report Submitted",
+          "Your report has been submitted successfully. Our moderation team will review it.",
+        );
+
+        // ======================================================
+        // RESET FORM
+        // ======================================================
+
+        setShowReportModal(
+          false,
+        );
+
+        setReportReason("");
+
+        setReportDescription("");
+      } catch (error: any) {
+        console.log(
+          "REPORT ERROR",
+          error?.response,
+        );
+
+        // ======================================================
+        // EXTRACT BACKEND ERROR
+        // ======================================================
+
+        let message =
+          "Failed to submit your report. Please try again.";
+
+        const responseData =
+          error?.response?.data;
+
+        if (
+          typeof responseData ===
+            "object" &&
+          responseData !== null
+        ) {
+          message =
+            responseData.message ||
+            responseData.detail ||
+            responseData.error ||
+            message;
+        } else if (
+          typeof error?.message ===
+          "string"
+        ) {
+          message =
+            error.message;
+        }
+
+        // ======================================================
+        // ERROR ALERT
+        // ======================================================
+
+        AlertService.error(
+          "Report Failed",
+          message,
+        );
+      } finally {
+        setReportLoading(
+          false,
+        );
+      }
+    };
 
   const WARNING_MESSAGE =
     "⚠️ Please communicate respectfully. Abuse, harassment, offensive language, sharing personal contact information, or inappropriate behaviour may result in account suspension.";

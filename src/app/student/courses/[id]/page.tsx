@@ -9,7 +9,8 @@ import {
   purchaseCourse,
   type Course,
   type Enrollment,
-} from '@/services/v2Service'; // adjust path if needed
+} from '@/services/v2Service';
+import AlertService from '@/services/alertService';
 
 type CourseWithBanner = Course & {
   banner?: string;
@@ -30,8 +31,10 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     if (!courseId || isNaN(courseId)) {
-      setError(t('common.invalidId') || 'Invalid course ID');
+      const errorMessage = t('common.invalidId') || 'Invalid course ID';
+      setError(errorMessage);
       setLoading(false);
+      AlertService.warning('Invalid Course', errorMessage, []);
       return;
     }
 
@@ -49,8 +52,21 @@ export default function CourseDetailPage() {
         setCourse(courseData);
         setEnrollment(enrollmentData);
       } catch (err: any) {
-        setError(err?.message || t('common.error') || 'Failed to load course');
+        const errorMessage =
+          err?.response?.data?.detail ||
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          t('common.error') ||
+          'Failed to load course';
+
+        setError(errorMessage);
         console.error(err);
+
+        AlertService.error(
+          'Unable to Load Course',
+          errorMessage,
+        );
       } finally {
         setLoading(false);
       }
@@ -66,11 +82,32 @@ export default function CourseDetailPage() {
     try {
       const result = await purchaseCourse(course.id);
       setEnrollment(result); // or refetch enrollment
-      setEnrollMessage(t('common.enrollSuccess') || 'Successfully enrolled!');
+      const successMessage =
+        t('common.enrollSuccess') ||
+        'Successfully enrolled!';
+
+      setEnrollMessage(successMessage);
+
+      AlertService.success(
+        'Enrollment Successful',
+        successMessage,
+      );
       // Optionally redirect to learning page after a short delay
       // setTimeout(() => router.push(`/learning/${course.id}`), 1500);
     } catch (err: any) {
-      setEnrollMessage(err?.response?.data?.detail || err?.message || 'Enrollment failed');
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        'Enrollment failed';
+
+      setEnrollMessage(errorMessage);
+
+      AlertService.error(
+        'Enrollment Failed',
+        errorMessage,
+      );
     } finally {
       setEnrolling(false);
     }

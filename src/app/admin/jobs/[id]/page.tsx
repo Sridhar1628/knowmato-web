@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getJob, createJob, updateJob, type Job } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 const emptyJob: Partial<Job> = {
   title: "",
@@ -45,7 +45,7 @@ export default function AdminJobFormPage() {
           setForm(job);
         })
         .catch(() => {
-          toast.error("Failed to load job");
+          AlertService.error("Load Failed", "Failed to load job");
           router.push("/admin/jobs");
         })
         .finally(() => setLoading(false));
@@ -84,14 +84,14 @@ export default function AdminJobFormPage() {
     try {
       if (isNew) {
         await createJob(form);
-        toast.success("Job created");
+        AlertService.success("Job Created", "Job created successfully");
       } else {
         await updateJob(Number(id), form);
-        toast.success("Job updated");
+        AlertService.success("Job Updated", "Job updated successfully");
       }
       router.push("/admin/jobs");
     } catch {
-      toast.error("Save failed");
+      AlertService.error("Save Failed", "Save failed");
     } finally {
       setSaving(false);
     }

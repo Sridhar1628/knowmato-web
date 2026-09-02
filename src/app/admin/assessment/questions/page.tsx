@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import AdminLayout from '@/app/admin/AdminLayout';
-import toast from 'react-hot-toast';
+import AlertService from '@/services/alertService';
 import { getAdminQuestions, AdminQuestionListItem } from '@/services/assessmentService';
 
 export default function AdminQuestionsListPage() {
@@ -20,7 +20,7 @@ export default function AdminQuestionsListPage() {
       const data = Array.isArray(response) ? response : (response as any)?.data ?? [];
       setQuestions(Array.isArray(data) ? data : []);
     } catch (err) {
-      toast.error('Failed to load questions');
+      AlertService.error('Load Failed', 'Failed to load questions');
     } finally {
       setLoading(false);
     }

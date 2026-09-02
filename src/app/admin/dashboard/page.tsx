@@ -7,7 +7,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { getAdminDashboard } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface DashboardData {
@@ -77,7 +77,7 @@ export default function AdminDashboardPage() {
       setDashboard(res?.data || res);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to load dashboard");
+      AlertService.error("Load Failed", "Failed to load dashboard");
     } finally {
       setLoading(false);
       setRefreshing(false);

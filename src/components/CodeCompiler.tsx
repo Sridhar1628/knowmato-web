@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import CodeEditor from '@uiw/react-textarea-code-editor';
-import { toast } from 'sonner';
+import AlertService from '@/services/alertService';
 import { getTokens } from '@/services/storageService';
 import {
   connectCompilerSocket,
@@ -151,7 +151,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             return finalOutput;
           });
 
-          toast.error(errorMessage);
+          AlertService.error("Compilation Error", errorMessage);
           setIsRunning(false);
           setTerminalInput('');
           break;
@@ -270,7 +270,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   const handleRun = () => {
     if (isRunning) return;
     if (sourceCode.trim().length === 0) {
-      toast.error('Source code is empty');
+      AlertService.warning("Empty Code", "Please enter some source code before running.",[]);
       return;
     }
 
@@ -280,7 +280,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     }
 
     if (!questionId) {
-      toast.error('No question ID provided. Cannot compile.');
+      AlertService.error("Compiler Error", "No question ID was provided. Cannot compile this code.");
       return;
     }
 

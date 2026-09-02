@@ -19,7 +19,7 @@ import {
   CreditCost,
 } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 type Tab = "categories" | "plans" | "costs" | "adjust";
 
@@ -288,7 +288,7 @@ export default function AdminCreditsPage() {
       setCategories(data);
       setAllCategories(data);
     } catch {
-      toast.error("Failed to load categories");
+      AlertService.error("Load Failed", "Failed to load categories");
     }
   }, []);
 
@@ -297,7 +297,7 @@ export default function AdminCreditsPage() {
       const data = await adminGetPlans();
       setPlans(data);
     } catch {
-      toast.error("Failed to load plans");
+      AlertService.error("Load Failed", "Failed to load plans");
     }
   }, []);
 
@@ -306,7 +306,7 @@ export default function AdminCreditsPage() {
       const data = await adminGetCosts();
       setCosts(data);
     } catch {
-      toast.error("Failed to load costs");
+      AlertService.error("Load Failed", "Failed to load costs");
     }
   }, []);
 
@@ -325,30 +325,42 @@ export default function AdminCreditsPage() {
     try {
       if (editingCat) {
         await adminUpdateCategory(editingCat.id, catForm);
-        toast.success("Category updated");
+        AlertService.success("Category Updated", "Category updated successfully");
       } else {
         await adminCreateCategory(catForm);
-        toast.success("Category created");
+        AlertService.success("Category Created", "Category created successfully");
       }
       setCatModalOpen(false);
       setEditingCat(null);
       setCatForm({ name: "", description: "", is_active: true });
       await fetchCategories();
     } catch {
-      toast.error("Failed to save category");
+      AlertService.error("Save Failed", "Failed to save category");
     }
   }, [editingCat, catForm, fetchCategories]);
 
   const handleDeleteCategory = useCallback(
     async (id: number) => {
-      if (!confirm("Delete this category?")) return;
-      try {
-        await adminDeleteCategory(id);
-        toast.success("Category deleted");
-        await fetchCategories();
-      } catch {
-        toast.error("Delete failed");
-      }
+      AlertService.confirm(
+        "Delete Category",
+        "Delete this category?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await adminDeleteCategory(id);
+                AlertService.success("Category Deleted", "Category deleted successfully");
+                await fetchCategories();
+              } catch {
+                AlertService.error("Delete Failed", "Delete failed");
+              }
+            },
+          },
+        ],
+      );
     },
     [fetchCategories]
   );
@@ -363,30 +375,42 @@ export default function AdminCreditsPage() {
       };
       if (editingPlan) {
         await adminUpdatePlan(editingPlan.id, payload);
-        toast.success("Plan updated");
+        AlertService.success("Plan Updated", "Plan updated successfully");
       } else {
         await adminCreatePlan(payload);
-        toast.success("Plan created");
+        AlertService.success("Plan Created", "Plan created successfully");
       }
       setPlanModalOpen(false);
       setEditingPlan(null);
       setPlanForm({ name: "", description: "", price: "", is_active: true, items: [] });
       await fetchPlans();
     } catch {
-      toast.error("Failed to save plan");
+      AlertService.error("Save Failed", "Failed to save plan");
     }
   }, [editingPlan, planForm, fetchPlans]);
 
   const handleDeletePlan = useCallback(
     async (id: number) => {
-      if (!confirm("Delete this plan?")) return;
-      try {
-        await adminDeletePlan(id);
-        toast.success("Plan deleted");
-        await fetchPlans();
-      } catch {
-        toast.error("Delete failed");
-      }
+      AlertService.confirm(
+        "Delete Plan",
+        "Delete this plan?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await adminDeletePlan(id);
+                AlertService.success("Plan Deleted", "Plan deleted successfully");
+                await fetchPlans();
+              } catch {
+                AlertService.error("Delete Failed", "Delete failed");
+              }
+            },
+          },
+        ],
+      );
     },
     [fetchPlans]
   );
@@ -396,11 +420,11 @@ export default function AdminCreditsPage() {
     async (id: number) => {
       try {
         await adminUpdateCost(id, { cost: parseInt(costInput, 10) });
-        toast.success("Cost updated");
+        AlertService.success("Cost Updated", "Cost updated successfully");
         setEditingCostId(null);
         await fetchCosts();
       } catch {
-        toast.error("Update failed");
+        AlertService.error("Update Failed", "Update failed");
       }
     },
     [costInput, fetchCosts]
@@ -410,7 +434,7 @@ export default function AdminCreditsPage() {
   const handleAdjustCredits = useCallback(async () => {
     const { user_id, category, amount, description } = adjustForm;
     if (!user_id || !category || !amount) {
-      toast.error("Please fill all required fields");
+      AlertService.error("Required Fields", "Please fill all required fields");
       return;
     }
     try {
@@ -420,10 +444,10 @@ export default function AdminCreditsPage() {
         amount: parseInt(amount, 10),
         description,
       });
-      toast.success("Credits adjusted");
+      AlertService.success("Credits Adjusted", "Credits adjusted successfully");
       setAdjustForm({ user_id: "", category: "", amount: "", description: "" });
     } catch {
-      toast.error("Adjustment failed");
+      AlertService.error("Adjustment Failed", "Adjustment failed");
     }
   }, [adjustForm]);
 

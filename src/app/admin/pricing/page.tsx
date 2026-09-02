@@ -10,7 +10,7 @@ import {
   deletePricingSlot,
 } from "@/services/v1Service";
 import AdminLayout from "@/app/admin/AdminLayout";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 // ---------- Types ----------
 interface PricingSlot {
@@ -93,7 +93,7 @@ export default function AdminPricingPage() {
         setTotalCount(count);
       } catch (error: any) {
         console.error("Fetch pricing slots error:", error);
-        toast.error("Failed to load pricing slots.");
+        AlertService.error("Load Failed", "Failed to load pricing slots.");
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -171,12 +171,12 @@ export default function AdminPricingPage() {
 
   const handleSave = async () => {
     if (!formDate || !formStartTime || !formEndTime || !formPrice) {
-      toast.error("Please fill all fields");
+      AlertService.error("Fields Required", "Please fill all fields");
       return;
     }
     const priceNum = parseFloat(formPrice);
     if (isNaN(priceNum) || priceNum <= 0) {
-      toast.error("Price must be a positive number");
+      AlertService.error("Invalid Price", "Price must be a positive number");
       return;
     }
 
@@ -188,7 +188,7 @@ export default function AdminPricingPage() {
           end_time: formEndTime,
           price: priceNum,
         });
-        toast.success("Slot updated");
+        AlertService.success("Slot Updated", "Pricing slot updated successfully");
       } else {
         await createPricingSlot({
           date: formDate,
@@ -196,7 +196,7 @@ export default function AdminPricingPage() {
           end_time: formEndTime,
           price: priceNum,
         });
-        toast.success("Slot created");
+        AlertService.success("Slot Created", "Pricing slot created successfully");
       }
       setModalOpen(false);
       setAllSlots([]);
@@ -205,22 +205,31 @@ export default function AdminPricingPage() {
     } catch (error: any) {
       console.error("Save error:", error);
       const msg = error?.response?.data?.error || "Operation failed";
-      toast.error(msg);
+      AlertService.error("Operation Failed", msg);
     }
   };
 
   const handleDelete = async (slot: PricingSlot) => {
-    const confirmed = window.confirm(
-      `Remove slot on ${slot.date} ${formatTo12Hour(slot.start_time)}-${formatTo12Hour(slot.end_time)}?`
+    AlertService.confirm(
+      "Delete Pricing Slot",
+      `Remove slot on ${slot.date} ${formatTo12Hour(slot.start_time)}-${formatTo12Hour(slot.end_time)}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deletePricingSlot(slot.id);
+              AlertService.success("Slot Deleted", "Pricing slot deleted successfully");
+              handleRefresh();
+            } catch {
+              AlertService.error("Delete Failed", "Failed to delete pricing slot");
+            }
+          },
+        },
+      ],
     );
-    if (!confirmed) return;
-    try {
-      await deletePricingSlot(slot.id);
-      toast.success("Slot deleted");
-      handleRefresh();
-    } catch {
-      toast.error("Failed to delete");
-    }
   };
 
   // ---------- Loading State ----------

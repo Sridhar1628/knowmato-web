@@ -8,6 +8,7 @@ import { BASE_URL } from '../../config/env';
 import { streamMessageToAI } from '../../services/aiService';
 import styles from './ThinkingIndicator.module.css';
 import { handleAINavigation } from '@/utils/aiNavigation';
+import AlertService from '@/services/alertService';
 
 
 import {
@@ -1055,12 +1056,25 @@ export default function AgentChatScreen() {
           }
         }
       } else {
-        alert(response.data.message || 'Failed to load conversations');
+        AlertService.error(
+          'Unable to Load Chats',
+          response.data.message ||
+            'Failed to load conversations.',
+        );
       }
     } catch (error: any) {
       console.error(error);
-      if (error.response?.status === 401) alert('Session Expired. Please login again.');
-      else alert('Could not connect to server');
+      if (error.response?.status === 401) {
+        AlertService.error(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+        );
+      } else {
+        AlertService.error(
+          'Connection Error',
+          'Could not connect to the server. Please check your internet connection and try again.',
+        );
+      }
     } finally {
       setFetching(false);
     }
@@ -1068,7 +1082,10 @@ export default function AgentChatScreen() {
 
   const createNewChat = async () => {
     if (isStreaming || loading) {
-      alert('Please wait for the current response to finish.');
+      AlertService.warning(
+        'Please Wait',
+        'Please wait for the current response to finish before starting a new chat.',[]
+      );
       return;
     }
     if (!currentConversationId || messages.length === 0) {
@@ -1088,10 +1105,18 @@ export default function AgentChatScreen() {
         pendingUserMessageRef.current = null;
         escalationDataRef.current = null;
       } else {
-        alert(response.data.message || 'Failed to create new chat');
+        AlertService.error(
+          'Unable to Create Chat',
+          response.data.message ||
+            'Failed to create a new chat.',
+        );
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Could not create new chat');
+      AlertService.error(
+        'Unable to Create Chat',
+        error.response?.data?.message ||
+          'Could not create a new chat.',
+      );
     }
   };
 
@@ -1109,20 +1134,52 @@ export default function AgentChatScreen() {
     if (feedbackGiven[messageId]) return;
     try {
       const res = await axiosInstance.post(`${BASE_URL}ai/feedback/`, { message_id: messageId, rating });
-      if (res.data.success) setFeedbackGiven((prev) => ({ ...prev, [messageId]: rating }));
-      else alert(res.data.message);
+      if (res.data.success) {
+        setFeedbackGiven((prev) => ({
+          ...prev,
+          [messageId]: rating,
+        }));
+
+        AlertService.success(
+          'Feedback Submitted',
+          'Thank you for helping us improve KnowMato.',
+        );
+      } else {
+        AlertService.error(
+          'Feedback Failed',
+          res.data.message ||
+            'Could not submit your feedback.',
+        );
+      }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Could not submit feedback.');
+      AlertService.error(
+        'Feedback Failed',
+        err.response?.data?.message ||
+          'Could not submit your feedback.',
+      );
     }
   };
 
-  const handleCopyMessage = async (content: string) => {
+  const handleCopyMessage = async (
+    content: string,
+  ) => {
     try {
       await navigator.clipboard.writeText(content);
-      alert("Copied to clipboard!");
+
+      AlertService.success(
+        'Copied',
+        'The response has been copied to your clipboard.',
+      );
     } catch (err) {
-      console.error(err);
-      alert("Failed to copy.");
+      console.error(
+        'Copy failed:',
+        err,
+      );
+
+      AlertService.error(
+        'Copy Failed',
+        'Unable to copy the response to your clipboard.',
+      );
     }
   };
 
@@ -1308,27 +1365,65 @@ export default function AgentChatScreen() {
           }
 
           case 'error': {
-            const errMsg = event.data;
-            if (errMsg && errMsg.includes('Daily message limit')) {
-              alert(errMsg);
-              router.push('/credits');
+            const errMsg =
+              typeof event.data === 'string'
+                ? event.data
+                : event.data?.message ||
+                  event.data?.error ||
+                  'Stream error';
+
+            if (
+              errMsg &&
+              errMsg.includes('Daily message limit')
+            ) {
+              AlertService.warning(
+                'Daily Message Limit Reached',
+                'You have reached your daily KnowMato message limit. Please add credits to continue.',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'View Credits',
+                    style: 'default',
+                    onPress: () => {
+                      router.push('/credits');
+                    },
+                  },
+                ],
+              );
             } else {
-              alert(errMsg || 'Stream error');
+              AlertService.error(
+                'Message Error',
+                errMsg || 'An error occurred while processing your message.',
+              );
             }
+
             setIsStreaming(false);
             setLoading(false);
             setStreamingMessage('');
             setHasReceivedToken(false);
             abortControllerRef.current = null;
+
             break;
           }
         }
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('Stream error:', error);
-        alert(error.message || 'Failed to send message');
+        console.error(
+          'Stream error:',
+          error,
+        );
+
+        AlertService.error(
+          'Message Failed',
+          error?.message ||
+            'Failed to send your message. Please try again.',
+        );
       }
+
       setStreamingMessage('');
       setIsStreaming(false);
       setLoading(false);
@@ -1502,7 +1597,11 @@ export default function AgentChatScreen() {
                 key={conv.id}
                 onClick={() => {
                   if (isStreaming || loading) {
-                    alert('Please wait for the current response to finish.');
+                    AlertService.warning(
+                      'Please Wait',
+                      'Please wait for the current response to finish before switching conversations.',
+                      [],
+                    );
                     return;
                   }
                   selectConversation(conv.id);

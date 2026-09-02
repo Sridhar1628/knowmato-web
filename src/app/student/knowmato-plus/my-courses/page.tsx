@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getMyCourses, type Enrollment } from '@/services/v2Service';
 import { useTranslation } from 'react-i18next';
+import AlertService from '@/services/alertService';
 
 export default function MyCoursesPage() {
   const { t } = useTranslation();
@@ -33,14 +34,21 @@ export default function MyCoursesPage() {
 
       setEnrollments(data);
     } catch (err: any) {
+      console.error('Failed to fetch enrolled courses:', err);
+
       const message =
         err?.response?.data?.detail ||
         err?.response?.data?.message ||
+        err?.response?.data?.error ||
         err?.message ||
         t('myCourses.loadError');
 
       setError(message);
-      console.error('Failed to fetch enrolled courses:', err);
+
+      AlertService.error(
+        'Unable to Load Courses',
+        message,
+      );
     } finally {
       setLoading(false);
     }

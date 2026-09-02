@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import AlertService from '@/services/alertService';
 import {
   getAttemptDetails,
   getQuizQuestions,
@@ -94,7 +94,10 @@ export default function MCQQuizPage() {
         setAnswers(answerMap);
       } catch (err: any) {
         console.error(err);
-        toast.error(t('mcq.loadError'));
+        AlertService.error(
+          "Quiz Load Failed",
+          t('mcq.loadError'),
+        );
         setError(err.message || t('mcq.loadError'));
       } finally {
         setLoading(false);
@@ -116,7 +119,10 @@ export default function MCQQuizPage() {
           selected_option_id: optionId,
         });
       } catch (err) {
-        toast.error(t('mcq.saveError'));
+        AlertService.error(
+          "Answer Save Failed",
+          t('mcq.saveError'),
+        );
       }
     },
     [attemptId, t]
@@ -127,7 +133,11 @@ export default function MCQQuizPage() {
     // Check that every question has an answer (optional, but good UX)
     const unanswered = questions.some((q) => !answers[q.id]);
     if (unanswered) {
-      toast.error(t('mcq.answerAll'));
+      AlertService.warning(
+        "Answer Required",
+        t('mcq.answerAll'),
+        [],
+      );
       return;
     }
 
@@ -140,9 +150,15 @@ export default function MCQQuizPage() {
       const resultData = resultRes?.data ?? resultRes;
       setResultSummary(resultData);
       setSubmitted(true);
-      toast.success(t('mcq.submitSuccess'));
+      AlertService.success(
+        "Quiz Submitted",
+        t('mcq.submitSuccess'),
+      );
     } catch (err) {
-      toast.error(t('mcq.submitError'));
+      AlertService.error(
+        "Submission Failed",
+        t('mcq.submitError'),
+      );
     } finally {
       setIsSubmitting(false);
     }

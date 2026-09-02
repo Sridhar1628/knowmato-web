@@ -15,6 +15,7 @@ import {
   clearTutorDashboard,
 } from "@/store/tutorDashboardRealtime";
 import { useTranslation } from "react-i18next"; // ✅
+import AlertService from "@/services/alertService";
 
 // ---------- Type definitions ----------
 interface DashboardStats {
@@ -95,7 +96,10 @@ export default function TutorDashboard() {
       setTutorDashboard(dashboardStats, pending, active);
     } catch (error) {
       console.error("Dashboard fetch error:", error);
-      alert(t("tutorDashboard.loadError"));
+      AlertService.error(
+        "Dashboard Error",
+        t("tutorDashboard.loadError"),
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -109,8 +113,9 @@ export default function TutorDashboard() {
       setLoading(false);
       return;
     }
-    fetchDashboard();
-  }, []);
+
+    void fetchDashboard();
+  }, [fetchDashboard]);
 
   // Refresh handler
   const handleRefresh = async () => {
@@ -277,11 +282,13 @@ export default function TutorDashboard() {
                     if (session.status === "active") {
                       router.push(`/chat?sessionId=${session.session_id}`);
                     } else {
-                      alert(
+                      AlertService.warning(
+                        "Upcoming Session",
                         t("tutorDashboard.upcomingSessionAlert", {
                           title: session.title,
                           time: formatDate(session.started_at) || "TBD",
-                        })
+                        }),
+                        [],
                       );
                     }
                   }}

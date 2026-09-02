@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { getLectures, deleteLecture, Lecture } from "@/services/v2Service";
 import AdminLayout from "@/app/admin/AdminLayout";
 import ConfirmModal from "@/components/ConfirmModal";
-import toast from "react-hot-toast";
+import AlertService from "@/services/alertService";
 
 export default function LecturesPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function LecturesPage() {
       const res = await getLectures(params);
       setLectures(Array.isArray(res) ? res : []);
     } catch (err) {
-      toast.error("Failed to load lectures");
+      AlertService.error("Load Failed", "Failed to load lectures");
     } finally {
       setLoading(false);
     }
@@ -41,10 +41,10 @@ export default function LecturesPage() {
     setDeleting(true);
     try {
       await deleteLecture(deleteModal.id);
-      toast.success("Lecture deleted");
+      AlertService.success("Lecture Deleted", "Lecture deleted successfully");
       fetchLectures();
     } catch (err) {
-      toast.error("Failed to delete");
+      AlertService.error("Delete Failed", "Failed to delete lecture");
     } finally {
       setDeleting(false);
       setDeleteModal({ open: false, id: null });
