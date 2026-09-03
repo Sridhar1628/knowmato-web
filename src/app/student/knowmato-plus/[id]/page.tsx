@@ -208,28 +208,36 @@ export default function CourseDetailPage() {
     }
   }, [courseId, t]);
 
-  const checkEnrollment = useCallback(async (lectureId?: number) => {
-    if (!lectureId) return;
-
+  const checkEnrollment = useCallback(async () => {
     try {
-      const rawProgress = await getLectureProgressByLecture(lectureId);
+      const rawStatus = await getCourseEnrollmentStatus(courseId);
 
-      // The API/service may return either a single LectureProgress
-      // object or an array containing LectureProgress objects.
-      const progress = Array.isArray(rawProgress)
-        ? rawProgress[0]
-        : rawProgress;
+      // The API/service may return either:
+      // 1. { is_enrolled, progress_percentage }
+      // 2. { data: { is_enrolled, progress_percentage } }
+      // 3. { success, status, message, data: { is_enrolled, ... } }
+      const status = (() => {
+        if (
+          rawStatus &&
+          typeof rawStatus === "object" &&
+          "data" in rawStatus
+        ) {
+          const data = (rawStatus as { data?: unknown }).data;
 
-      if (progress) {
-        setLectureProgress((previous) => ({
-          ...previous,
-          [lectureId]: progress,
-        }));
-      }
+          if (data && typeof data === "object") {
+            return data as { is_enrolled?: boolean };
+          }
+        }
+
+        return rawStatus as { is_enrolled?: boolean } | null;
+      })();
+
+      setIsEnrolled(Boolean(status?.is_enrolled));
     } catch (err) {
-      console.error("Failed to load selected lecture progress:", err);
+      console.error("Failed to load course enrollment status:", err);
+      setIsEnrolled(false);
     }
-  }, []);
+  }, [courseId]);
 
   const loadCourseProgress = useCallback(async () => {
     if (!courseId) return;
@@ -701,7 +709,7 @@ export default function CourseDetailPage() {
 
   if (error || !course) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#080018] px-4 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] px-4 text-white">
         <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-xl">
           <div className="text-4xl">⚠️</div>
           <p className="mt-4 text-red-300">
@@ -710,7 +718,7 @@ export default function CourseDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="mt-5 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold hover:bg-white/15"
+            className="mt-5 rounded-lg bg-white/10 px-5 py-2.5 text-sm font-semibold hover:bg-white/10"
           >
             {t("common.goBack")}
           </button>
@@ -720,9 +728,13 @@ export default function CourseDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080018] text-white">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
+      <div className="pointer-events-none absolute top-0 -left-20 h-72 w-72 rounded-full bg-purple-500/20 mix-blend-multiply blur-3xl animate-blob" />
+      <div className="pointer-events-none absolute top-0 -right-20 h-72 w-72 rounded-full bg-fuchsia-500/20 mix-blend-multiply blur-3xl animate-blob animation-delay-2000" />
+      <div className="pointer-events-none absolute -bottom-20 left-40 h-72 w-72 rounded-full bg-cyan-500/20 mix-blend-multiply blur-3xl animate-blob animation-delay-4000" />
+      <div className="relative z-10">
       {/* Top course header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080018]/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0f0c29]/75 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.25)]">
         <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-3 py-3 sm:px-5 lg:px-6">
           <button
             type="button"
@@ -734,7 +746,7 @@ export default function CourseDetailPage() {
           </button>
 
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-base font-bold sm:text-lg">
+            <h1 className="truncate bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-base font-bold text-transparent sm:text-lg">
               {course.title}
             </h1>
             <p className="hidden truncate text-xs text-white/40 sm:block">
@@ -752,7 +764,7 @@ export default function CourseDetailPage() {
 
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 transition-all"
                 style={{ width: `${courseProgressPercent}%` }}
               />
             </div>
@@ -785,7 +797,7 @@ export default function CourseDetailPage() {
 
       <div className="mx-auto grid max-w-[1600px] lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* Desktop syllabus sidebar */}
-        <aside className="hidden border-r border-white/10 bg-black/10 lg:block lg:min-h-[calc(100vh-113px)]">
+        <aside className="hidden border-r border-white/10 bg-white/[0.025] lg:block lg:min-h-[calc(100vh-113px)]">
           <div className="sticky top-[113px] max-h-[calc(100vh-113px)] overflow-y-auto p-4">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
@@ -819,7 +831,7 @@ export default function CourseDetailPage() {
                   <button
                     type="button"
                     onClick={() => toggleSection(section.id)}
-                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-white/[0.04] p-3 text-left transition hover:bg-white/[0.08]"
+                    className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-white/5 p-3 text-left transition hover:bg-white/10"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">
@@ -955,7 +967,7 @@ export default function CourseDetailPage() {
           {/* Mobile syllabus */}
           {activeTab === "syllabus" && (
             <section className="mx-auto max-w-4xl lg:hidden">
-              <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
                 <h2 className="text-lg font-bold">Course Syllabus</h2>
                 <p className="mt-1 text-sm text-white/40">
                   {courseProgress?.completed_lectures ?? 0}/
@@ -965,7 +977,7 @@ export default function CourseDetailPage() {
 
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500"
                     style={{
                       width: `${courseProgressPercent}%`,
                     }}
@@ -977,7 +989,7 @@ export default function CourseDetailPage() {
                 {course.sections.map((section) => (
                   <div
                     key={section.id}
-                    className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"
+                    className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-3"
                   >
                     <button
                       type="button"
@@ -1009,7 +1021,7 @@ export default function CourseDetailPage() {
                                   section.id,
                                 );
                               }}
-                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] p-3 text-left hover:bg-white/[0.07]"
+                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.04] p-3 text-left hover:bg-white/10"
                             >
                               <span>
                                 {lecture.content_type ===
@@ -1043,7 +1055,7 @@ export default function CourseDetailPage() {
                                   section.id,
                                 )
                               }
-                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.03] p-3 text-left text-sm hover:bg-white/[0.07]"
+                              className="flex w-full items-center gap-3 rounded-lg bg-white/[0.04] p-3 text-left text-sm hover:bg-white/10"
                             >
                               <span>📝</span>
                               <span className="min-w-0 flex-1 truncate">
@@ -1092,7 +1104,7 @@ export default function CourseDetailPage() {
                       />
                     ) : activeLecture.content_type ===
                       "article" ? (
-                      <div className="min-h-[300px] bg-[#101018] p-5 sm:p-8">
+                      <div className="min-h-[300px] bg-[#0f0c29]/80 p-5 sm:p-8">
                         <div
                           className="prose prose-invert max-w-none"
                           dangerouslySetInnerHTML={{
@@ -1109,7 +1121,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-4 sm:p-5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
@@ -1142,7 +1154,7 @@ export default function CourseDetailPage() {
 
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all"
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 transition-all"
                         style={{
                           width: `${currentLecturePercent}%`,
                         }}
@@ -1169,7 +1181,7 @@ export default function CourseDetailPage() {
                   </div>
 
                   {activeLecture.resource_url && (
-                    <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-4">
+                    <div className="mt-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl p-4">
                       <p className="text-sm font-semibold">
                         Resource
                       </p>
@@ -1189,7 +1201,7 @@ export default function CourseDetailPage() {
                 </>
               ) : activeQuiz && isEnrolled ? (
                 <div className="mx-auto max-w-3xl">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-7">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 sm:p-7">
                     <h2 className="text-2xl font-bold">
                       {activeQuiz.title}
                     </h2>
@@ -1221,7 +1233,7 @@ export default function CourseDetailPage() {
                                 null,
                             );
                           }}
-                          className="mt-6 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-bold"
+                          className="mt-6 rounded-lg bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-5 py-2.5 text-sm font-bold"
                         >
                           Back to Course
                         </button>
@@ -1266,7 +1278,7 @@ export default function CourseDetailPage() {
                                 selectedOption ===
                                 option.id
                                   ? "border-violet-400 bg-violet-500/10"
-                                  : "border-white/10 bg-white/[0.02] hover:border-white/25"
+                                  : "border-white/10 bg-white/[0.04] hover:border-white/25"
                               }`}
                             >
                               <input
@@ -1298,7 +1310,7 @@ export default function CourseDetailPage() {
                           disabled={
                             selectedOption === null
                           }
-                          className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
+                          className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-5 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           {currentQuestionIndex <
                           quizQuestions.length - 1
@@ -1331,7 +1343,7 @@ export default function CourseDetailPage() {
                     type="button"
                     onClick={handleEnroll}
                     disabled={enrollLoading}
-                    className="mt-5 w-full rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-3 font-bold disabled:opacity-50"
+                    className="mt-5 w-full rounded-lg bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-5 py-3 font-bold disabled:opacity-50"
                   >
                     {enrollLoading
                       ? t("courseDetail.enrolling")
@@ -1359,7 +1371,7 @@ export default function CourseDetailPage() {
                     type="button"
                     onClick={handleEnroll}
                     disabled={enrollLoading}
-                    className="mt-5 rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-5 py-2.5 font-bold disabled:opacity-50"
+                    className="mt-5 rounded-lg bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-5 py-2.5 font-bold disabled:opacity-50"
                   >
                     {enrollLoading
                       ? t("courseDetail.enrolling")
@@ -1373,7 +1385,7 @@ export default function CourseDetailPage() {
       </div>
 
       {/* Mobile course progress */}
-      <div className="fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/10 bg-[#100820]/95 p-3 shadow-2xl backdrop-blur-xl md:hidden">
+      <div className="fixed bottom-3 left-3 right-3 z-30 rounded-xl border border-white/10 bg-[#0f0c29]/90 p-3 shadow-2xl backdrop-blur-xl md:hidden">
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-white/40">Course Progress</span>
           <span className="font-bold text-violet-300">
@@ -1383,12 +1395,13 @@ export default function CourseDetailPage() {
 
         <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500"
             style={{
               width: `${courseProgressPercent}%`,
             }}
           />
         </div>
+      </div>
       </div>
     </div>
   );

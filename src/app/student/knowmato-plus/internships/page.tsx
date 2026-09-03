@@ -256,8 +256,13 @@ export default function InternshipsPage() {
 
   // --- Render ---
   return (
-    <div className="min-h-screen bg-[#0B0C10] p-6 text-white">
-      <div className="mx-auto max-w-6xl">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-6 text-white">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 -left-20 h-72 w-72 rounded-full bg-purple-500/20 mix-blend-multiply blur-3xl animate-blob" />
+        <div className="absolute top-0 -right-20 h-72 w-72 rounded-full bg-fuchsia-500/20 mix-blend-multiply blur-3xl animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-20 left-40 h-72 w-72 rounded-full bg-cyan-500/20 mix-blend-multiply blur-3xl animate-blob animation-delay-4000" />
+      </div>
+      <div className="relative z-10 mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
@@ -269,7 +274,7 @@ export default function InternshipsPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-10 grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur-xl sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label htmlFor="search-title" className="mb-1.5 block text-sm font-medium text-white/60">
               {t('internships.search')}
@@ -280,7 +285,7 @@ export default function InternshipsPage() {
               value={searchTitle}
               onChange={(e) => setSearchTitle(e.target.value)}
               placeholder={t('internships.searchPlaceholder')}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl transition focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             />
           </div>
 
@@ -294,7 +299,7 @@ export default function InternshipsPage() {
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
               placeholder={t('internships.locationPlaceholder')}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 backdrop-blur-xl transition focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             />
           </div>
 
@@ -306,7 +311,7 @@ export default function InternshipsPage() {
               id="filter-type"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white backdrop-blur-xl focus:border-violet-500/50 focus:outline-none"
+              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white backdrop-blur-xl transition focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             >
               <option value="">{t('internships.typeAll')}</option>
               <option value="full_time">{t('internships.types.full_time')}</option>
@@ -383,7 +388,7 @@ export default function InternshipsPage() {
                 <div
                   key={internship.id}
                   onClick={() => openDetailModal(internship)}
-                  className="flex flex-col rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl transition hover:border-violet-500/30 hover:shadow-violet-500/5 cursor-pointer"
+                  className="flex flex-col rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-violet-400/30 hover:bg-white/[0.07] hover:shadow-violet-500/10 cursor-pointer"
                 >
                   {/* Title & Company */}
                   <h3 className="text-lg font-bold text-white line-clamp-2">{internship.title}</h3>
@@ -470,7 +475,7 @@ export default function InternshipsPage() {
             }
           }}
         >
-          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/20 bg-gray-900/90 backdrop-blur-xl p-6 shadow-2xl">
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#17152f]/95 p-6 shadow-2xl shadow-black/40 backdrop-blur-xl">
             {/* Close button */}
             <button
               onClick={() => {
@@ -597,7 +602,7 @@ export default function InternshipsPage() {
                   <button
                     onClick={handleWithdraw}
                     disabled={withdrawing}
-                    className="mt-6 w-full rounded-lg bg-red-500/20 border border-red-500/30 px-4 py-2.5 text-sm font-medium text-red-300 hover:bg-red-500/30 disabled:opacity-50"
+                    className="mt-6 w-full rounded-lg border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50"
                   >
                     {withdrawing ? t('internships.withdrawing') : t('internships.withdrawApplication')}
                   </button>
@@ -617,7 +622,7 @@ export default function InternshipsPage() {
                         value={coverLetter}
                         onChange={(e) => setCoverLetter(e.target.value)}
                         placeholder={t('internships.coverLetterPlaceholder')}
-                        className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none resize-none"
+                        className="mt-1 w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-white placeholder:text-white/30 transition focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                       />
                     </div>
                     <div>
@@ -630,7 +635,7 @@ export default function InternshipsPage() {
                         value={resumeUrl}
                         onChange={(e) => setResumeUrl(e.target.value)}
                         placeholder={t('internships.resumeUrlPlaceholder')}
-                        className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder:text-white/30 focus:border-violet-500/50 focus:outline-none"
+                        className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder:text-white/30 transition focus:border-violet-400/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
                       />
                     </div>
                     {applyMessage && (
