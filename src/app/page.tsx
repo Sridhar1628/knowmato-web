@@ -13,6 +13,7 @@ const features = [
     description:
       'Learn through structured courses and educational content designed to support your learning journey.',
     icon: '📚',
+    href: '/courses',
   },
   {
     title: 'Current Affairs',
@@ -140,6 +141,7 @@ export default function HomePage() {
       {/* =========================================================
           BACKGROUND
       ========================================================== */}
+
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-0 overflow-hidden"
@@ -152,16 +154,17 @@ export default function HomePage() {
 
         <div className="absolute bottom-0 left-1/4 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl sm:h-96 sm:w-96" />
 
-        <div className="absolute left-[8%] top-[24%] h-3 w-3 rounded-full bg-violet-300/50 animate-pulse" />
+        <div className="absolute left-[8%] top-[24%] h-3 w-3 animate-pulse rounded-full bg-violet-300/50" />
 
-        <div className="absolute right-[12%] top-[18%] h-4 w-4 rounded-full bg-fuchsia-300/40 animate-pulse" />
+        <div className="absolute right-[12%] top-[18%] h-4 w-4 animate-pulse rounded-full bg-fuchsia-300/40" />
 
-        <div className="absolute bottom-[18%] right-[20%] h-3 w-3 rounded-full bg-cyan-300/40 animate-pulse" />
+        <div className="absolute bottom-[18%] right-[20%] h-3 w-3 animate-pulse rounded-full bg-cyan-300/40" />
       </div>
 
       {/* =========================================================
           HEADER
       ========================================================== */}
+
       <header className="relative z-20 border-b border-white/10 bg-[#0f0c29]/70 backdrop-blur-xl">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link
@@ -169,18 +172,31 @@ export default function HomePage() {
             className="flex items-center gap-2"
             aria-label="KnowMato home"
           >
-            <span className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 sm:text-3xl">
+            <span className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-3xl">
               KnowMato
             </span>
-            <span className="hidden text-lg sm:inline" aria-hidden="true">
+
+            <span
+              className="hidden text-lg sm:inline"
+              aria-hidden="true"
+            >
               🎓
             </span>
           </Link>
 
           <nav
             aria-label="Main navigation"
-            className="flex items-center gap-2 sm:gap-3"
+            className="flex items-center gap-1 sm:gap-2"
           >
+            {/* PUBLIC COURSES LINK */}
+
+            <Link
+              href="/courses"
+              className="rounded-xl px-3 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white sm:px-4 sm:text-base"
+            >
+              Courses
+            </Link>
+
             <Link
               href="/login"
               className="rounded-xl px-3 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white sm:px-4 sm:text-base"
@@ -201,18 +217,22 @@ export default function HomePage() {
       {/* =========================================================
           HERO
       ========================================================== */}
+
       <section className="relative z-10">
         <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
           {/* Hero copy */}
+
           <div className="text-center lg:text-left">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-white/5 px-4 py-2 text-sm font-semibold text-violet-200 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
+
               A student-focused learning platform
             </div>
 
             <h1 className="mx-auto max-w-4xl text-4xl font-black leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl lg:mx-0 lg:text-7xl">
               Solve Your Doubts.
-              <span className="mt-2 block text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300">
+
+              <span className="mt-2 block bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-transparent">
                 Learn. Grow. Move Forward.
               </span>
             </h1>
@@ -230,9 +250,19 @@ export default function HomePage() {
                 className="group inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-violet-500/30 sm:text-lg"
               >
                 Ask a Doubt
+
                 <span className="transition-transform group-hover:translate-x-1">
                   <ArrowIcon />
                 </span>
+              </Link>
+
+              <Link
+                href="/courses"
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-white/5 px-7 py-4 text-base font-bold text-white backdrop-blur-md transition hover:border-cyan-300/30 hover:bg-white/10 sm:text-lg"
+              >
+                Explore Courses
+
+                <ArrowIcon />
               </Link>
 
               <Link
@@ -262,6 +292,7 @@ export default function HomePage() {
           </div>
 
           {/* Hero visual */}
+
           <div className="relative mx-auto w-full max-w-xl">
             <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-r from-violet-500/20 via-fuchsia-500/15 to-cyan-500/20 blur-3xl" />
 
@@ -271,6 +302,7 @@ export default function HomePage() {
                   <p className="text-sm font-medium text-white/50">
                     KnowMato
                   </p>
+
                   <p className="mt-1 text-lg font-bold text-white sm:text-xl">
                     Your learning journey
                   </p>
@@ -282,6 +314,7 @@ export default function HomePage() {
               </div>
 
               {/* Doubt card */}
+
               <div className="rounded-2xl border border-violet-300/20 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 p-5">
                 <div className="flex items-start gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 text-2xl">
@@ -312,25 +345,66 @@ export default function HomePage() {
               </div>
 
               {/* Mini feature grid */}
+
               <div className="mt-4 grid grid-cols-2 gap-3">
-                {[
-                  ['📚', 'Courses'],
-                  ['💻', 'Coding'],
-                  ['💼', 'Careers'],
-                  ['🤖', 'AI Tools'],
-                ].map(([icon, title]) => (
-                  <div
-                    key={title}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.08]"
+                {/* Courses */}
+
+                <Link
+                  href="/courses"
+                  className="group rounded-2xl border border-violet-300/20 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-violet-300/40 hover:bg-white/[0.08]"
+                  aria-label="Explore KnowMato courses"
+                >
+                  <span
+                    className="text-xl transition-transform group-hover:scale-110"
+                    aria-hidden="true"
                   >
-                    <span className="text-xl" aria-hidden="true">
-                      {icon}
-                    </span>
-                    <p className="mt-2 text-sm font-semibold text-white/80">
-                      {title}
-                    </p>
-                  </div>
-                ))}
+                    📚
+                  </span>
+
+                  <p className="mt-2 text-sm font-semibold text-white/80 group-hover:text-white">
+                    Courses
+                  </p>
+
+                  <p className="mt-1 text-xs text-violet-300/70">
+                    Explore →
+                  </p>
+                </Link>
+
+                {/* Coding */}
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.08]">
+                  <span className="text-xl" aria-hidden="true">
+                    💻
+                  </span>
+
+                  <p className="mt-2 text-sm font-semibold text-white/80">
+                    Coding
+                  </p>
+                </div>
+
+                {/* Careers */}
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.08]">
+                  <span className="text-xl" aria-hidden="true">
+                    💼
+                  </span>
+
+                  <p className="mt-2 text-sm font-semibold text-white/80">
+                    Careers
+                  </p>
+                </div>
+
+                {/* AI */}
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:bg-white/[0.08]">
+                  <span className="text-xl" aria-hidden="true">
+                    🤖
+                  </span>
+
+                  <p className="mt-2 text-sm font-semibold text-white/80">
+                    AI Tools
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -340,6 +414,7 @@ export default function HomePage() {
       {/* =========================================================
           INTRO / TRUST
       ========================================================== */}
+
       <section className="relative z-10 border-y border-white/10 bg-white/[0.025]">
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-300">
@@ -356,12 +431,23 @@ export default function HomePage() {
             learning, coding, career development, community, and AI-powered
             assistance.
           </p>
+
+          <div className="mt-8">
+            <Link
+              href="/courses"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-violet-300/20 bg-violet-500/10 px-6 py-3 text-sm font-bold text-violet-200 transition hover:border-violet-300/40 hover:bg-violet-500/20"
+            >
+              Explore Our Courses
+              <ArrowIcon />
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* =========================================================
           FEATURES
       ========================================================== */}
+
       <section
         id="features"
         className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8"
@@ -382,40 +468,121 @@ export default function HomePage() {
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <article
-              key={feature.title}
-              className={`group rounded-3xl border p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 ${
-                feature.featured
-                  ? 'border-violet-300/30 bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 shadow-xl shadow-violet-500/10'
-                  : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.07]'
-              }`}
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-2xl transition group-hover:scale-105">
-                {feature.icon}
+          {features.map((feature) => {
+            const cardClassName = `group rounded-3xl border p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 ${
+              feature.featured
+                ? 'border-violet-300/30 bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 shadow-xl shadow-violet-500/10'
+                : 'border-white/10 bg-white/[0.04] hover:border-white/20 hover:bg-white/[0.07]'
+            }`;
+
+            const content = (
+              <>
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-2xl transition group-hover:scale-105">
+                  {feature.icon}
+                </div>
+
+                <h3 className="mt-5 text-xl font-bold text-white">
+                  {feature.title}
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-white/60">
+                  {feature.description}
+                </p>
+
+                {feature.featured && (
+                  <div className="mt-5 inline-flex rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-200">
+                    KnowMato&apos;s core
+                  </div>
+                )}
+
+                {feature.href === '/courses' && (
+                  <div className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-cyan-300 transition group-hover:text-cyan-200">
+                    Explore Courses
+                    <span className="transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </div>
+                )}
+              </>
+            );
+
+            if (feature.href) {
+              return (
+                <Link
+                  key={feature.title}
+                  href={feature.href}
+                  className={cardClassName}
+                  aria-label={`Explore ${feature.title}`}
+                >
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <article
+                key={feature.title}
+                className={cardClassName}
+              >
+                {content}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* =========================================================
+          COURSE CTA
+      ========================================================== */}
+
+      <section className="relative z-10 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="relative overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-500/10 via-violet-500/10 to-fuchsia-500/10 p-8 shadow-2xl backdrop-blur-xl sm:p-10 lg:p-12">
+            <div
+              aria-hidden="true"
+              className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl"
+            />
+
+            <div
+              aria-hidden="true"
+              className="absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl"
+            />
+
+            <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
+              <div className="max-w-3xl">
+                <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">
+                  Learn with KnowMato
+                </p>
+
+                <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">
+                  Explore courses and build practical skills
+                </h2>
+
+                <p className="mt-4 text-base leading-7 text-white/60 sm:text-lg">
+                  Discover structured courses designed to help you learn
+                  programming, technical concepts, placement skills, and more.
+                </p>
               </div>
 
-              <h3 className="mt-5 text-xl font-bold text-white">
-                {feature.title}
-              </h3>
+              <Link
+                href="/courses"
+                className="group inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-violet-500/30"
+              >
+                Browse All Courses
 
-              <p className="mt-3 text-sm leading-6 text-white/60">
-                {feature.description}
-              </p>
-
-              {feature.featured && (
-                <div className="mt-5 inline-flex rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-xs font-bold text-violet-200">
-                  KnowMato&apos;s core
-                </div>
-              )}
-            </article>
-          ))}
+                <span className="transition-transform group-hover:translate-x-1">
+                  <ArrowIcon />
+                </span>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* =========================================================
           HOW IT WORKS
       ========================================================== */}
+
       <section className="relative z-10 border-y border-white/10 bg-white/[0.025]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
           <div className="text-center">
@@ -458,6 +625,7 @@ export default function HomePage() {
       {/* =========================================================
           TUTOR / PARTNER CTA
       ========================================================== */}
+
       <section className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
         <div className="grid gap-5 md:grid-cols-2">
           <div className="overflow-hidden rounded-[2rem] border border-violet-300/20 bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 p-7 sm:p-9">
@@ -511,6 +679,7 @@ export default function HomePage() {
       {/* =========================================================
           FUTURE VISION
       ========================================================== */}
+
       <section className="relative z-10 border-y border-white/10 bg-gradient-to-b from-white/[0.025] to-transparent">
         <div className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-24">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-300">
@@ -553,6 +722,7 @@ export default function HomePage() {
       {/* =========================================================
           FAQ
       ========================================================== */}
+
       <section
         id="faq"
         className="relative z-10 mx-auto max-w-4xl px-4 py-20 sm:px-6 sm:py-24"
@@ -588,6 +758,7 @@ export default function HomePage() {
       {/* =========================================================
           FINAL CTA
       ========================================================== */}
+
       <section className="relative z-10 px-4 pb-20 sm:px-6 sm:pb-24">
         <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-violet-300/20 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-cyan-500/10 p-8 text-center shadow-2xl sm:p-12">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-200">
@@ -596,7 +767,8 @@ export default function HomePage() {
 
           <h2 className="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
             Have a question?
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-cyan-300">
+
+            <span className="block bg-gradient-to-r from-violet-300 to-cyan-300 bg-clip-text text-transparent">
               Let&apos;s solve it.
             </span>
           </h2>
@@ -614,6 +786,14 @@ export default function HomePage() {
             </Link>
 
             <Link
+              href="/courses"
+              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-white/5 px-7 py-4 font-bold text-white transition hover:border-cyan-300/30 hover:bg-white/10"
+            >
+              Explore Courses
+              <ArrowIcon />
+            </Link>
+
+            <Link
               href="/login"
               className="inline-flex min-h-14 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-7 py-4 font-bold text-white transition hover:bg-white/10"
             >
@@ -626,13 +806,14 @@ export default function HomePage() {
       {/* =========================================================
           FOOTER
       ========================================================== */}
+
       <footer className="relative z-10 border-t border-white/10 bg-[#0b0920]/80">
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="max-w-sm">
               <Link
                 href="/"
-                className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300"
+                className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-black text-transparent"
               >
                 KnowMato
               </Link>
@@ -644,6 +825,13 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-sm sm:grid-cols-3 sm:gap-x-16">
+              <Link
+                href="/courses"
+                className="font-semibold text-cyan-300 transition hover:text-cyan-200"
+              >
+                Courses
+              </Link>
+
               <Link
                 href="/login"
                 className="text-white/60 transition hover:text-white"
