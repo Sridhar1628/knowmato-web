@@ -184,7 +184,7 @@ export async function generateMetadata({
       description,
       url: canonicalUrl,
       siteName: "KnowMato",
-      type: "article",
+      type: "website",
 
       ...(course.thumbnail
         ? {
@@ -306,6 +306,30 @@ export default async function PublicCoursePage({
       : {}),
   };
 
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `${SITE_URL}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Courses",
+        item: `${SITE_URL}/courses`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: course.title,
+      },
+    ],
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
 
@@ -341,6 +365,13 @@ export default async function PublicCoursePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(structuredData),
+        }}
+      />
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbData),
         }}
       />
 
