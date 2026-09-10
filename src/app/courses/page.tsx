@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Online Courses | Learn Programming & More | KnowMato",
+  title: "Online Courses | Learn Programming & More",
   description:
     "Explore online courses on KnowMato and learn programming, technology, and practical skills with structured courses designed for students and learners.",
   alternates: {
