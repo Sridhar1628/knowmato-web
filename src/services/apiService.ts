@@ -35,10 +35,14 @@ export const apiPut = async (
 };
 
 export const apiDelete = async (
-  url: string
+  url: string,
+  data?: any,
+  config?: AxiosRequestConfig
 ) => {
-  const response =
-    await axiosInstance.delete(url);
+  const response = await axiosInstance.delete(url, {
+    ...config,
+    data,
+  });
 
   return response.data;
 };

@@ -1,4 +1,4 @@
-import { apiPost } from './apiService';
+import { apiPost, apiDelete } from './apiService';
 
 export interface RegisterData {
   email: string;
@@ -8,14 +8,14 @@ export interface RegisterData {
 }
 
 export interface VerifyRegisterData {
-  identifier: string;    // email or phone
+  identifier: string;
   email_otp: string;
   phone_otp?: string;
 }
 
 export const loginWithOtp = async (data: {
   identifier: string;
-  password?: string; // ✅ FIX
+  password?: string;
 }) => {
   return await apiPost('accounts/login/', data);
 };
@@ -27,7 +27,9 @@ export const verifyOtpLogin = async (data: {
   return await apiPost('accounts/verify-login/', data);
 };
 
-export const resendOtp = async (data: { identifier: string }) => {
+export const resendOtp = async (data: {
+  identifier: string;
+}) => {
   return await apiPost('accounts/resend-otp/', data);
 };
 
@@ -36,3 +38,10 @@ export const registerUser = (data: RegisterData) =>
 
 export const verifyRegisterOtp = (data: VerifyRegisterData) =>
   apiPost('accounts/verify-register/', data);
+
+// Account deletion
+export const deleteAccount = () => {
+  return apiDelete('accounts/delete-account/', {
+    confirm: true,
+  });
+};
