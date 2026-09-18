@@ -583,6 +583,69 @@ export default function CourseDetailPage() {
     if (!activeLecture || !isEnrolled) return;
 
     try {
+      // Video lectures must be completed through watched-time progress.
+      if (activeLecture.content_type === "video") {
+        const duration = safeNumber(activeLecture.video_duration, 0);
+        const currentSavedSeconds = safeNumber(
+          lectureProgress[activeLecture.id]?.watched_seconds ??
+            activeLecture.watched_seconds,
+          0,
+        );
+        const finalWatchedSeconds = Math.max(duration, currentSavedSeconds);
+
+        if (finalWatchedSeconds <= 0) {
+          console.warn("Video ended but no valid video duration was available.");
+          return;
+        }
+
+        lastSavedSecondsRef.current[activeLecture.id] = finalWatchedSeconds;
+        setSavingProgress(true);
+
+        const result = await updateLectureProgress(
+          activeLecture.id,
+          finalWatchedSeconds,
+        );
+
+        const progress = result?.lecture_progress;
+
+        if (progress) {
+          setLectureProgress((previous) => ({
+            ...previous,
+            [activeLecture.id]: progress,
+          }));
+        } else {
+          setLectureProgress((previous) => ({
+            ...previous,
+            [activeLecture.id]: {
+              ...(previous[activeLecture.id] || ({} as LectureProgress)),
+              watched_seconds: finalWatchedSeconds,
+              completion_percentage: 100,
+              is_completed: true,
+            } as LectureProgress,
+          }));
+        }
+
+        if (result?.course_progress !== undefined) {
+          setCourseProgress((previous) =>
+            previous
+              ? {
+                  ...previous,
+                  progress_percentage: safeNumber(
+                    result.course_progress,
+                    previous.progress_percentage,
+                  ),
+                  course_completed: Boolean(result.course_completed),
+                }
+              : previous,
+          );
+        }
+
+        AlertService.success("Lecture Completed", "Lecture completed.");
+        await loadCourseProgress();
+        return;
+      }
+
+      // Non-video lectures can use the explicit completion endpoint.
       const result = await completeLecture(activeLecture.id);
 
       if (result?.lecture_progress) {
@@ -601,22 +664,27 @@ export default function CourseDetailPage() {
                   result.course_progress,
                   previous.progress_percentage,
                 ),
-                course_completed: Boolean(
-                  result.course_completed,
-                ),
+                course_completed: Boolean(result.course_completed),
               }
             : previous,
         );
       }
 
-      AlertService.success(
-        "Lecture Completed",
-        "Lecture completed.",
-      );
-
+      AlertService.success("Lecture Completed", "Lecture completed.");
       await loadCourseProgress();
-    } catch (err) {
-      console.error("Failed to complete lecture:", err);
+    } catch (err: any) {
+      console.error("Failed to complete/save lecture progress:", err);
+
+      const backendDetail =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message;
+
+      AlertService.error(
+        "Lecture Progress Error",
+        backendDetail || "Unable to save lecture progress. Please try again.",
+      );
+    } finally {
+      setSavingProgress(false);
     }
   };
 
@@ -1397,7 +1465,7 @@ export default function CourseDetailPage() {
           <div
             className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500"
             style={{
-              width: `${courseProgressPercent}%`,
+              width : `${courseProgressPercent}%`,
             }}
           />
         </div>
