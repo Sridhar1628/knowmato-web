@@ -1,4 +1,9 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 const features = [
   {
@@ -135,9 +140,150 @@ function CheckIcon() {
   );
 }
 
+/* =========================================================
+   ROLE BASED DASHBOARD ROUTE
+========================================================= */
+
+function getDashboardRoute(role?: string): string | null {
+  switch (role) {
+    case 'student':
+      return '/student/dashboard';
+
+    case 'tutor':
+      return '/tutor/dashboard';
+
+    case 'admin':
+      return '/admin/dashboard';
+
+    case 'company':
+      return '/company/dashboard';
+
+    default:
+      return null;
+  }
+}
+
+/* =========================================================
+   HOMEPAGE
+========================================================= */
+
 export default function HomePage() {
+  const router = useRouter();
+
+  const {
+    user,
+    loading,
+    authenticated,
+  } = useAuthContext();
+
+  const dashboardRoute = getDashboardRoute(user?.role);
+
+  /* =========================================================
+     AUTOMATIC AUTHENTICATED USER REDIRECT
+
+     Flow:
+
+     Homepage
+        ↓
+     AuthProvider checks session
+        ↓
+     loading = true
+        ↓
+     Wait
+        ↓
+     loading = false
+        ↓
+     authenticated?
+        ↓
+     YES → role based dashboard
+     NO  → stay on homepage
+  ========================================================= */
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (authenticated && dashboardRoute) {
+      router.replace(dashboardRoute);
+    }
+  }, [
+    loading,
+    authenticated,
+    dashboardRoute,
+    router,
+  ]);
+
+  /* =========================================================
+     AUTHENTICATION LOADING SCREEN
+
+     This prevents:
+     Homepage → Login button → Auth restored → Dashboard
+
+     Instead:
+
+     Homepage → Checking session → Dashboard
+  ========================================================= */
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f0c29] text-white">
+        <div className="flex flex-col items-center justify-center px-6 text-center">
+          <div className="relative mb-6">
+            <div className="absolute -inset-4 rounded-full bg-violet-500/20 blur-2xl" />
+
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-xl">
+              <span className="text-3xl">🎓</span>
+            </div>
+          </div>
+
+          <h1 className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-black text-transparent sm:text-3xl">
+            KnowMato
+          </h1>
+
+          <div className="mt-5 flex items-center gap-3 text-sm text-white/50">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-violet-400" />
+            Checking your session...
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * If authentication has finished and the user is authenticated,
+   * the redirect effect above will navigate them to the dashboard.
+   *
+   * Render nothing briefly while navigation is happening.
+   */
+  if (authenticated && dashboardRoute) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f0c29] text-white">
+        <div className="flex flex-col items-center justify-center px-6 text-center">
+          <div className="relative mb-6">
+            <div className="absolute -inset-4 rounded-full bg-violet-500/20 blur-2xl" />
+
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-xl">
+              <span className="text-3xl">🎓</span>
+            </div>
+          </div>
+
+          <h1 className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-black text-transparent sm:text-3xl">
+            KnowMato
+          </h1>
+
+          <div className="mt-5 flex items-center gap-3 text-sm text-white/50">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-violet-400" />
+            Taking you to your dashboard...
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#0f0c29] text-white">
+
       {/* =========================================================
           BACKGROUND
       ========================================================== */}
@@ -167,6 +313,7 @@ export default function HomePage() {
 
       <header className="relative z-20 border-b border-white/10 bg-[#0f0c29]/70 backdrop-blur-xl">
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+
           <Link
             href="/"
             className="flex items-center gap-2"
@@ -188,6 +335,7 @@ export default function HomePage() {
             aria-label="Main navigation"
             className="flex items-center gap-1 sm:gap-2"
           >
+
             {/* PUBLIC COURSES LINK */}
 
             <Link
@@ -196,6 +344,8 @@ export default function HomePage() {
             >
               Courses
             </Link>
+
+            {/* LOGIN / REGISTER ONLY FOR GUEST USERS */}
 
             <Link
               href="/login"
@@ -210,6 +360,7 @@ export default function HomePage() {
             >
               Get Started
             </Link>
+
           </nav>
         </div>
       </header>
@@ -220,9 +371,11 @@ export default function HomePage() {
 
       <section className="relative z-10">
         <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-24">
+
           {/* Hero copy */}
 
           <div className="text-center lg:text-left">
+
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-white/5 px-4 py-2 text-sm font-semibold text-violet-200 backdrop-blur-md">
               <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
 
@@ -244,7 +397,12 @@ export default function HomePage() {
               AI-powered assistance.
             </p>
 
+            {/* =====================================================
+                HERO ACTIONS
+            ====================================================== */}
+
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+
               <Link
                 href="/login"
                 className="group inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-4 text-base font-bold text-white shadow-xl shadow-violet-500/20 transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-violet-500/30 sm:text-lg"
@@ -271,9 +429,11 @@ export default function HomePage() {
               >
                 Create Your Account
               </Link>
+
             </div>
 
             <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-3 text-sm text-white/60 lg:justify-start">
+
               <span className="inline-flex items-center gap-2">
                 <CheckIcon />
                 Expert tutor support
@@ -288,16 +448,20 @@ export default function HomePage() {
                 <CheckIcon />
                 Learning ecosystem
               </span>
+
             </div>
           </div>
 
           {/* Hero visual */}
 
           <div className="relative mx-auto w-full max-w-xl">
+
             <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-r from-violet-500/20 via-fuchsia-500/15 to-cyan-500/20 blur-3xl" />
 
             <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-2xl backdrop-blur-xl sm:p-7">
+
               <div className="mb-5 flex items-center justify-between">
+
                 <div>
                   <p className="text-sm font-medium text-white/50">
                     KnowMato
@@ -311,17 +475,21 @@ export default function HomePage() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-xl shadow-lg">
                   🎓
                 </div>
+
               </div>
 
               {/* Doubt card */}
 
               <div className="rounded-2xl border border-violet-300/20 bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 p-5">
+
                 <div className="flex items-start gap-4">
+
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/20 text-2xl">
                     💡
                   </div>
 
                   <div className="min-w-0">
+
                     <p className="text-xs font-semibold uppercase tracking-wider text-violet-300">
                       Main focus
                     </p>
@@ -334,7 +502,9 @@ export default function HomePage() {
                       Ask questions, connect with tutors, understand concepts,
                       and keep learning.
                     </p>
+
                   </div>
+
                 </div>
 
                 <div className="mt-5 flex items-center gap-2">
@@ -342,11 +512,13 @@ export default function HomePage() {
                   <span className="h-2 w-2 rounded-full bg-white/20" />
                   <span className="h-2 w-2 rounded-full bg-white/20" />
                 </div>
+
               </div>
 
               {/* Mini feature grid */}
 
               <div className="mt-4 grid grid-cols-2 gap-3">
+
                 {/* Courses */}
 
                 <Link
@@ -405,9 +577,12 @@ export default function HomePage() {
                     AI Tools
                   </p>
                 </div>
+
               </div>
+
             </div>
           </div>
+
         </div>
       </section>
 
@@ -416,7 +591,9 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 border-y border-white/10 bg-white/[0.025]">
+
         <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:px-6 sm:py-20">
+
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-300">
             One platform. Multiple ways to grow.
           </p>
@@ -441,7 +618,9 @@ export default function HomePage() {
               <ArrowIcon />
             </Link>
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -452,7 +631,9 @@ export default function HomePage() {
         id="features"
         className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8"
       >
+
         <div className="max-w-3xl">
+
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">
             Explore KnowMato
           </p>
@@ -465,10 +646,13 @@ export default function HomePage() {
             Start with your doubt and discover the tools that can help you
             learn, practice, build skills, and explore opportunities.
           </p>
+
         </div>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
           {features.map((feature) => {
+
             const cardClassName = `group rounded-3xl border p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 ${
               feature.featured
                 ? 'border-violet-300/30 bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 shadow-xl shadow-violet-500/10'
@@ -498,6 +682,7 @@ export default function HomePage() {
                 {feature.href === '/courses' && (
                   <div className="mt-5 inline-flex items-center gap-1 text-sm font-bold text-cyan-300 transition group-hover:text-cyan-200">
                     Explore Courses
+
                     <span className="transition-transform group-hover:translate-x-1">
                       →
                     </span>
@@ -528,7 +713,9 @@ export default function HomePage() {
               </article>
             );
           })}
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -536,8 +723,11 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 px-4 py-8 sm:px-6 lg:px-8">
+
         <div className="mx-auto max-w-7xl">
+
           <div className="relative overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-500/10 via-violet-500/10 to-fuchsia-500/10 p-8 shadow-2xl backdrop-blur-xl sm:p-10 lg:p-12">
+
             <div
               aria-hidden="true"
               className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl"
@@ -549,7 +739,9 @@ export default function HomePage() {
             />
 
             <div className="relative z-10 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
+
               <div className="max-w-3xl">
+
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">
                   Learn with KnowMato
                 </p>
@@ -562,6 +754,7 @@ export default function HomePage() {
                   Discover structured courses designed to help you learn
                   programming, technical concepts, placement skills, and more.
                 </p>
+
               </div>
 
               <Link
@@ -574,9 +767,12 @@ export default function HomePage() {
                   <ArrowIcon />
                 </span>
               </Link>
+
             </div>
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -584,8 +780,11 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 border-y border-white/10 bg-white/[0.025]">
+
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+
           <div className="text-center">
+
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-fuchsia-300">
               How it works
             </p>
@@ -597,9 +796,11 @@ export default function HomePage() {
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/60 sm:text-lg">
               A simple path from question to understanding.
             </p>
+
           </div>
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
+
             {steps.map((step) => (
               <article
                 key={step.number}
@@ -618,8 +819,11 @@ export default function HomePage() {
                 </p>
               </article>
             ))}
+
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -627,8 +831,11 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+
         <div className="grid gap-5 md:grid-cols-2">
+
           <div className="overflow-hidden rounded-[2rem] border border-violet-300/20 bg-gradient-to-br from-violet-500/15 to-fuchsia-500/10 p-7 sm:p-9">
+
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-400/15 text-2xl">
               👨‍🏫
             </div>
@@ -649,9 +856,11 @@ export default function HomePage() {
               Become a Tutor
               <ArrowIcon />
             </Link>
+
           </div>
 
           <div className="overflow-hidden rounded-[2rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 p-7 sm:p-9">
+
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/15 text-2xl">
               🤝
             </div>
@@ -672,8 +881,11 @@ export default function HomePage() {
               Become a Partner
               <ArrowIcon />
             </Link>
+
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -681,7 +893,9 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 border-y border-white/10 bg-gradient-to-b from-white/[0.025] to-transparent">
+
         <div className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-24">
+
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-300">
             Growing with students
           </p>
@@ -698,6 +912,7 @@ export default function HomePage() {
           </p>
 
           <div className="mx-auto mt-10 flex max-w-3xl flex-wrap justify-center gap-3">
+
             {[
               'Learning',
               'Doubt Solving',
@@ -715,8 +930,11 @@ export default function HomePage() {
                 {item}
               </span>
             ))}
+
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -727,7 +945,9 @@ export default function HomePage() {
         id="faq"
         className="relative z-10 mx-auto max-w-4xl px-4 py-20 sm:px-6 sm:py-24"
       >
+
         <div className="text-center">
+
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-cyan-300">
             Frequently asked questions
           </p>
@@ -735,9 +955,11 @@ export default function HomePage() {
           <h2 className="mt-3 text-3xl font-black text-white sm:text-4xl">
             Questions about KnowMato
           </h2>
+
         </div>
 
         <div className="mt-10 space-y-4">
+
           {faqs.map((faq) => (
             <details
               key={faq.question}
@@ -752,7 +974,9 @@ export default function HomePage() {
               </p>
             </details>
           ))}
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -760,7 +984,9 @@ export default function HomePage() {
       ========================================================== */}
 
       <section className="relative z-10 px-4 pb-20 sm:px-6 sm:pb-24">
+
         <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] border border-violet-300/20 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-cyan-500/10 p-8 text-center shadow-2xl sm:p-12">
+
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-violet-200">
             Start with KnowMato
           </p>
@@ -778,6 +1004,7 @@ export default function HomePage() {
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+
             <Link
               href="/register"
               className="inline-flex min-h-14 items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-4 font-bold text-white shadow-xl shadow-violet-500/20 transition hover:-translate-y-0.5"
@@ -795,12 +1022,15 @@ export default function HomePage() {
 
             <Link
               href="/login"
-              className="inline-flex min-h-14 items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-7 py-4 font-bold text-white transition hover:bg-white/10"
+              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-7 py-4 font-bold text-white transition hover:bg-white/10"
             >
               Login
             </Link>
+
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================================
@@ -808,9 +1038,13 @@ export default function HomePage() {
       ========================================================== */}
 
       <footer className="relative z-10 border-t border-white/10 bg-[#0b0920]/80">
+
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+
             <div className="max-w-sm">
+
               <Link
                 href="/"
                 className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-2xl font-black text-transparent"
@@ -822,9 +1056,11 @@ export default function HomePage() {
                 Solve doubts, learn new skills, explore opportunities, and grow
                 with KnowMato.
               </p>
+
             </div>
 
             <div className="grid grid-cols-2 gap-x-12 gap-y-3 text-sm sm:grid-cols-3 sm:gap-x-16">
+
               <Link
                 href="/courses"
                 className="font-semibold text-cyan-300 transition hover:text-cyan-200"
@@ -873,14 +1109,19 @@ export default function HomePage() {
               >
                 FAQ
               </Link>
+
             </div>
+
           </div>
 
           <div className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/40">
             © {new Date().getFullYear()} KnowMato. All rights reserved.
           </div>
+
         </div>
+
       </footer>
+
     </main>
   );
 }

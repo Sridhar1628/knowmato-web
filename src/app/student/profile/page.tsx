@@ -110,6 +110,8 @@ const AutocompleteChipInput = ({
   suggestions = [],
   label,
   addLabel,
+  error,
+  fieldKey,
 }: {
   items: string[];
   onChange: (items: string[]) => void;
@@ -117,6 +119,8 @@ const AutocompleteChipInput = ({
   suggestions?: string[];
   label: string;
   addLabel?: string;
+  error?: string;
+  fieldKey?: string;
 }) => {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -250,10 +254,14 @@ const AutocompleteChipInput = ({
   }, []);
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      data-validation-field={fieldKey}
+    >
       {label && (
-        <p className="text-sm font-medium text-white/80 mb-2">
+        <p className="mb-2 text-sm font-medium text-white/80">
           {label}
+          <span className="ml-1 text-rose-300">*</span>
         </p>
       )}
 
@@ -261,7 +269,11 @@ const AutocompleteChipInput = ({
         ref={dropdownRef}
         className="relative"
       >
-        <div className="flex flex-wrap items-center gap-2 border-2 border-white/20 rounded-xl px-3 py-2 bg-gray-900/60 focus-within:ring-4 focus-within:ring-violet-500/50 focus-within:border-violet-400 transition">
+        <div className={`flex flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-2 bg-gray-900/60 transition focus-within:ring-4 ${
+            error
+              ? "border-rose-400/70 focus-within:border-rose-400 focus-within:ring-rose-500/20"
+              : "border-white/20 focus-within:border-violet-400 focus-within:ring-violet-500/50"
+          }`}>
           {items.map((item, idx) => (
             <span
               key={`${item}-${idx}`}
@@ -339,8 +351,14 @@ const AutocompleteChipInput = ({
               )}
             </div>
           )}
+        </div>
+
+        {error && (
+          <p className="mt-1.5 text-xs font-medium text-rose-300">
+            {error}
+          </p>
+        )}
       </div>
-    </div>
   );
 };
 
@@ -367,6 +385,11 @@ export default function StudentProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Validation errors for every required field.
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
 
   // Account deletion state.
   const [deletingAccount, setDeletingAccount] =
@@ -473,7 +496,272 @@ export default function StudentProfilePage() {
   ) => {
     e.preventDefault();
 
-    if (!profile) return;
+    if (!profile || saving || deletingAccount) {
+      return;
+    }
+
+    /*
+     * ==========================================================
+     * COMPLETE CLIENT-SIDE VALIDATION
+     * ==========================================================
+     *
+     * Every field displayed in this form is compulsory.
+     * Nothing is sent to the backend until every validation
+     * rule below passes.
+     */
+
+    const errors: Record<string, string> = {};
+
+    const fullName = profile.full_name?.trim() || "";
+    const email = profile.email?.trim() || "";
+    const mobile = profile.mobile_number?.trim() || "";
+    const educationLevel =
+      profile.education_level?.trim() || "";
+    const gradeYear = profile.grade_year?.trim() || "";
+    const streamCategory =
+      profile.stream_category?.trim() || "";
+    const stream = profile.stream?.trim() || "";
+    const skillLevel =
+      profile.skill_level?.trim() || "";
+    const aboutLearning =
+      profile.about_learning?.trim() || "";
+
+    const languages = Array.isArray(
+      profile.preferred_languages
+    )
+      ? profile.preferred_languages.filter(
+          (item) => item?.trim()
+        )
+      : [];
+
+    const subjects = Array.isArray(
+      profile.subjects
+    )
+      ? profile.subjects.filter(
+          (item) => item?.trim()
+        )
+      : [];
+
+    const learningGoals = Array.isArray(
+      profile.learning_goals
+    )
+      ? profile.learning_goals.filter(
+          (item) => item?.trim()
+        )
+      : [];
+
+    const sessionTypes = Array.isArray(
+      profile.session_types
+    )
+      ? profile.session_types.filter(
+          (item) => item?.trim()
+        )
+      : [];
+
+    const preferredTime = Array.isArray(
+      profile.preferred_time
+    )
+      ? profile.preferred_time.filter(
+          (item) => item?.trim()
+        )
+      : [];
+
+    // ---------------- PERSONAL INFORMATION ----------------
+
+    if (!fullName) {
+      errors.full_name = "Full name is required.";
+    } else if (fullName.length < 2) {
+      errors.full_name =
+        "Full name must contain at least 2 characters.";
+    } else if (fullName.length > 100) {
+      errors.full_name =
+        "Full name must not exceed 100 characters.";
+    } else if (
+      !/^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\u2019-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(
+        fullName
+      )
+    ) {
+      errors.full_name =
+        "Enter a valid name using letters, spaces, apostrophes or hyphens only.";
+    }
+
+    if (!email) {
+      errors.email = "Email address is required.";
+    } else if (email.length > 254) {
+      errors.email =
+        "Email address is too long.";
+    } else if (
+      !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/.test(
+        email
+      )
+    ) {
+      errors.email =
+        "Enter a valid email address, for example name@example.com.";
+    }
+
+    /*
+     * Mobile:
+     * - exactly 10 digits
+     * - Indian mobile numbers normally begin with 6, 7, 8 or 9
+     */
+    if (!mobile) {
+      errors.mobile_number =
+        "Mobile number is required.";
+    } else if (!/^\d{10}$/.test(mobile)) {
+      errors.mobile_number =
+        "Mobile number must contain exactly 10 digits.";
+    } else if (!/^[6-9]\d{9}$/.test(mobile)) {
+      errors.mobile_number =
+        "Enter a valid 10-digit Indian mobile number starting with 6, 7, 8 or 9.";
+    }
+
+    // ---------------- EDUCATION ----------------
+
+    if (!educationLevel) {
+      errors.education_level =
+        "Education level is required.";
+    } else if (educationLevel.length > 100) {
+      errors.education_level =
+        "Education level must not exceed 100 characters.";
+    }
+
+    if (!gradeYear) {
+      errors.grade_year =
+        "Grade / year is required.";
+    } else if (gradeYear.length > 100) {
+      errors.grade_year =
+        "Grade / year must not exceed 100 characters.";
+    }
+
+    if (!streamCategory) {
+      errors.stream_category =
+        "Stream category is required.";
+    } else if (streamCategory.length > 100) {
+      errors.stream_category =
+        "Stream category must not exceed 100 characters.";
+    }
+
+    if (!stream) {
+      errors.stream = "Stream is required.";
+    } else if (stream.length > 100) {
+      errors.stream =
+        "Stream must not exceed 100 characters.";
+    }
+
+    // ---------------- LEARNING PREFERENCES ----------------
+
+    if (!skillLevel) {
+      errors.skill_level =
+        "Skill level is required.";
+    } else if (skillLevel.length > 100) {
+      errors.skill_level =
+        "Skill level must not exceed 100 characters.";
+    }
+
+    if (languages.length === 0) {
+      errors.preferred_languages =
+        "Select or add at least one preferred language.";
+    }
+
+    if (subjects.length === 0) {
+      errors.subjects =
+        "Select or add at least one subject.";
+    }
+
+    if (learningGoals.length === 0) {
+      errors.learning_goals =
+        "Select or add at least one learning goal.";
+    }
+
+    if (sessionTypes.length === 0) {
+      errors.session_types =
+        "Select or add at least one preferred session type.";
+    }
+
+    if (preferredTime.length === 0) {
+      errors.preferred_time =
+        "Select or add at least one preferred time.";
+    }
+
+    // ---------------- ABOUT LEARNING ----------------
+
+    if (!aboutLearning) {
+      errors.about_learning =
+        "Please tell us about your learning.";
+    } else if (aboutLearning.length < 10) {
+      errors.about_learning =
+        "Please enter at least 10 characters.";
+    } else if (aboutLearning.length > 2000) {
+      errors.about_learning =
+        "About learning must not exceed 2000 characters.";
+    }
+
+    // ---------------- PROFILE PHOTO ----------------
+
+    /*
+     * Existing uploaded profile photo is accepted.
+     * For a completely new profile, a photo is compulsory.
+     */
+    const hasExistingPhoto =
+      typeof profile.profile_photo === "string" &&
+      profile.profile_photo.trim().length > 0;
+
+    if (!hasExistingPhoto && !profilePhoto) {
+      errors.profile_photo =
+        "Profile photo is required.";
+    }
+
+    if (profilePhoto) {
+      if (!profilePhoto.type.startsWith("image/")) {
+        errors.profile_photo =
+          "Please select a valid image file.";
+      } else if (profilePhoto.size > 5 * 1024 * 1024) {
+        errors.profile_photo =
+          "Profile photo must be 5 MB or smaller.";
+      }
+    }
+
+    /*
+     * Show all validation errors and STOP.
+     * Absolutely no API request is made when even one
+     * compulsory field is invalid.
+     */
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      const firstInvalidField =
+        Object.keys(errors)[0];
+
+      console.warn(
+        "Profile validation failed:",
+        errors
+      );
+
+      AlertService.warning(
+        "Complete All Required Fields",
+        errors[firstInvalidField] ||
+          "Please fill in every required field correctly.",
+        []
+      );
+
+      /*
+       * Scroll the first invalid element into view
+       * when it has the matching data-validation-field.
+       */
+      setTimeout(() => {
+        const element =
+          document.querySelector(
+            `[data-validation-field="${firstInvalidField}"]`
+          );
+
+        element?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 50);
+
+      return;
+    }
 
     setSaving(true);
 
@@ -481,52 +769,32 @@ export default function StudentProfilePage() {
       const formData =
         buildStudentProfileFormData(
           {
-            full_name:
-              profile.full_name.trim(),
-
-            email:
-              profile.email.trim(),
-
-            mobile_number:
-              profile.mobile_number.trim(),
-
-            education_level:
-              profile.education_level.trim(),
-
-            grade_year:
-              profile.grade_year.trim(),
-
-            stream_category:
-              profile.stream_category.trim(),
-
-            stream:
-              profile.stream.trim(),
-
-            preferred_languages:
-              profile.preferred_languages,
-
-            subjects:
-              profile.subjects,
-
-            learning_goals:
-              profile.learning_goals,
-
-            session_types:
-              profile.session_types,
-
-            preferred_time:
-              profile.preferred_time,
-
-            skill_level:
-              profile.skill_level.trim(),
-
-            about_learning:
-              profile.about_learning.trim(),
+            full_name: fullName,
+            email,
+            mobile_number: mobile,
+            education_level: educationLevel,
+            grade_year: gradeYear,
+            stream_category: streamCategory,
+            stream,
+            preferred_languages: languages,
+            subjects,
+            learning_goals: learningGoals,
+            session_types: sessionTypes,
+            preferred_time: preferredTime,
+            skill_level: skillLevel,
+            about_learning: aboutLearning,
           },
           profilePhoto
         );
 
+      console.log(
+        "Profile validation passed. Submitting profile..."
+      );
+
       await updateStudentProfile(formData);
+
+      // Clear validation state after successful save.
+      setValidationErrors({});
 
       AlertService.success(
         t("studentProfile.updateSuccessTitle", {
@@ -537,12 +805,54 @@ export default function StudentProfilePage() {
             "Your profile has been updated successfully.",
         })
       );
+
+      /*
+       * Update local profile state as well so the UI immediately
+       * reflects the submitted values.
+       */
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              full_name: fullName,
+              email,
+              mobile_number: mobile,
+              education_level: educationLevel,
+              grade_year: gradeYear,
+              stream_category: streamCategory,
+              stream,
+              preferred_languages: languages,
+              subjects,
+              learning_goals: learningGoals,
+              session_types: sessionTypes,
+              preferred_time: preferredTime,
+              skill_level: skillLevel,
+              about_learning: aboutLearning,
+              profile_completed: true,
+            }
+          : current
+      );
+
+      setProfilePhoto(null);
     } catch (err: any) {
+      console.error(
+        "Profile update failed:",
+        err
+      );
+
+      const responseData =
+        err?.response?.data;
+
+      const backendMessage =
+        responseData?.message ||
+        responseData?.error ||
+        responseData?.detail;
+
       AlertService.error(
         t("studentProfile.updateFailedTitle", {
           defaultValue: "Update Failed",
         }),
-        err?.response?.data?.error ||
+        backendMessage ||
           t("studentProfile.updateFailed", {
             defaultValue:
               "Failed to update your profile. Please try again.",
@@ -697,6 +1007,7 @@ export default function StudentProfilePage() {
       <div className="max-w-4xl mx-auto relative z-10">
         <motion.form
           onSubmit={handleSubmit}
+          noValidate
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="space-y-6"
@@ -748,6 +1059,102 @@ export default function StudentProfilePage() {
           </div>
 
           {/* ==================================================
+              PROFILE PHOTO REQUIREMENT
+          ================================================== */}
+
+          <Section
+            title={t("studentProfile.profilePhoto", {
+              defaultValue: "Profile Photo",
+            })}
+          >
+            <div
+              data-validation-field="profile_photo"
+              className="space-y-3"
+            >
+              <p className="text-sm font-medium text-white/80">
+                Profile photo
+                <span className="ml-1 text-rose-300">*</span>
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-violet-400/30 bg-white/5">
+                  {profilePhoto ? (
+                    <img
+                      src={URL.createObjectURL(profilePhoto)}
+                      alt="Selected profile preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : profile.profile_photo ? (
+                    <img
+                      src={profile.profile_photo}
+                      alt="Current profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl text-white/40">
+                      👤
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1">
+                  <label className="inline-flex cursor-pointer items-center rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20">
+                    Choose Profile Photo
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+
+                        if (!file) {
+                          return;
+                        }
+
+                        if (!file.type.startsWith("image/")) {
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            profile_photo:
+                              "Please select a valid image file.",
+                          }));
+                          return;
+                        }
+
+                        if (file.size > 5 * 1024 * 1024) {
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            profile_photo:
+                              "Profile photo must be 5 MB or smaller.",
+                          }));
+                          return;
+                        }
+
+                        setProfilePhoto(file);
+
+                        setValidationErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.profile_photo;
+                          return next;
+                        });
+                      }}
+                    />
+                  </label>
+
+                  <p className="mt-2 text-xs text-white/45">
+                    JPG, PNG or WEBP · Maximum 5 MB · Required
+                  </p>
+                </div>
+              </div>
+
+              {validationErrors.profile_photo && (
+                <p className="text-xs font-medium text-rose-300">
+                  {validationErrors.profile_photo}
+                </p>
+              )}
+            </div>
+          </Section>
+
+          {/* ==================================================
               PERSONAL INFORMATION
           ================================================== */}
 
@@ -768,6 +1175,8 @@ export default function StudentProfilePage() {
                     full_name: v,
                   })
                 }
+                error={validationErrors.full_name}
+                fieldKey="full_name"
               />
 
               <Field
@@ -782,6 +1191,8 @@ export default function StudentProfilePage() {
                   })
                 }
                 type="email"
+                error={validationErrors.email}
+                fieldKey="email"
               />
 
               <Field
@@ -792,10 +1203,16 @@ export default function StudentProfilePage() {
                 onChange={(v) =>
                   setProfile({
                     ...profile,
-                    mobile_number: v,
+                    mobile_number: v
+                      .replace(/\D/g, "")
+                      .slice(0, 10),
                   })
                 }
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                error={validationErrors.mobile_number}
+                fieldKey="mobile_number"
               />
             </div>
           </Section>
@@ -821,6 +1238,8 @@ export default function StudentProfilePage() {
                     education_level: v,
                   })
                 }
+                              error={validationErrors.education_level}
+                fieldKey="education_level"
               />
 
               <Field
@@ -834,6 +1253,8 @@ export default function StudentProfilePage() {
                     grade_year: v,
                   })
                 }
+                              error={validationErrors.grade_year}
+                fieldKey="grade_year"
               />
 
               <Field
@@ -847,6 +1268,8 @@ export default function StudentProfilePage() {
                     stream_category: v,
                   })
                 }
+                              error={validationErrors.stream_category}
+                fieldKey="stream_category"
               />
 
               <Field
@@ -860,6 +1283,8 @@ export default function StudentProfilePage() {
                     stream: v,
                   })
                 }
+                              error={validationErrors.stream}
+                fieldKey="stream"
               />
             </div>
           </Section>
@@ -885,6 +1310,8 @@ export default function StudentProfilePage() {
                     skill_level: v,
                   })
                 }
+                              error={validationErrors.skill_level}
+                fieldKey="skill_level"
               />
             </div>
 
@@ -904,7 +1331,9 @@ export default function StudentProfilePage() {
                       items,
                   })
                 }
-                suggestions={
+                                error={validationErrors.preferred_languages}
+                fieldKey="preferred_languages"
+suggestions={
                   LANGUAGE_OPTIONS
                 }
                 placeholder={t(
@@ -928,7 +1357,9 @@ export default function StudentProfilePage() {
                     subjects: items,
                   })
                 }
-                suggestions={
+                                error={validationErrors.subjects}
+                fieldKey="subjects"
+suggestions={
                   SUBJECT_OPTIONS
                 }
                 placeholder={t(
@@ -954,7 +1385,9 @@ export default function StudentProfilePage() {
                       items,
                   })
                 }
-                suggestions={
+                                error={validationErrors.learning_goals}
+                fieldKey="learning_goals"
+suggestions={
                   LEARNING_GOAL_OPTIONS
                 }
                 placeholder={t(
@@ -980,7 +1413,9 @@ export default function StudentProfilePage() {
                       items,
                   })
                 }
-                suggestions={
+                                error={validationErrors.session_types}
+                fieldKey="session_types"
+suggestions={
                   SESSION_TYPE_OPTIONS
                 }
                 placeholder={t(
@@ -1006,7 +1441,9 @@ export default function StudentProfilePage() {
                       items,
                   })
                 }
-                suggestions={
+                                error={validationErrors.preferred_time}
+                fieldKey="preferred_time"
+suggestions={
                   PREFERRED_TIME_OPTIONS
                 }
                 placeholder={t(
@@ -1029,6 +1466,8 @@ export default function StudentProfilePage() {
             )}
           >
             <textarea
+              data-validation-field="about_learning"
+              aria-invalid={Boolean(validationErrors.about_learning)}
               className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[120px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
               placeholder={t(
                 "studentProfile.aboutLearningPlaceholder"
@@ -1044,6 +1483,11 @@ export default function StudentProfilePage() {
                 })
               }
             />
+            {validationErrors.about_learning && (
+              <p className="mt-2 text-xs font-medium text-rose-300">
+                {validationErrors.about_learning}
+              </p>
+            )}
           </Section>
 
           {/* ==================================================
@@ -1270,24 +1714,47 @@ const Field = ({
   value,
   onChange,
   type = "text",
+  error,
+  inputMode,
+  maxLength,
+  fieldKey,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  error?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
+  fieldKey?: string;
 }) => (
-  <div>
-    <label className="block text-sm font-medium text-white/70 mb-1">
-      {label}
+  <div data-validation-field={fieldKey} >
+    <label className="mb-1 block text-sm font-medium text-white/70">
+      <span>{label}</span>
+      <span className="ml-1 text-rose-300">*</span>
     </label>
 
     <input
       type={type}
       value={value}
+      required
+      inputMode={inputMode}
+      maxLength={maxLength}
+      aria-invalid={Boolean(error)}
       onChange={(e) =>
         onChange(e.target.value)
       }
-      className="w-full border-2 border-white/20 rounded-xl px-4 py-2.5 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+      className={`w-full rounded-xl border-2 px-4 py-2.5 bg-gray-900/60 text-white placeholder-white/40 outline-none transition ${
+        error
+          ? "border-rose-400/70 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/20"
+          : "border-white/20 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50"
+      }`}
     />
+
+    {error && (
+      <p className="mt-1.5 text-xs font-medium text-rose-300">
+        {error}
+      </p>
+    )}
   </div>
 );

@@ -69,11 +69,18 @@ const authSlice = createSlice({
       state.knowmatoPlusEnabled = false;
       state.activeMode = 'regular';
 
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('knowmato_plus_enabled');
-        localStorage.removeItem('active_mode');
+      if (
+        typeof window !== 'undefined'
+      ) {
+        localStorage.removeItem('tokens');
+
+        localStorage.removeItem(
+          'knowmato_plus_enabled'
+        );
+
+        localStorage.removeItem(
+          'active_mode'
+        );
       }
     },
 

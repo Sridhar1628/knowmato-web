@@ -20,7 +20,12 @@ import {
 interface AuthUser {
   id: number;
   email: string;
-  role: 'student' | 'tutor' | 'admin';
+  role:
+    | 'student'
+    | 'tutor'
+    | 'admin'
+    | 'company';
+
   display_name?: string;
   first_name?: string;
   phone?: string;
@@ -36,7 +41,9 @@ interface AuthContextType {
 }
 
 const AuthContext =
-  createContext<AuthContextType | null>(null);
+  createContext<AuthContextType | null>(
+    null
+  );
 
 export function AuthProvider({
   children,
@@ -50,60 +57,95 @@ export function AuthProvider({
   const [loading, setLoading] =
     useState(true);
 
-  const refreshAuth = async () => {
+  const refreshAuth =
+    async (): Promise<void> => {
 
-    const tokens = getTokens();
+      // ------------------------------------------
+      // Check browser
+      // ------------------------------------------
 
-    if (!tokens?.access) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-
-      const res = await checkAuthentication();
-
-      console.log(
-        'AUTH RESPONSE:',
-        res
-      );
-
-      // -----------------------------
-      // Support BOTH response formats
-      // -----------------------------
-      const profile =
-        res?.data?.user ??
-        null;
-
-      if (!profile) {
-        throw new Error(
-          'Authentication failed'
-        );
+      if (
+        typeof window === 'undefined'
+      ) {
+        return;
       }
 
-      setUser(profile);
+      // ------------------------------------------
+      // Get stored tokens
+      // ------------------------------------------
 
-    } catch (error) {
+      const tokens = getTokens();
 
-      console.error(
-        'AUTH ERROR:',
-        error
-      );
+      if (!tokens?.access) {
 
-      clearTokens();
+        setUser(null);
+        setLoading(false);
 
-      setUser(null);
+        return;
+      }
 
-    } finally {
+      setLoading(true);
 
-      setLoading(false);
+      try {
 
-    }
+        // ----------------------------------------
+        // Axios will automatically refresh
+        // the access token if required.
+        // ----------------------------------------
 
-  };
+        const res =
+          await checkAuthentication();
+
+        console.log(
+          'AUTH RESPONSE:',
+          res
+        );
+
+        const profile =
+          res?.data?.user ??
+          null;
+
+        if (!profile) {
+          throw new Error(
+            'Authentication profile not found.'
+          );
+        }
+
+        setUser(profile);
+
+      } catch (error) {
+
+        console.error(
+          'AUTH ERROR:',
+          error
+        );
+
+        /*
+         * IMPORTANT:
+         *
+         * Do NOT blindly clear tokens here.
+         *
+         * Axios already attempted the refresh
+         * when the access token returned 401.
+         *
+         * If Axios reaches here after refresh
+         * failed, the token storage has already
+         * been cleared.
+         */
+
+        const currentTokens =
+          getTokens();
+
+        if (!currentTokens?.access) {
+          setUser(null);
+        }
+
+      } finally {
+
+        setLoading(false);
+
+      }
+    };
 
   useEffect(() => {
 
@@ -139,5 +181,4 @@ export function useAuthContext() {
   }
 
   return context;
-
 }

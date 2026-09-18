@@ -59,10 +59,14 @@ const ChipInput = ({
   items,
   onChange,
   placeholder,
+  error,
+  fieldKey,
 }: {
   items: string[];
   onChange: (items: string[]) => void;
   placeholder: string;
+  error?: string;
+  fieldKey?: string;
 }) => {
   const [input, setInput] = useState("");
 
@@ -90,34 +94,51 @@ const ChipInput = ({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-2 border-white/20 rounded-xl px-3 py-2 bg-gray-900/60 focus-within:ring-4 focus-within:ring-violet-500/50 focus-within:border-violet-400 transition">
-      {items.map((item, idx) => (
-        <span
-          key={`${item}-${idx}`}
-          className="inline-flex items-center gap-1 bg-violet-500/20 text-violet-300 px-2.5 py-0.5 rounded-full text-sm border border-violet-400/30"
-        >
-          {item}
-
-          <button
-            type="button"
-            onClick={() => removeItem(item)}
-            className="hover:text-rose-400 transition"
-            aria-label={`Remove ${item}`}
+    <div data-validation-field={fieldKey}>
+      <div
+        className={`flex flex-wrap items-center gap-2 rounded-xl px-3 py-2 bg-gray-900/60 transition border-2 focus-within:ring-4 ${
+          error
+            ? "border-rose-400/70 focus-within:border-rose-400 focus-within:ring-rose-500/20"
+            : "border-white/20 focus-within:ring-violet-500/50 focus-within:border-violet-400"
+        }`}
+      >
+        {items.map((item, idx) => (
+          <span
+            key={`${item}-${idx}`}
+            className="inline-flex items-center gap-1 bg-violet-500/20 text-violet-300 px-2.5 py-0.5 rounded-full text-sm border border-violet-400/30"
           >
-            ×
-          </button>
-        </span>
-      ))}
+            {item}
 
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={addItem}
-        placeholder={items.length === 0 ? placeholder : ""}
-        className="flex-1 min-w-[120px] outline-none text-sm bg-transparent text-white placeholder-white/40"
-      />
+            <button
+              type="button"
+              onClick={() => removeItem(item)}
+              className="hover:text-rose-400 transition"
+              aria-label={`Remove ${item}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            if (input.trim()) addItem();
+          }}
+          placeholder={items.length === 0 ? placeholder : ""}
+          aria-invalid={Boolean(error)}
+          className="flex-1 min-w-[120px] outline-none text-sm bg-transparent text-white placeholder-white/40"
+        />
+      </div>
+
+      {error && (
+        <p className="mt-1.5 text-xs text-rose-300">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
@@ -145,6 +166,7 @@ export default function TutorProfilePage() {
   const [profile, setProfile] = useState<TutorProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   const resumeInputRef = useRef<HTMLInputElement>(null);
@@ -172,84 +194,279 @@ export default function TutorProfilePage() {
     fetchProfile();
   }, [t]);
 
-  // ---------- Update Profile ----------
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+// ---------- Validate Profile ----------
+const validateProfile = (): Record<string, string> => {
+  if (!profile) {
+    return { profile: "Profile data is not available." };
+  }
 
-    if (!profile || saving) return;
+  const errors: Record<string, string> = {};
+  const currentYear = new Date().getFullYear();
 
-    setSaving(true);
+  const bio = (profile.bio || "").trim();
+  const skills = (profile.skills || "").trim();
+  const phone = (profile.phone_number || "").replace(/\D/g, "");
+  const cityState = (profile.city_state || "").trim();
+  const linkedin = (profile.linkedin_profile || "").trim();
+  const highestQualification = (profile.highest_qualification || "").trim();
+  const degree = (profile.degree || "").trim();
+  const collegeName = (profile.college_name || "").trim();
+  const expertiseLevel = (profile.expertise_level || "").trim();
+  const currentStatus = (profile.current_status || "").trim();
+  const organization = (profile.organization || "").trim();
+  const professionalSummary = (profile.professional_summary || "").trim();
+  const mentorSubjects = Array.isArray(profile.mentor_subjects)
+    ? profile.mentor_subjects.filter((item) => item?.trim())
+    : [];
+  const mentorLanguages = Array.isArray(profile.mentor_languages)
+    ? profile.mentor_languages.filter((item) => item?.trim())
+    : [];
 
+  if (!bio) {
+    errors.bio = "Bio is required.";
+  } else if (bio.length < 20) {
+    errors.bio = "Bio must contain at least 20 characters.";
+  } else if (bio.length > 2000) {
+    errors.bio = "Bio must not exceed 2000 characters.";
+  }
+
+  if (!skills) {
+    errors.skills = "Skills are required.";
+  } else if (skills.length < 2) {
+    errors.skills = "Please enter valid skills.";
+  } else if (skills.length > 1000) {
+    errors.skills = "Skills must not exceed 1000 characters.";
+  }
+
+  if (!phone) {
+    errors.phone_number = "Mobile number is required.";
+  } else if (!/^\d{10}$/.test(phone)) {
+    errors.phone_number = "Mobile number must contain exactly 10 digits.";
+  } else if (!/^[6-9]/.test(phone)) {
+    errors.phone_number = "Please enter a valid Indian mobile number starting with 6, 7, 8, or 9.";
+  }
+
+  if (!cityState) {
+    errors.city_state = "City / State is required.";
+  } else if (cityState.length < 2) {
+    errors.city_state = "Please enter a valid city / state.";
+  } else if (cityState.length > 150) {
+    errors.city_state = "City / State must not exceed 150 characters.";
+  }
+
+  if (!linkedin) {
+    errors.linkedin_profile = "LinkedIn profile URL is required.";
+  } else {
+    try {
+      const url = new URL(linkedin);
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        errors.linkedin_profile = "Please enter a valid LinkedIn URL.";
+      } else if (!/^(www\.)?linkedin\.com$/i.test(url.hostname)) {
+        errors.linkedin_profile = "Please enter a valid LinkedIn profile URL.";
+      }
+    } catch {
+      errors.linkedin_profile = "Please enter a valid LinkedIn profile URL.";
+    }
+  }
+
+  if (!highestQualification) {
+    errors.highest_qualification = "Highest qualification is required.";
+  }
+
+  if (!degree) {
+    errors.degree = "Degree is required.";
+  }
+
+  if (!collegeName) {
+    errors.college_name = "College / university name is required.";
+  } else if (collegeName.length < 2) {
+    errors.college_name = "Please enter a valid college / university name.";
+  }
+
+  if (
+    profile.year_of_completion === null ||
+    profile.year_of_completion === undefined ||
+    !Number.isInteger(Number(profile.year_of_completion))
+  ) {
+    errors.year_of_completion = "Year of completion is required.";
+  } else if (
+    Number(profile.year_of_completion) < 1950 ||
+    Number(profile.year_of_completion) > currentYear + 1
+  ) {
+    errors.year_of_completion = `Year of completion must be between 1950 and ${currentYear + 1}.`;
+  }
+
+  if (!expertiseLevel) {
+    errors.expertise_level = "Expertise level is required.";
+  }
+
+  if (!currentStatus) {
+    errors.current_status = "Current status is required.";
+  }
+
+  if (!organization) {
+    errors.organization = "Organization is required.";
+  }
+
+  if (!professionalSummary) {
+    errors.professional_summary = "Professional summary is required.";
+  } else if (professionalSummary.length < 20) {
+    errors.professional_summary =
+      "Professional summary must contain at least 20 characters.";
+  } else if (professionalSummary.length > 3000) {
+    errors.professional_summary =
+      "Professional summary must not exceed 3000 characters.";
+  }
+
+  if (mentorSubjects.length === 0) {
+    errors.mentor_subjects = "Please add at least one subject.";
+  }
+
+  if (mentorLanguages.length === 0) {
+    errors.mentor_languages = "Please add at least one language.";
+  }
+
+  // Resume is required only when there is no resume already stored.
+  if (!profile.resume && !resumeFile) {
+    errors.resume = "Please upload your resume.";
+  }
+
+  if (resumeFile) {
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const extension = resumeFile.name.split(".").pop()?.toLowerCase();
+
+    if (
+      !allowedTypes.includes(resumeFile.type) &&
+      !["pdf", "doc", "docx"].includes(extension || "")
+    ) {
+      errors.resume = "Resume must be a PDF, DOC, or DOCX file.";
+    } else if (resumeFile.size > 5 * 1024 * 1024) {
+      errors.resume = "Resume size must not exceed 5 MB.";
+    }
+  }
+
+  return errors;
+};
+
+// ---------- Update Profile ----------
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+
+  if (!profile || saving) return;
+
+  const errors = validateProfile();
+  setValidationErrors(errors);
+
+  if (Object.keys(errors).length > 0) {
+    const firstInvalidField = Object.keys(errors)[0];
+
+    AlertService.error(
+      "Complete Required Fields",
+      errors[firstInvalidField] ||
+        "Please fill in all required fields correctly."
+    );
+
+    setTimeout(() => {
+      const element = document.querySelector(
+        `[data-validation-field="${firstInvalidField}"]`
+      );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 50);
+
+    return;
+  }
+
+  setSaving(true);
+
+  try {
     const formData = new FormData();
 
-    formData.append("bio", profile.bio || "");
-    formData.append("skills", profile.skills || "");
-    formData.append("experience", String(profile.experience || 0));
-    formData.append("phone_number", profile.phone_number || "");
-    formData.append("city_state", profile.city_state || "");
-    formData.append("linkedin_profile", profile.linkedin_profile || "");
+    formData.append("bio", profile.bio.trim());
+    formData.append("skills", profile.skills.trim());
+    formData.append("experience", String(profile.experience ?? 0));
+    formData.append(
+      "phone_number",
+      profile.phone_number.replace(/\D/g, "")
+    );
+    formData.append("city_state", profile.city_state.trim());
+    formData.append("linkedin_profile", profile.linkedin_profile.trim());
     formData.append(
       "highest_qualification",
-      profile.highest_qualification || ""
+      profile.highest_qualification.trim()
     );
-    formData.append("degree", profile.degree || "");
-    formData.append("college_name", profile.college_name || "");
+    formData.append("degree", profile.degree.trim());
+    formData.append("college_name", profile.college_name.trim());
     formData.append(
       "year_of_completion",
-      profile.year_of_completion
-        ? String(profile.year_of_completion)
-        : ""
+      String(profile.year_of_completion)
     );
-    formData.append("expertise_level", profile.expertise_level || "");
-    formData.append("current_status", profile.current_status || "");
-    formData.append("organization", profile.organization || "");
+    formData.append("expertise_level", profile.expertise_level.trim());
+    formData.append("current_status", profile.current_status.trim());
+    formData.append("organization", profile.organization.trim());
     formData.append(
       "professional_summary",
-      profile.professional_summary || ""
+      profile.professional_summary.trim()
     );
     formData.append(
       "mentor_subjects",
-      JSON.stringify(profile.mentor_subjects || [])
+      JSON.stringify(
+        profile.mentor_subjects
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
     );
     formData.append(
       "mentor_languages",
-      JSON.stringify(profile.mentor_languages || [])
+      JSON.stringify(
+        profile.mentor_languages
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
     );
 
     if (resumeFile) {
       formData.append("resume", resumeFile);
     }
 
-    try {
-      await updateTutorProfile(formData);
+    await updateTutorProfile(formData);
 
-      AlertService.success(
-        t("common.success"),
-        t("tutorProfile.updateSuccess")
-      );
+    setValidationErrors({});
 
-      setResumeFile(null);
+    AlertService.success(
+      t("common.success"),
+      t("tutorProfile.updateSuccess")
+    );
 
-      if (resumeInputRef.current) {
-        resumeInputRef.current.value = "";
-      }
-    } catch (error: any) {
-      console.error("Failed to update tutor profile:", error);
+    setResumeFile(null);
 
-      const message =
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        error?.message ||
-        t("tutorProfile.updateFailed");
-
-      AlertService.error(
-        t("common.error"),
-        message
-      );
-    } finally {
-      setSaving(false);
+    if (resumeInputRef.current) {
+      resumeInputRef.current.value = "";
     }
-  };
+  } catch (error: any) {
+    console.error("Failed to update tutor profile:", error);
+
+    const message =
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      t("tutorProfile.updateFailed");
+
+    AlertService.error(
+      t("common.error"),
+      message
+    );
+  } finally {
+    setSaving(false);
+  }
+};
 
   // ---------- Loading ----------
   if (loading) {
@@ -284,6 +501,7 @@ export default function TutorProfilePage() {
 
       <div className="max-w-4xl mx-auto relative z-10">
         <motion.form
+          noValidate
           onSubmit={handleSubmit}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -366,6 +584,8 @@ export default function TutorProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
                 label={t("tutorProfile.field.phoneNumber")}
+                error={validationErrors.phone_number}
+                fieldKey="phone_number"
                 value={profile.phone_number || ""}
                 onChange={(v) =>
                   setProfile({
@@ -377,6 +597,8 @@ export default function TutorProfilePage() {
 
               <Field
                 label={t("tutorProfile.field.cityState")}
+                error={validationErrors.city_state}
+                fieldKey="city_state"
                 value={profile.city_state || ""}
                 onChange={(v) =>
                   setProfile({
@@ -388,6 +610,8 @@ export default function TutorProfilePage() {
 
               <Field
                 label={t("tutorProfile.field.linkedin")}
+                error={validationErrors.linkedin_profile}
+                fieldKey="linkedin_profile"
                 value={profile.linkedin_profile || ""}
                 onChange={(v) =>
                   setProfile({
@@ -401,8 +625,18 @@ export default function TutorProfilePage() {
 
           {/* About Me */}
           <Section title={t("tutorProfile.section.aboutMe")}>
-            <textarea
-              className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+            <div data-validation-field="bio">
+              <label className="block text-sm font-semibold text-white/70 mb-1">
+                {t("tutorProfile.section.aboutMe")}
+                <span className="text-rose-400 ml-1">*</span>
+              </label>
+              <textarea
+              aria-invalid={Boolean(validationErrors.bio)}
+              className={`w-full border-2 rounded-xl p-3 min-h-[100px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 outline-none transition ${
+                validationErrors.bio
+                  ? "border-rose-400/70 focus:ring-rose-500/20 focus:border-rose-400"
+                  : "border-white/20 focus:ring-violet-500/50 focus:border-violet-400"
+              }`}
               placeholder={t("tutorProfile.placeholder.bio")}
               value={profile.bio || ""}
               onChange={(e) =>
@@ -412,9 +646,26 @@ export default function TutorProfilePage() {
                 })
               }
             />
+              {validationErrors.bio && (
+                <p className="mt-1.5 text-xs text-rose-300">
+                  {validationErrors.bio}
+                </p>
+              )}
+            </div>
 
-            <textarea
-              className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[100px] mt-3 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+            <div data-validation-field="professional_summary">
+              <label className="block text-sm font-semibold text-white/70 mb-1">
+                {t("tutorProfile.placeholder.professionalSummary")}
+                <span className="text-rose-400 ml-1">*</span>
+              </label>
+
+              <textarea
+              aria-invalid={Boolean(validationErrors.professional_summary)}
+              className={`w-full border-2 rounded-xl p-3 min-h-[100px] mt-3 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 outline-none transition ${
+                validationErrors.professional_summary
+                  ? "border-rose-400/70 focus:ring-rose-500/20 focus:border-rose-400"
+                  : "border-white/20 focus:ring-violet-500/50 focus:border-violet-400"
+              }`}
               placeholder={t(
                 "tutorProfile.placeholder.professionalSummary"
               )}
@@ -425,7 +676,13 @@ export default function TutorProfilePage() {
                   professional_summary: e.target.value,
                 })
               }
-            />
+              />
+              {validationErrors.professional_summary && (
+                <p className="mt-1.5 text-xs text-rose-300">
+                  {validationErrors.professional_summary}
+                </p>
+              )}
+            </div>
           </Section>
 
           {/* Education */}
@@ -442,10 +699,15 @@ export default function TutorProfilePage() {
                     highest_qualification: v,
                   })
                 }
+              
+                error={validationErrors.highest_qualification}
+                fieldKey="highest_qualification"
               />
 
               <Field
                 label={t("tutorProfile.field.degree")}
+                error={validationErrors.degree}
+                fieldKey="degree"
                 value={profile.degree || ""}
                 onChange={(v) =>
                   setProfile({
@@ -457,6 +719,8 @@ export default function TutorProfilePage() {
 
               <Field
                 label={t("tutorProfile.field.collegeName")}
+                error={validationErrors.college_name}
+                fieldKey="college_name"
                 value={profile.college_name || ""}
                 onChange={(v) =>
                   setProfile({
@@ -484,6 +748,9 @@ export default function TutorProfilePage() {
                   })
                 }
                 type="number"
+              
+                error={validationErrors.year_of_completion}
+                fieldKey="year_of_completion"
               />
             </div>
           </Section>
@@ -497,6 +764,8 @@ export default function TutorProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field
                 label={t("tutorProfile.field.skills")}
+                error={validationErrors.skills}
+                fieldKey="skills"
                 value={profile.skills || ""}
                 onChange={(v) =>
                   setProfile({
@@ -514,10 +783,15 @@ export default function TutorProfilePage() {
                 onChange={(v) =>
                   setProfile({
                     ...profile,
-                    experience: parseInt(v, 10) || 0,
+                    experience: v === "" ? 0 : Math.max(0, Math.min(60, parseInt(v, 10) || 0)),
                   })
                 }
+                min={0}
+                max={60}
                 type="number"
+              
+                error={validationErrors.experience}
+                fieldKey="experience"
               />
 
               <Field
@@ -531,6 +805,9 @@ export default function TutorProfilePage() {
                     expertise_level: v,
                   })
                 }
+              
+                error={validationErrors.expertise_level}
+                fieldKey="expertise_level"
               />
 
               <Field
@@ -544,6 +821,9 @@ export default function TutorProfilePage() {
                     current_status: v,
                   })
                 }
+              
+                error={validationErrors.current_status}
+                fieldKey="current_status"
               />
 
               <Field
@@ -557,15 +837,20 @@ export default function TutorProfilePage() {
                     organization: v,
                   })
                 }
+              
+                error={validationErrors.organization}
+                fieldKey="organization"
               />
             </div>
           </Section>
 
           {/* Mentor Subjects */}
           <Section
-            title={t("tutorProfile.section.mentorSubjects")}
+            title={`${t("tutorProfile.section.mentorSubjects")} *`}
           >
             <ChipInput
+              error={validationErrors.mentor_subjects}
+              fieldKey="mentor_subjects"
               items={profile.mentor_subjects || []}
               onChange={(items) =>
                 setProfile({
@@ -580,8 +865,10 @@ export default function TutorProfilePage() {
           </Section>
 
           {/* Languages */}
-          <Section title={t("tutorProfile.section.languages")}>
+          <Section title={`${t("tutorProfile.section.languages")} *`}>
             <ChipInput
+              error={validationErrors.mentor_languages}
+              fieldKey="mentor_languages"
               items={profile.mentor_languages || []}
               onChange={(items) =>
                 setProfile({
@@ -596,8 +883,8 @@ export default function TutorProfilePage() {
           </Section>
 
           {/* Resume */}
-          <Section title={t("tutorProfile.section.resume")}>
-            <div className="space-y-2">
+          <Section title={`${t("tutorProfile.section.resume")} *`}>
+            <div className="space-y-2" data-validation-field="resume">
               {profile.resume && (
                 <a
                   href={profile.resume}
@@ -618,7 +905,12 @@ export default function TutorProfilePage() {
                     e.target.files?.[0] || null
                   )
                 }
-                className="block w-full text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-violet-500/20 file:text-violet-300 file:font-semibold hover:file:bg-violet-500/30 file:transition"
+                aria-invalid={Boolean(validationErrors.resume)}
+                 className={`block w-full text-sm text-white file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-violet-500/20 file:text-violet-300 file:font-semibold hover:file:bg-violet-500/30 file:transition ${
+                   validationErrors.resume
+                     ? " ring-2 ring-rose-400/40"
+                     : ""
+                 }`}
               />
 
               {resumeFile && (
@@ -626,6 +918,12 @@ export default function TutorProfilePage() {
                   {t("tutorProfile.newFile", {
                     name: resumeFile.name,
                   })}
+                </p>
+              )}
+
+              {validationErrors.resume && (
+                <p className="text-xs text-rose-300">
+                  {validationErrors.resume}
                 </p>
               )}
             </div>
@@ -691,22 +989,52 @@ const Field = ({
   value,
   onChange,
   type = "text",
+  error,
+  fieldKey,
+  inputMode,
+  maxLength,
+  min,
+  max,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: React.HTMLInputTypeAttribute;
+  error?: string;
+  fieldKey?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
+  min?: number | string;
+  max?: number | string;
 }) => (
-  <div>
+  <div data-validation-field={fieldKey}>
     <label className="block text-sm font-semibold text-white/70 mb-1">
       {label}
+      <span className="text-rose-400 ml-1">*</span>
     </label>
 
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full border-2 border-white/20 rounded-xl px-4 py-2.5 bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+      inputMode={inputMode}
+      maxLength={maxLength}
+      min={min}
+      max={max}
+      required
+      aria-invalid={Boolean(error)}
+      className={`w-full rounded-xl px-4 py-2.5 bg-gray-900/60 text-white placeholder-white/40 outline-none transition border-2 focus:ring-4 ${
+        error
+          ? "border-rose-400/70 focus:border-rose-400 focus:ring-rose-500/20"
+          : "border-white/20 focus:ring-violet-500/50 focus:border-violet-400"
+      }`}
     />
+
+    {error && (
+      <p className="mt-1.5 text-xs text-rose-300">
+        {error}
+      </p>
+    )}
   </div>
 );
+

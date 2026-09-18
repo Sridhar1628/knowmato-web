@@ -104,6 +104,8 @@ const VideoCallScreen: React.FC = () => {
         setIsLoading(true);
 
         const tokens = await getTokens();
+        if (!tokens?.access) throw new Error("No token");
+
         const payload = JSON.parse(atob(tokens.access.split(".")[1]));
         const currentUserId = Number(payload.user_id);
 
@@ -113,8 +115,6 @@ const VideoCallScreen: React.FC = () => {
         } else {
           setUserRole("tutor");
         }
-
-        if (!tokens?.access) throw new Error("No token");
 
         const res = await axios.post(`sessions/${sessionId}/start-video/`);
         const { channel_name, token, uid } = res.data;
