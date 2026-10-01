@@ -257,6 +257,8 @@
     "doubtId": "Doubt ID:",
     "completed": "Completed",
     "tutor": "Tutor",
+    "assigned": "Assigned",
+    "cancelled": "Cancelled",
     "notAssigned": "Not Assigned",
     "yourReview": "Your Review",
     "addReview": "Add Review",

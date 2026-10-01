@@ -1,6 +1,6 @@
 // app/student/profile/page.tsx
 "use client";
-
+import { API_HOST } from "@/config/env";
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import AlertService from "@/services/alertService";
@@ -382,6 +382,16 @@ export default function StudentProfilePage() {
 
   const [profile, setProfile] =
     useState<StudentProfile | null>(null);
+
+  const getProfilePhotoUrl = (photo?: string | null) => {
+    if (!photo) return null;
+
+    if (photo.startsWith("http://") || photo.startsWith("https://")) {
+      return photo;
+    }
+
+    return `${API_HOST}${photo.startsWith("/") ? photo : `/${photo}`}`;
+  };
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1020,7 +1030,7 @@ export default function StudentProfilePage() {
             <div className="relative">
               {profile.profile_photo ? (
                 <img
-                  src={profile.profile_photo}
+                  src={getProfilePhotoUrl(profile.profile_photo) ?? ""}
                   alt="Profile"
                   className="w-20 h-20 rounded-full object-cover border-2 border-violet-400/50 shadow-lg"
                 />
@@ -1085,7 +1095,7 @@ export default function StudentProfilePage() {
                     />
                   ) : profile.profile_photo ? (
                     <img
-                      src={profile.profile_photo}
+                      src={getProfilePhotoUrl(profile.profile_photo) ?? ""}
                       alt="Current profile"
                       className="h-full w-full object-cover"
                     />
