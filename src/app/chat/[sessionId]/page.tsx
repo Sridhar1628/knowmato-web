@@ -105,18 +105,33 @@ const ChatScreen = () => {
   }, []);
 
   // Navigate after session ends
-  const navigateAfterEnd = async () => {
-    try {
-      const res = await axiosInstance.get(`/v1/session/${sessionId}/`);
-      if (currentUserId === Number(res.data.student_id)) {
-        router.replace(`/student/submit-review/${sessionId}`);
-      } else {
-        router.replace("/tutor/dashboard");
-      }
-    } catch {
-      router.back();
+  // Navigate after session ends
+  const navigateAfterEnd = useCallback(() => {
+    console.log("🚀 SESSION ENDED - NAVIGATING USER", {
+      sessionId,
+      currentUserId,
+      studentId: sessionDetails?.student_id,
+      tutorId: sessionDetails?.tutor_id,
+    });
+
+    if (!currentUserId || !sessionDetails) {
+      console.warn("⚠️ Cannot navigate after session end: user/session data missing");
+      return;
     }
-  };
+
+    const studentId = Number(sessionDetails.student_id);
+
+    if (Number(currentUserId) === studentId) {
+      console.log("🎓 Student session ended → feedback screen");
+
+      router.replace(`/student/submit-review/${sessionId}`);
+      return;
+    }
+
+    console.log("👨‍🏫 Tutor session ended → tutor dashboard");
+
+    router.replace("/tutor/dashboard");
+  }, [currentUserId, sessionDetails, sessionId, router]);
 
   // Main socket event handler
   const handleSocketEvent = useCallback(
