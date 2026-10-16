@@ -26,6 +26,8 @@ import {
   isMatchingTimerRunning,
 } from '@/services/matchingTimerService';
 
+import NotificationBell from "@/components/notifications/NotificationBell";
+
 export default function StudentLayoutContent({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const user = useSelector((state: RootState) => (state as RootState).auth.user);
@@ -274,19 +276,26 @@ export default function StudentLayoutContent({ children }: { children: React.Rea
           </div>
         </div>
 
-        {/* Right: profile */}
+        {/* Right : profile */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/student/profile')}
-            className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md px-3 py-2 shadow-sm transition-all duration-300 hover:border-violet-400/40 hover:shadow-lg"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-bold text-white shadow-md">
-              {cachedName.charAt(0).toUpperCase()}
-            </span>
-            <span className="hidden sm:inline text-sm font-semibold text-white/90">
-              {cachedName || t('common.student')}
-            </span>
-          </button>
+
+          {/* Right: notifications and profile */}
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+
+              <button
+                onClick={() => router.push("/student/profile")}
+                className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md px-3 py-2 shadow-sm transition-all duration-300 hover:border-violet-400/40 hover:shadow-lg"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-bold text-white shadow-md">
+                  {cachedName.charAt(0).toUpperCase()}
+                </span>
+
+                <span className="hidden sm:inline text-sm font-semibold text-white/90">
+                  {cachedName || t("common.student")}
+                </span>
+              </button>
+            </div>
         </div>
       </header>
 

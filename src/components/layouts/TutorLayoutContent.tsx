@@ -16,6 +16,8 @@ import {
   updateTutorWallet,
 } from "@/store/tutorDashboardRealtime";
 
+import NotificationBell from "@/components/notifications/NotificationBell";
+
 interface WalletState {
   real: number;
   bonus: number;
@@ -235,8 +237,11 @@ export default function TutorLayoutContent({
             </div>
           </div>
 
-          {/* RIGHT */}
+          
+          {/* RIGHT : Notifications + Wallet */}
           <div className="flex items-center gap-3">
+            <NotificationBell />
+
             <button
               onClick={() => router.push("/tutor/wallet")}
               className="rounded-xl bg-violet-500/20 backdrop-blur-md border border-violet-400/30 px-4 py-2 text-sm font-bold text-violet-300 transition hover:bg-violet-500/30 hover:text-white"
@@ -244,6 +249,7 @@ export default function TutorLayoutContent({
               💰 ₹{tutorDashboardCache.stats.walletBalance}
             </button>
           </div>
+
         </header>
 
         {/* ============================= */}

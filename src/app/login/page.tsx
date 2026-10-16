@@ -13,7 +13,6 @@ import {
 import * as Yup from 'yup';
 
 import { loginWithOtp } from '@/services/authService';
-import { saveTokens } from '@/services/storageService';
 import { loginSuccess } from '@/redux/slices/authSlice';
 import { getProfileByRole } from '@/services/profileService';
 import { useAuthContext } from '@/contexts/AuthContext';
@@ -71,175 +70,76 @@ export default function LoginPage() {
   // LOGIN
   // ==========================================
 
-  const handleLogin = async (
-    values: LoginFormValues,
-  ) => {
+  
+  const handleLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
 
     try {
-      const payload = {
+      const response = await loginWithOtp({
         identifier: values.identifier.trim(),
         password: values.password,
-      };
+      });
 
-      // ========================================
-      // LOGIN API
-      // ========================================
+      // ApiResponse may wrap the session payload in `data`.
+      const loginData = response?.data ?? response;
 
-      const res =
-        await loginWithOtp(payload);
-
-      console.log(
-        'LOGIN RESPONSE:',
-        res,
-      );
-
-      // ========================================
-      // VALIDATE ACCESS TOKEN
-      // ========================================
-
-      if (!res?.access) {
-        throw new Error(
-          'Login failed. No access token was received.',
-        );
+      if (!loginData?.role) {
+        throw new Error('Login response did not contain a user role.');
       }
 
-      // ========================================
-      // SAVE TOKENS
-      // ========================================
+      const role = loginData.role as string;
 
-      saveTokens(
-        res.access,
-        res.refresh,
-      );
+      const profileResponse = await getProfileByRole(role);
+      const profileUser = profileResponse?.user;
 
-      console.log(
-        'TOKENS IN LOCALSTORAGE:',
-        localStorage.getItem(
-          'tokens',
-        ),
-      );
+      if (!profileUser) {
+        throw new Error('Unable to load your user profile.');
+      }
 
-      // ========================================
-      // GET PROFILE
-      // ========================================
+      const user = {
+        ...profileUser,
+        id: profileUser.id ?? loginData.user_id,
+        email: profileUser.email ?? loginData.email,
+        role,
+        display_name:
+          profileUser.display_name ?? loginData.display_name,
+      };
 
-      const profile =
-        await getProfileByRole(
-          res.role,
-        );
+      localStorage.setItem('user_id', String(user.id));
+      localStorage.setItem('role', role);
+      localStorage.setItem('display_name', user.display_name ?? '');
 
-      console.log(
-        'PROFILE:',
-        profile,
-      );
-
-      console.log(
-        'PROFILE RESPONSE:',
-        profile,
-      );
-
-      // ========================================
-      // SAVE USER INFORMATION
-      // ========================================
-
-      localStorage.setItem(
-        'user_id',
-        String(res.user_id),
-      );
-
-      localStorage.setItem(
-        'role',
-        String(res.role),
-      );
-
-      localStorage.setItem(
-        'display_name',
-        String(res.display_name ?? ''),
-      );
-
-      // ========================================
-      // REDUX LOGIN STATE
-      // ========================================
-
-      dispatch(
-        loginSuccess({
-          access: res.access,
-          refresh: res.refresh,
-          user: profile.user,
-        }),
-      );
-
-      // ========================================
-      // REFRESH AUTH CONTEXT
-      // ========================================
+      dispatch(loginSuccess({ user }));
 
       await refreshAuth();
 
-      // ========================================
-      // SUCCESS ALERT
-      // ========================================
-
       AlertService.success(
-        t('toast.loginSuccess') ||
-          'Login successful 🎉',
+        t('toast.loginSuccess') || 'Login successful 🎉',
         'You have been logged in successfully.',
       );
 
-      // ========================================
-      // ROLE ROUTING
-      // ========================================
-
-      const roleRoutes: Record<
-        string,
-        string
-      > = {
-        student:
-          '/student/dashboard',
-
-        tutor:
-          '/tutor/dashboard',
-
-        admin:
-          '/admin/dashboard',
-
-        company:
-          '/company/dashboard',
+      const roleRoutes: Record<string, string> = {
+        student: '/student/dashboard',
+        tutor: '/tutor/dashboard',
+        admin: '/admin/dashboard',
+        company: '/company/dashboard',
       };
 
-      router.push(
-        roleRoutes[res.role] || '/',
-      );
-
-      return;
+      router.push(roleRoutes[role] || '/');
     } catch (error: unknown) {
-      console.error(
-        'Login error:',
-        error,
-      );
+      let errorMsg = 'Login failed. Please try again.';
 
-      // ========================================
-      // EXTRACT ERROR MESSAGE SAFELY
-      // ========================================
-
-      let errorMsg =
-        'Login failed. Please try again.';
-
-      if (
-        typeof error === 'object' &&
-        error !== null
-      ) {
-        const possibleError =
-          error as {
-            response?: {
-              data?: {
-                error?: string;
-                detail?: string;
-                message?: string;
-              };
+      if (typeof error === 'object' && error !== null) {
+        const possibleError = error as {
+          response?: {
+            data?: {
+              error?: string;
+              detail?: string;
+              message?: string;
             };
-            message?: string;
           };
+          message?: string;
+        };
 
         errorMsg =
           possibleError.response?.data?.error ||
@@ -249,18 +149,12 @@ export default function LoginPage() {
           errorMsg;
       }
 
-      // ========================================
-      // CUSTOM ERROR ALERT
-      // ========================================
-
-      AlertService.error(
-        'Login Failed',
-        errorMsg,
-      );
+      AlertService.error('Login Failed', errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // ============================================
   // RENDER

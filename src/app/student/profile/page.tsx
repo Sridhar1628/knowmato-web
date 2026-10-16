@@ -15,6 +15,9 @@ import {
 
 import { apiDelete } from "@/services/apiService";
 
+// ⬇️ Import the profile API from userService that returns display_name
+import { getProfile } from "@/services/userService";
+
 // ========== Suggestion Options ==========
 const LANGUAGE_OPTIONS = [
   "English",
@@ -102,6 +105,9 @@ const PREFERRED_TIME_OPTIONS = [
   "Flexible / Anytime",
 ];
 
+// Public profile base URL
+const PROFILE_PUBLIC_BASE = "https://www.knowmato.in/profile";
+
 // ========== Autocomplete Chip Input Component ==========
 const AutocompleteChipInput = ({
   items,
@@ -112,6 +118,7 @@ const AutocompleteChipInput = ({
   addLabel,
   error,
   fieldKey,
+  disabled = false,
 }: {
   items: string[];
   onChange: (items: string[]) => void;
@@ -121,6 +128,7 @@ const AutocompleteChipInput = ({
   addLabel?: string;
   error?: string;
   fieldKey?: string;
+  disabled?: boolean;
 }) => {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -129,8 +137,6 @@ const AutocompleteChipInput = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter suggestions based on input,
-  // excluding already selected items.
   const availableSuggestions = suggestions.filter(
     (s) => !items.includes(s)
   );
@@ -148,6 +154,8 @@ const AutocompleteChipInput = ({
     );
 
   const addItem = (value: string) => {
+    if (disabled) return;
+
     const trimmed = value.trim();
 
     if (trimmed && !items.includes(trimmed)) {
@@ -161,12 +169,16 @@ const AutocompleteChipInput = ({
   };
 
   const removeItem = (item: string) => {
+    if (disabled) return;
+
     onChange(items.filter((i) => i !== item));
   };
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
   ) => {
+    if (disabled) return;
+
     if (e.key === "Enter") {
       e.preventDefault();
 
@@ -224,11 +236,12 @@ const AutocompleteChipInput = ({
   };
 
   const handleFocus = () => {
+    if (disabled) return;
+
     setIsOpen(true);
     setActiveIndex(-1);
   };
 
-  // Close dropdown on outside click.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -253,6 +266,14 @@ const AutocompleteChipInput = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (disabled) {
+      setIsOpen(false);
+      setActiveIndex(-1);
+      setInput("");
+    }
+  }, [disabled]);
+
   return (
     <div
       className="w-full"
@@ -269,11 +290,21 @@ const AutocompleteChipInput = ({
         ref={dropdownRef}
         className="relative"
       >
-        <div className={`flex flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-2 bg-gray-900/60 transition focus-within:ring-4 ${
-            error
+        <div
+          className={`flex flex-wrap items-center gap-2 rounded-xl border-2 px-3 py-2 bg-gray-900/60 transition ${
+            disabled
+              ? "border-white/10 opacity-70 cursor-not-allowed"
+              : "focus-within:ring-4"
+          } ${
+            !disabled && error
               ? "border-rose-400/70 focus-within:border-rose-400 focus-within:ring-rose-500/20"
-              : "border-white/20 focus-within:border-violet-400 focus-within:ring-violet-500/50"
-          }`}>
+              : ""
+          } ${
+            !disabled && !error
+              ? "border-white/20 focus-within:border-violet-400 focus-within:ring-violet-500/50"
+              : ""
+          }`}
+        >
           {items.map((item, idx) => (
             <span
               key={`${item}-${idx}`}
@@ -281,33 +312,41 @@ const AutocompleteChipInput = ({
             >
               {item}
 
-              <button
-                type="button"
-                onClick={() => removeItem(item)}
-                className="hover:text-rose-400 ml-1"
-                aria-label={`Remove ${item}`}
-              >
-                ×
-              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeItem(item)}
+                  className="hover:text-rose-400 ml-1"
+                  aria-label={`Remove ${item}`}
+                >
+                  ×
+                </button>
+              )}
             </span>
           ))}
 
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onFocus={handleFocus}
-            placeholder={
-              items.length === 0 ? placeholder : ""
-            }
-            className="flex-1 min-w-[120px] outline-none text-sm bg-transparent text-white placeholder-white/40"
-          />
+          {disabled ? (
+            items.length === 0 ? (
+              <span className="text-sm text-white/35">
+                {placeholder}
+              </span>
+            ) : null
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={handleFocus}
+              placeholder={items.length === 0 ? placeholder : ""}
+              className="flex-1 min-w-[120px] outline-none text-sm bg-transparent text-white placeholder-white/40"
+            />
+          )}
         </div>
 
-        {/* Dropdown Suggestions */}
-        {isOpen &&
+        {!disabled &&
+          isOpen &&
           (filtered.length > 0 || showCustomAdd) && (
             <div className="absolute z-20 mt-1 w-full max-h-48 overflow-y-auto rounded-xl bg-gray-900/90 backdrop-blur-lg border border-white/20 shadow-2xl">
               {filtered.map((suggestion, idx) => (
@@ -317,9 +356,7 @@ const AutocompleteChipInput = ({
                     e.preventDefault();
                     addItem(suggestion);
                   }}
-                  onMouseEnter={() =>
-                    setActiveIndex(idx)
-                  }
+                  onMouseEnter={() => setActiveIndex(idx)}
                   className={`px-4 py-2 text-sm cursor-pointer transition ${
                     idx === activeIndex
                       ? "bg-violet-500/30 text-white"
@@ -351,14 +388,14 @@ const AutocompleteChipInput = ({
               )}
             </div>
           )}
-        </div>
-
-        {error && (
-          <p className="mt-1.5 text-xs font-medium text-rose-300">
-            {error}
-          </p>
-        )}
       </div>
+
+      {error && (
+        <p className="mt-1.5 text-xs font-medium text-rose-300">
+          {error}
+        </p>
+      )}
+    </div>
   );
 };
 
@@ -396,6 +433,15 @@ export default function StudentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  /*
+   * ============================================================
+   * EDIT MODE
+   * ============================================================
+   */
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalProfile, setOriginalProfile] =
+    useState<StudentProfile | null>(null);
+
   // Validation errors for every required field.
   const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
@@ -410,6 +456,24 @@ export default function StudentProfilePage() {
 
   const photoInputRef =
     useRef<HTMLInputElement>(null);
+
+  // ============================================================
+  // SHARE PROFILE STATE
+  // ============================================================
+
+  // display_name is loaded from accounts/profile/ (userService.getProfile)
+  const [displayName, setDisplayName] = useState<string>("");
+
+  // Whether we already copied the link (to show "Copied!" state)
+  const [copied, setCopied] = useState(false);
+
+  // Copy timer to reset "Copied!" state
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Build the shareable link from displayName
+  const shareProfileUrl = displayName
+    ? `${PROFILE_PUBLIC_BASE}/${encodeURIComponent(displayName)}`
+    : "";
 
   // ============================================================
   // LOAD PROFILE
@@ -498,6 +562,219 @@ export default function StudentProfilePage() {
   }, [t]);
 
   // ============================================================
+  // LOAD DISPLAY NAME (for share link)
+  // ============================================================
+
+  useEffect(() => {
+    const fetchDisplayName = async () => {
+      try {
+        const res = await getProfile();
+
+        const response = res as any;
+
+        /*
+         * Backend returns:
+         * {
+         *   success: true,
+         *   status: 200,
+         *   message: "...",
+         *   data: {
+         *     user: { id, display_name, ... }
+         *   }
+         * }
+         *
+         * But we defensively handle other nesting shapes too.
+         */
+        const user =
+          response?.data?.data?.user ??
+          response?.data?.user ??
+          response?.user ??
+          null;
+
+        const name: string =
+          user?.display_name ??
+          response?.data?.data?.display_name ??
+          response?.data?.display_name ??
+          "";
+
+        if (typeof name === "string" && name.trim().length > 0) {
+          setDisplayName(name.trim());
+        }
+      } catch (err) {
+        // Silent failure — share block will simply hide.
+        console.warn("Failed to load display_name for share link:", err);
+      }
+    };
+
+    fetchDisplayName();
+  }, []);
+
+  // Cleanup copy reset timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyResetTimer.current) {
+        clearTimeout(copyResetTimer.current);
+      }
+    };
+  }, []);
+
+  // ============================================================
+  // COPY PROFILE LINK
+  // ============================================================
+
+  const handleCopyLink = async () => {
+    if (!shareProfileUrl) {
+      AlertService.warning(
+        "Link Unavailable",
+        "We could not generate your profile link right now. Please try again later.",
+        []
+      );
+      return;
+    }
+
+    const markCopied = () => {
+      setCopied(true);
+      if (copyResetTimer.current) {
+        clearTimeout(copyResetTimer.current);
+      }
+      copyResetTimer.current = setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    };
+
+    try {
+      // Preferred modern API — requires secure context (HTTPS/localhost).
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await navigator.clipboard.writeText(shareProfileUrl);
+        markCopied();
+        AlertService.success(
+          "Link Copied",
+          "Your public profile link has been copied to the clipboard."
+        );
+        return;
+      }
+
+      // Fallback for older browsers / non-secure contexts.
+      const textarea = document.createElement("textarea");
+      textarea.value = shareProfileUrl;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-1000px";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+
+      if (ok) {
+        markCopied();
+        AlertService.success(
+          "Link Copied",
+          "Your public profile link has been copied to the clipboard."
+        );
+      } else {
+        throw new Error("Copy command failed");
+      }
+    } catch (err) {
+      console.error("Copy failed:", err);
+
+      AlertService.error(
+        "Copy Failed",
+        "We could not copy the link automatically. Please copy it manually from the field above."
+      );
+    }
+  };
+
+  // ============================================================
+  // NATIVE SHARE (mobile-friendly)
+  // ============================================================
+
+  const handleShare = async () => {
+    if (!shareProfileUrl) {
+      AlertService.warning(
+        "Link Unavailable",
+        "We could not generate your profile link right now. Please try again later.",
+        []
+      );
+      return;
+    }
+
+    const sharePayload = {
+      title: "My KnowMato Profile",
+      text: "Check out my KnowMato profile!",
+      url: shareProfileUrl,
+    };
+
+    try {
+      if (
+        typeof navigator !== "undefined" &&
+        typeof (navigator as any).share === "function"
+      ) {
+        await (navigator as any).share(sharePayload);
+        return;
+      }
+
+      // If Web Share API not supported, just copy instead.
+      await handleCopyLink();
+    } catch (err: any) {
+      /*
+       * AbortError means the user cancelled the native share sheet —
+       * no need to show an error.
+       */
+      if (err?.name === "AbortError") return;
+
+      console.warn("Share failed:", err);
+      // Fallback to copy on other errors.
+      await handleCopyLink();
+    }
+  };
+
+  // ============================================================
+  // EDIT MODE HANDLERS
+  // ============================================================
+
+  const handleStartEditing = () => {
+    if (!profile || saving || deletingAccount) return;
+
+    setOriginalProfile(profile);
+    setValidationErrors({});
+    setProfilePhoto(null);
+
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+
+    setIsEditing(true);
+
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }, 50);
+  };
+
+  const handleCancelEditing = () => {
+    if (saving || deletingAccount) return;
+
+    if (originalProfile) {
+      setProfile(originalProfile);
+    }
+
+    setProfilePhoto(null);
+    setValidationErrors({});
+    setOriginalProfile(null);
+    setIsEditing(false);
+
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  };
+
+  // ============================================================
   // SAVE PROFILE
   // ============================================================
 
@@ -506,19 +783,14 @@ export default function StudentProfilePage() {
   ) => {
     e.preventDefault();
 
-    if (!profile || saving || deletingAccount) {
+    if (
+      !profile ||
+      saving ||
+      deletingAccount ||
+      !isEditing
+    ) {
       return;
     }
-
-    /*
-     * ==========================================================
-     * COMPLETE CLIENT-SIDE VALIDATION
-     * ==========================================================
-     *
-     * Every field displayed in this form is compulsory.
-     * Nothing is sent to the backend until every validation
-     * rule below passes.
-     */
 
     const errors: Record<string, string> = {};
 
@@ -609,11 +881,6 @@ export default function StudentProfilePage() {
         "Enter a valid email address, for example name@example.com.";
     }
 
-    /*
-     * Mobile:
-     * - exactly 10 digits
-     * - Indian mobile numbers normally begin with 6, 7, 8 or 9
-     */
     if (!mobile) {
       errors.mobile_number =
         "Mobile number is required.";
@@ -708,10 +975,6 @@ export default function StudentProfilePage() {
 
     // ---------------- PROFILE PHOTO ----------------
 
-    /*
-     * Existing uploaded profile photo is accepted.
-     * For a completely new profile, a photo is compulsory.
-     */
     const hasExistingPhoto =
       typeof profile.profile_photo === "string" &&
       profile.profile_photo.trim().length > 0;
@@ -731,11 +994,6 @@ export default function StudentProfilePage() {
       }
     }
 
-    /*
-     * Show all validation errors and STOP.
-     * Absolutely no API request is made when even one
-     * compulsory field is invalid.
-     */
     setValidationErrors(errors);
 
     if (Object.keys(errors).length > 0) {
@@ -754,10 +1012,6 @@ export default function StudentProfilePage() {
         []
       );
 
-      /*
-       * Scroll the first invalid element into view
-       * when it has the matching data-validation-field.
-       */
       setTimeout(() => {
         const element =
           document.querySelector(
@@ -803,7 +1057,6 @@ export default function StudentProfilePage() {
 
       await updateStudentProfile(formData);
 
-      // Clear validation state after successful save.
       setValidationErrors({});
 
       AlertService.success(
@@ -816,10 +1069,6 @@ export default function StudentProfilePage() {
         })
       );
 
-      /*
-       * Update local profile state as well so the UI immediately
-       * reflects the submitted values.
-       */
       setProfile((current) =>
         current
           ? {
@@ -844,6 +1093,13 @@ export default function StudentProfilePage() {
       );
 
       setProfilePhoto(null);
+
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
+
+      setOriginalProfile(null);
+      setIsEditing(false);
     } catch (err: any) {
       console.error(
         "Profile update failed:",
@@ -880,7 +1136,6 @@ export default function StudentProfilePage() {
   const handleDeleteAccount = async () => {
     if (deletingAccount) return;
 
-    // First confirmation.
     const firstConfirmation = window.confirm(
       "Are you sure you want to permanently delete your KnowMato account?\n\n" +
         "This action cannot be undone."
@@ -890,7 +1145,6 @@ export default function StudentProfilePage() {
       return;
     }
 
-    // Second confirmation to prevent accidental deletion.
     const secondConfirmation = window.confirm(
       "FINAL CONFIRMATION\n\n" +
         "Your KnowMato account and associated data will be permanently deleted.\n\n" +
@@ -904,20 +1158,6 @@ export default function StudentProfilePage() {
     setDeletingAccount(true);
 
     try {
-      /*
-       * This calls your existing Django endpoint:
-       *
-       * DELETE /accounts/delete-account/
-       *
-       * Your backend expects:
-       *
-       * {
-       *   "confirm": true
-       * }
-       *
-       * Authentication is handled by apiDelete(),
-       * exactly like your existing application API calls.
-       */
       await apiDelete(
         "accounts/delete-account/",
         {
@@ -925,16 +1165,6 @@ export default function StudentProfilePage() {
         }
       );
 
-      /*
-       * Account deletion succeeded.
-       *
-       * We don't try to manually manipulate authentication
-       * tokens here because the exact token-storage mechanism
-       * belongs to apiService/authentication.
-       *
-       * Redirecting to login lets the application's normal
-       * authentication flow handle the now-deleted account.
-       */
       AlertService.success(
         "Account Deleted",
         "Your KnowMato account has been permanently deleted."
@@ -1064,9 +1294,256 @@ export default function StudentProfilePage() {
                     ? t("studentProfile.complete")
                     : t("studentProfile.incomplete")}
                 </span>
+
+                {isEditing && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold border bg-violet-400/20 text-violet-200 border-violet-400/40">
+                    {t("studentProfile.editing", {
+                      defaultValue: "Editing",
+                    })}
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* ---- EDIT BUTTON (top-right) ---- */}
+            <div className="sm:ml-auto">
+              {!isEditing ? (
+                <motion.button
+                  type="button"
+                  onClick={handleStartEditing}
+                  disabled={saving || deletingAccount}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-5 py-2.5 rounded-xl border border-violet-400/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 hover:text-white font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="w-4 h-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.862 4.487a2.06 2.06 0 1 1 2.914 2.914L7.5 19.677 3 21l1.323-4.5L16.862 4.487Z"
+                    />
+                  </svg>
+                  {t("studentProfile.editProfile", {
+                    defaultValue: "Edit Profile",
+                  })}
+                </motion.button>
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-2 text-xs font-semibold text-amber-200">
+                  {t("studentProfile.editModeNotice", {
+                    defaultValue:
+                      "You are editing your profile",
+                  })}
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* ==================================================
+              SHARE MY PROFILE LINK
+          ================================================== */}
+
+          <section className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="w-5 h-5 text-violet-300"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10.81 15.312a4.5 4.5 0 0 1-1.242-7.244l4.5-4.5a4.5 4.5 0 0 1 6.364 6.364l-1.757 1.757"
+                    />
+                  </svg>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold text-white">
+                    {t("studentProfile.shareProfileTitle", {
+                      defaultValue: "Share My Profile",
+                    })}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-white/60 max-w-2xl">
+                    {t("studentProfile.shareProfileDescription", {
+                      defaultValue:
+                        "Anyone with this link can view your public KnowMato profile.",
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Link preview + actions */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 bg-gray-900/60 transition ${
+                        shareProfileUrl
+                          ? "border-white/20"
+                          : "border-white/10 opacity-70"
+                      }`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className="w-4 h-4 shrink-0 text-white/50"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M10.81 15.312a4.5 4.5 0 0 1-1.242-7.244l4.5-4.5a4.5 4.5 0 0 1 6.364 6.364l-1.757 1.757"
+                        />
+                      </svg>
+
+                      <input
+                        type="text"
+                        readOnly
+                        value={
+                          shareProfileUrl ||
+                          t("studentProfile.shareProfileLoading", {
+                            defaultValue:
+                              "Preparing your profile link...",
+                          })
+                        }
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="flex-1 min-w-0 bg-transparent text-sm text-white/90 placeholder-white/40 outline-none truncate"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <motion.button
+                      type="button"
+                      onClick={handleCopyLink}
+                      disabled={!shareProfileUrl}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-violet-400/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200 hover:text-white font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {copied ? (
+                        <>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M4.5 12.75l6 6 9-13.5"
+                            />
+                          </svg>
+                          {t("studentProfile.copied", {
+                            defaultValue: "Copied!",
+                          })}
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                            />
+                          </svg>
+                          {t("studentProfile.copyLink", {
+                            defaultValue: "Copy Link",
+                          })}
+                        </>
+                      )}
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      onClick={handleShare}
+                      disabled={!shareProfileUrl}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className="w-4 h-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.935-2.186 2.25 2.25 0 0 0-3.935 2.186Z"
+                        />
+                      </svg>
+                      {t("studentProfile.share", {
+                        defaultValue: "Share",
+                      })}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {!shareProfileUrl && (
+                  <p className="text-xs text-white/45">
+                    {t("studentProfile.shareProfileUnavailable", {
+                      defaultValue:
+                        "Your public profile link is not available yet. It will appear once your display name is set.",
+                    })}
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ==================================================
+              READ-ONLY NOTICE
+          ================================================== */}
+
+          {!isEditing && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm text-white/60 flex items-start gap-3">
+              <span className="text-base leading-5">🔒</span>
+              <p className="leading-6">
+                {t("studentProfile.readOnlyNotice", {
+                  defaultValue:
+                    "Your profile is currently read-only. Click “Edit Profile” to enable the fields and make changes.",
+                })}
+              </p>
+            </div>
+          )}
 
           {/* ==================================================
               PROFILE PHOTO REQUIREMENT
@@ -1107,48 +1584,57 @@ export default function StudentProfilePage() {
                 </div>
 
                 <div className="flex-1">
-                  <label className="inline-flex cursor-pointer items-center rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20">
-                    Choose Profile Photo
-                    <input
-                      ref={photoInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/jpg"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
+                  {isEditing ? (
+                    <label className="inline-flex cursor-pointer items-center rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/20">
+                      Choose Profile Photo
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
 
-                        if (!file) {
-                          return;
-                        }
+                          if (!file) {
+                            return;
+                          }
 
-                        if (!file.type.startsWith("image/")) {
-                          setValidationErrors((prev) => ({
-                            ...prev,
-                            profile_photo:
-                              "Please select a valid image file.",
-                          }));
-                          return;
-                        }
+                          if (!file.type.startsWith("image/")) {
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              profile_photo:
+                                "Please select a valid image file.",
+                            }));
+                            return;
+                          }
 
-                        if (file.size > 5 * 1024 * 1024) {
-                          setValidationErrors((prev) => ({
-                            ...prev,
-                            profile_photo:
-                              "Profile photo must be 5 MB or smaller.",
-                          }));
-                          return;
-                        }
+                          if (file.size > 5 * 1024 * 1024) {
+                            setValidationErrors((prev) => ({
+                              ...prev,
+                              profile_photo:
+                                "Profile photo must be 5 MB or smaller.",
+                            }));
+                            return;
+                          }
 
-                        setProfilePhoto(file);
+                          setProfilePhoto(file);
 
-                        setValidationErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.profile_photo;
-                          return next;
-                        });
-                      }}
-                    />
-                  </label>
+                          setValidationErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.profile_photo;
+                            return next;
+                          });
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <p className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/45">
+                      {t("studentProfile.photoLocked", {
+                        defaultValue:
+                          "Click Edit Profile to change your photo",
+                      })}
+                    </p>
+                  )}
 
                   <p className="mt-2 text-xs text-white/45">
                     JPG, PNG or WEBP · Maximum 5 MB · Required
@@ -1179,6 +1665,7 @@ export default function StudentProfilePage() {
                   "studentProfile.fullName"
                 )}
                 value={profile.full_name}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
@@ -1194,6 +1681,7 @@ export default function StudentProfilePage() {
                   "studentProfile.email"
                 )}
                 value={profile.email}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
@@ -1210,6 +1698,7 @@ export default function StudentProfilePage() {
                   "studentProfile.mobileNumber"
                 )}
                 value={profile.mobile_number}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
@@ -1242,13 +1731,14 @@ export default function StudentProfilePage() {
                   "studentProfile.educationLevel"
                 )}
                 value={profile.education_level}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
                     education_level: v,
                   })
                 }
-                              error={validationErrors.education_level}
+                error={validationErrors.education_level}
                 fieldKey="education_level"
               />
 
@@ -1257,13 +1747,14 @@ export default function StudentProfilePage() {
                   "studentProfile.gradeYear"
                 )}
                 value={profile.grade_year}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
                     grade_year: v,
                   })
                 }
-                              error={validationErrors.grade_year}
+                error={validationErrors.grade_year}
                 fieldKey="grade_year"
               />
 
@@ -1272,13 +1763,14 @@ export default function StudentProfilePage() {
                   "studentProfile.streamCategory"
                 )}
                 value={profile.stream_category}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
                     stream_category: v,
                   })
                 }
-                              error={validationErrors.stream_category}
+                error={validationErrors.stream_category}
                 fieldKey="stream_category"
               />
 
@@ -1287,13 +1779,14 @@ export default function StudentProfilePage() {
                   "studentProfile.stream"
                 )}
                 value={profile.stream}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
                     stream: v,
                   })
                 }
-                              error={validationErrors.stream}
+                error={validationErrors.stream}
                 fieldKey="stream"
               />
             </div>
@@ -1314,13 +1807,14 @@ export default function StudentProfilePage() {
                   "studentProfile.skillLevel"
                 )}
                 value={profile.skill_level}
+                disabled={!isEditing}
                 onChange={(v) =>
                   setProfile({
                     ...profile,
                     skill_level: v,
                   })
                 }
-                              error={validationErrors.skill_level}
+                error={validationErrors.skill_level}
                 fieldKey="skill_level"
               />
             </div>
@@ -1334,6 +1828,7 @@ export default function StudentProfilePage() {
                   profile.preferred_languages ||
                   []
                 }
+                disabled={!isEditing}
                 onChange={(items) =>
                   setProfile({
                     ...profile,
@@ -1341,9 +1836,9 @@ export default function StudentProfilePage() {
                       items,
                   })
                 }
-                                error={validationErrors.preferred_languages}
+                error={validationErrors.preferred_languages}
                 fieldKey="preferred_languages"
-suggestions={
+                suggestions={
                   LANGUAGE_OPTIONS
                 }
                 placeholder={t(
@@ -1361,15 +1856,16 @@ suggestions={
                 items={
                   profile.subjects || []
                 }
+                disabled={!isEditing}
                 onChange={(items) =>
                   setProfile({
                     ...profile,
                     subjects: items,
                   })
                 }
-                                error={validationErrors.subjects}
+                error={validationErrors.subjects}
                 fieldKey="subjects"
-suggestions={
+                suggestions={
                   SUBJECT_OPTIONS
                 }
                 placeholder={t(
@@ -1388,6 +1884,7 @@ suggestions={
                   profile.learning_goals ||
                   []
                 }
+                disabled={!isEditing}
                 onChange={(items) =>
                   setProfile({
                     ...profile,
@@ -1395,9 +1892,9 @@ suggestions={
                       items,
                   })
                 }
-                                error={validationErrors.learning_goals}
+                error={validationErrors.learning_goals}
                 fieldKey="learning_goals"
-suggestions={
+                suggestions={
                   LEARNING_GOAL_OPTIONS
                 }
                 placeholder={t(
@@ -1416,6 +1913,7 @@ suggestions={
                   profile.session_types ||
                   []
                 }
+                disabled={!isEditing}
                 onChange={(items) =>
                   setProfile({
                     ...profile,
@@ -1423,9 +1921,9 @@ suggestions={
                       items,
                   })
                 }
-                                error={validationErrors.session_types}
+                error={validationErrors.session_types}
                 fieldKey="session_types"
-suggestions={
+                suggestions={
                   SESSION_TYPE_OPTIONS
                 }
                 placeholder={t(
@@ -1444,6 +1942,7 @@ suggestions={
                   profile.preferred_time ||
                   []
                 }
+                disabled={!isEditing}
                 onChange={(items) =>
                   setProfile({
                     ...profile,
@@ -1451,9 +1950,9 @@ suggestions={
                       items,
                   })
                 }
-                                error={validationErrors.preferred_time}
+                error={validationErrors.preferred_time}
                 fieldKey="preferred_time"
-suggestions={
+                suggestions={
                   PREFERRED_TIME_OPTIONS
                 }
                 placeholder={t(
@@ -1478,7 +1977,12 @@ suggestions={
             <textarea
               data-validation-field="about_learning"
               aria-invalid={Boolean(validationErrors.about_learning)}
-              className="w-full border-2 border-white/20 rounded-xl p-3 min-h-[120px] bg-gray-900/60 text-white placeholder-white/40 focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400 outline-none transition"
+              disabled={!isEditing}
+              className={`w-full border-2 border-white/20 rounded-xl p-3 min-h-[120px] bg-gray-900/60 text-white placeholder-white/40 outline-none transition ${
+                isEditing
+                  ? "focus:ring-4 focus:ring-violet-500/50 focus:border-violet-400"
+                  : "opacity-70 cursor-not-allowed border-white/10"
+              }`}
               placeholder={t(
                 "studentProfile.aboutLearningPlaceholder"
               )}
@@ -1501,32 +2005,65 @@ suggestions={
           </Section>
 
           {/* ==================================================
-              SAVE BUTTON
+              ACTION BAR (EDIT / CANCEL / SAVE)
           ================================================== */}
 
-          <div className="sticky bottom-4 flex justify-end">
-            <motion.button
-              type="submit"
-              disabled={
-                saving ||
-                deletingAccount
-              }
-              whileHover={{
-                scale: 1.02,
-              }}
-              whileTap={{
-                scale: 0.98,
-              }}
-              className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition disabled:opacity-60 flex items-center gap-2"
-            >
-              {saving
-                ? t(
-                    "studentProfile.saving"
-                  )
-                : t(
-                    "studentProfile.saveProfile"
-                  )}
-            </motion.button>
+          <div className="sticky bottom-4 flex flex-wrap justify-end gap-3">
+            {isEditing ? (
+              <>
+                <motion.button
+                  type="button"
+                  onClick={handleCancelEditing}
+                  disabled={saving || deletingAccount}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-3 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white font-bold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t("studentProfile.cancel", {
+                    defaultValue: "Cancel",
+                  })}
+                </motion.button>
+
+                <motion.button
+                  type="submit"
+                  disabled={saving || deletingAccount}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition disabled:opacity-60 flex items-center gap-2"
+                >
+                  {saving
+                    ? t("studentProfile.saving")
+                    : t("studentProfile.saveProfile")}
+                </motion.button>
+              </>
+            ) : (
+              <motion.button
+                type="button"
+                onClick={handleStartEditing}
+                disabled={saving || deletingAccount}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="px-8 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold rounded-xl shadow-lg shadow-violet-500/25 transition disabled:opacity-60 flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.862 4.487a2.06 2.06 0 1 1 2.914 2.914L7.5 19.677 3 21l1.323-4.5L16.862 4.487Z"
+                  />
+                </svg>
+                {t("studentProfile.editProfile", {
+                  defaultValue: "Edit Profile",
+                })}
+              </motion.button>
+            )}
           </div>
 
           {/* ==================================================
@@ -1728,6 +2265,7 @@ const Field = ({
   inputMode,
   maxLength,
   fieldKey,
+  disabled = false,
 }: {
   label: string;
   value: string;
@@ -1737,8 +2275,9 @@ const Field = ({
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   maxLength?: number;
   fieldKey?: string;
+  disabled?: boolean;
 }) => (
-  <div data-validation-field={fieldKey} >
+  <div data-validation-field={fieldKey}>
     <label className="mb-1 block text-sm font-medium text-white/70">
       <span>{label}</span>
       <span className="ml-1 text-rose-300">*</span>
@@ -1748,14 +2287,15 @@ const Field = ({
       type={type}
       value={value}
       required
+      disabled={disabled}
       inputMode={inputMode}
       maxLength={maxLength}
       aria-invalid={Boolean(error)}
-      onChange={(e) =>
-        onChange(e.target.value)
-      }
+      onChange={(e) => onChange(e.target.value)}
       className={`w-full rounded-xl border-2 px-4 py-2.5 bg-gray-900/60 text-white placeholder-white/40 outline-none transition ${
-        error
+        disabled
+          ? "border-white/10 opacity-70 cursor-not-allowed"
+          : error
           ? "border-rose-400/70 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/20"
           : "border-white/20 focus:border-violet-400 focus:ring-4 focus:ring-violet-500/50"
       }`}

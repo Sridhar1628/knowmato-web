@@ -51,18 +51,26 @@ export default function AdminCompanyApplicationsPage() {
   const [applications, setApplications] = useState<AdminCompanyApplication[]>([]); 
   const [statusFilter, setStatusFilter] = useState<string>(""); 
  
-  const fetchApplications = useCallback(async () => { 
-    try { 
-      const res = await getAdminCompanyApplications( 
-        statusFilter ? (statusFilter as "pending" | "approved" | "rejected") : undefined 
-      ); 
-      setApplications(res.results); 
-    } catch (error) { 
-      console.error(error); 
-      AlertService.error("Load Failed", "Failed to load company applications"); 
-    } finally { 
-      setLoading(false); 
-    } 
+  const fetchApplications = useCallback(async () => {
+    try {
+      const res = await getAdminCompanyApplications(
+        statusFilter
+          ? (statusFilter as "pending" | "approved" | "rejected")
+          : undefined
+      );
+
+      console.log("ADMIN COMPANY APPLICATIONS RESPONSE:", res);
+
+      setApplications(res.results ?? []);
+    } catch (error) {
+      console.error(error);
+      AlertService.error(
+        "Load Failed",
+        "Failed to load company applications"
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [statusFilter]); 
  
   useEffect(() => { 

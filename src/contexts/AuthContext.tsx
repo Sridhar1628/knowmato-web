@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -6,31 +7,21 @@ import {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from 'react';
 
-import {
-  checkAuthentication,
-} from '@/services/userService';
-
-import {
-  clearTokens,
-  getTokens,
-} from '@/services/storageService';
+import { checkAuthentication } from '@/services/userService';
 
 interface AuthUser {
   id: number;
   email: string;
-  role:
-    | 'student'
-    | 'tutor'
-    | 'admin'
-    | 'company';
-
+  role: 'student' | 'tutor' | 'admin' | 'company';
   display_name?: string;
   first_name?: string;
   phone?: string;
   profile?: any;
   wallet_balance?: number;
+  knowmato_plus_enabled?: boolean;
 }
 
 interface AuthContextType {
@@ -40,125 +31,45 @@ interface AuthContextType {
   refreshAuth: () => Promise<void>;
 }
 
-const AuthContext =
-  createContext<AuthContextType | null>(
-    null
-  );
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [user, setUser] =
-    useState<AuthUser | null>(null);
+  const refreshAuth = useCallback(async (): Promise<void> => {
+    if (typeof window === 'undefined') return;
 
-  const [loading, setLoading] =
-    useState(true);
+    setLoading(true);
 
-  const refreshAuth =
-    async (): Promise<void> => {
+    try {
+      const response = await checkAuthentication();
+      const profile = response?.data?.user;
 
-      // ------------------------------------------
-      // Check browser
-      // ------------------------------------------
-
-      if (
-        typeof window === 'undefined'
-      ) {
-        return;
-      }
-
-      // ------------------------------------------
-      // Get stored tokens
-      // ------------------------------------------
-
-      const tokens = getTokens();
-
-      if (!tokens?.access) {
-
+      if (!profile) {
         setUser(null);
-        setLoading(false);
-
         return;
       }
 
-      setLoading(true);
-
-      try {
-
-        // ----------------------------------------
-        // Axios will automatically refresh
-        // the access token if required.
-        // ----------------------------------------
-
-        const res =
-          await checkAuthentication();
-
-        console.log(
-          'AUTH RESPONSE:',
-          res
-        );
-
-        const profile =
-          res?.data?.user ??
-          null;
-
-        if (!profile) {
-          throw new Error(
-            'Authentication profile not found.'
-          );
-        }
-
-        setUser(profile);
-
-      } catch (error) {
-
-        console.error(
-          'AUTH ERROR:',
-          error
-        );
-
-        /*
-         * IMPORTANT:
-         *
-         * Do NOT blindly clear tokens here.
-         *
-         * Axios already attempted the refresh
-         * when the access token returned 401.
-         *
-         * If Axios reaches here after refresh
-         * failed, the token storage has already
-         * been cleared.
-         */
-
-        const currentTokens =
-          getTokens();
-
-        if (!currentTokens?.access) {
-          setUser(null);
-        }
-
-      } finally {
-
-        setLoading(false);
-
-      }
-    };
+      setUser(profile as AuthUser);
+    } catch {
+      // A failed session check means the web session is not usable.
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-
-    refreshAuth();
-
-  }, []);
+    void refreshAuth();
+  }, [refreshAuth]);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        authenticated: !!user,
+        authenticated: Boolean(user),
         refreshAuth,
       }}
     >
@@ -168,16 +79,10 @@ export function AuthProvider({
 }
 
 export function useAuthContext() {
-
-  const context =
-    useContext(AuthContext);
+  const context = useContext(AuthContext);
 
   if (!context) {
-
-    throw new Error(
-      'useAuthContext must be used inside AuthProvider'
-    );
-
+    throw new Error('useAuthContext must be used inside AuthProvider');
   }
 
   return context;

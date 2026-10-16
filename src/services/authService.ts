@@ -17,7 +17,7 @@ export const loginWithOtp = async (data: {
   identifier: string;
   password?: string;
 }) => {
-  return await apiPost('accounts/login/', data);
+  return await apiPost('accounts/web-session/login/', data);
 };
 
 export const verifyOtpLogin = async (data: {

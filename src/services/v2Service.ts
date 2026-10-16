@@ -1674,549 +1674,6 @@ export const getQuizAttempts = async (
     return response.data;
 };
 
-// ======================================================
-// JOBS
-// ======================================================
-
-export interface Job {
-    id: number;
-    company: number;
-    company_name?: string;
-
-    title: string;
-    description: string;
-
-    responsibilities: string;
-    requirements: string;
-    skills: string[];
-
-    location: string;
-
-    job_type:
-        | "full_time"
-        | "part_time"
-        | "contract"
-        | "remote";
-
-    experience_level:
-        | "fresher"
-        | "0_1"
-        | "1_3"
-        | "3_plus";
-
-    salary_min: number;
-    salary_max: number;
-
-    vacancies: number;
-
-    application_deadline?: string;
-
-    status:
-        | "draft"
-        | "published"
-        | "closed";
-
-    is_active: boolean;
-
-    created_at: string;
-    updated_at: string;
-}
-
-export interface JobApplication {
-
-    id: number;
-
-    job: number;
-
-    job_title?: string;
-
-    company_name?: string;
-
-    student: number;
-
-    student_name?: string;
-
-    cover_letter: string;
-
-    resume_url: string;
-
-    status:
-        | "applied"
-        | "shortlisted"
-        | "interview"
-        | "offered"
-        | "rejected"
-        | "withdrawn";
-
-    company_notes: string;
-
-    applied_at: string;
-
-    updated_at: string;
-}
-
-export const getJobs = async (
-    params?: {
-        company?: number;
-        location?: string;
-        job_type?: string;
-        ordering?: string;
-    },
-): Promise<Job[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/jobs/",
-        {
-            params,
-        },
-    );
-
-    return response.data;
-};
-
-export const getJob = async (
-    id: number,
-): Promise<Job> => {
-
-    const response = await axiosInstance.get(
-        `/v2/jobs/${id}/`,
-    );
-
-    return response.data;
-};
-
-export const createJob = async (
-    data: Partial<Job>,
-): Promise<Job> => {
-
-    const response = await axiosInstance.post(
-        "/v2/jobs/",
-        data,
-    );
-
-    return response.data;
-};
-
-export const updateJob = async (
-    id: number,
-    data: Partial<Job>,
-): Promise<Job> => {
-
-    const response = await axiosInstance.patch(
-        `/v2/jobs/${id}/`,
-        data,
-    );
-
-    return response.data;
-};
-
-export const deleteJob = async (
-    id: number,
-): Promise<void> => {
-
-    await axiosInstance.delete(
-        `/v2/jobs/${id}/`,
-    );
-};
-
-export interface ApplyJobRequest {
-
-    job: number;
-
-    cover_letter?: string;
-
-    resume_url?: string;
-}
-
-export const applyForJob = async (
-    data: ApplyJobRequest,
-): Promise<any> => {
-
-    const response = await axiosInstance.post(
-        "/v2/job-applications/apply/",
-        data,
-    );
-
-    return response.data;
-};
-
-export const getMyJobApplications = async (): Promise<JobApplication[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/job-applications/my-applications/",
-    );
-
-    return response.data;
-};
-
-export const getJobApplications = async (
-    params?: {
-        job?: number;
-        status?: string;
-    },
-): Promise<JobApplication[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/job-applications/",
-        {
-            params,
-        },
-    );
-
-    return response.data;
-};
-
-export const withdrawJobApplication = async (
-    id: number,
-): Promise<any> => {
-
-    const response = await axiosInstance.post(
-        `/v2/job-applications/${id}/withdraw/`,
-    );
-
-    return response.data;
-};
-
-export const updateJobApplicationStatus = async (
-    id: number,
-    status: string,
-    company_notes = "",
-): Promise<any> => {
-
-    const response = await axiosInstance.patch(
-        `/v2/job-applications/${id}/update-status/`,
-        {
-            status,
-            company_notes,
-        },
-    );
-
-    return response.data;
-};
-
-export interface Internship {
-
-    id: number;
-
-    company: number;
-
-    company_name?: string;
-
-    title: string;
-
-    description: string;
-
-    responsibilities: string;
-
-    requirements: string;
-
-    skills: string[];
-
-    location: string;
-
-    internship_type:
-        | "full_time"
-        | "part_time"
-        | "remote"
-        | "hybrid";
-
-    duration_months: number;
-
-    stipend: number;
-
-    vacancies: number;
-
-    ppo_available: boolean;
-
-    certificate_provided: boolean;
-
-    application_deadline?: string;
-
-    status:
-        | "draft"
-        | "published"
-        | "closed";
-
-    is_active: boolean;
-
-    created_at: string;
-
-    updated_at: string;
-}
-
-export interface InternshipApplication {
-
-    id: number;
-
-    internship: number;
-
-    internship_title?: string;
-
-    company_name?: string;
-
-    student: number;
-
-    student_name?: string;
-
-    cover_letter: string;
-
-    resume_url: string;
-
-    status:
-        | "applied"
-        | "shortlisted"
-        | "interview"
-        | "selected"
-        | "rejected"
-        | "withdrawn";
-
-    company_notes: string;
-
-    applied_at: string;
-
-    updated_at: string;
-}
-
-export const getInternships = async (
-    params?: {
-        company?: number;
-        location?: string;
-        internship_type?: string;
-        ordering?: string;
-    },
-): Promise<Internship[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/internships/",
-        {
-            params,
-        },
-    );
-
-    return response.data;
-};
-
-export const getInternship = async (
-    id: number,
-): Promise<Internship> => {
-
-    const response = await axiosInstance.get(
-        `/v2/internships/${id}/`,
-    );
-
-    return response.data;
-};
-
-export const createInternship = async (
-    data: Partial<Internship>,
-): Promise<Internship> => {
-
-    const response = await axiosInstance.post(
-        "/v2/internships/",
-        data,
-    );
-
-    return response.data;
-};
-
-export const updateInternship = async (
-    id: number,
-    data: Partial<Internship>,
-): Promise<Internship> => {
-
-    const response = await axiosInstance.patch(
-        `/v2/internships/${id}/`,
-        data,
-    );
-
-    return response.data;
-};
-
-export const deleteInternship = async (
-    id: number,
-): Promise<void> => {
-
-    await axiosInstance.delete(
-        `/v2/internships/${id}/`,
-    );
-};
-
-export interface ApplyInternshipRequest {
-
-    internship: number;
-
-    cover_letter?: string;
-
-    resume_url?: string;
-}
-
-export const applyForInternship = async (
-    data: ApplyInternshipRequest,
-): Promise<any> => {
-
-    const response = await axiosInstance.post(
-        "/v2/internship-applications/apply/",
-        data,
-    );
-
-    return response.data;
-};
-
-export const getMyInternshipApplications = async (): Promise<InternshipApplication[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/internship-applications/my-applications/",
-    );
-
-    return response.data;
-};
-
-export const getInternshipApplications = async (
-    params?: {
-        internship?: number;
-        status?: string;
-    },
-): Promise<InternshipApplication[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/internship-applications/",
-        {
-            params,
-        },
-    );
-
-    return response.data;
-};
-
-export const withdrawInternshipApplication = async (
-    id: number,
-): Promise<any> => {
-
-    const response = await axiosInstance.post(
-        `/v2/internship-applications/${id}/withdraw/`,
-    );
-
-    return response.data;
-};
-
-export const updateInternshipApplicationStatus = async (
-    id: number,
-    status: string,
-    company_notes = "",
-): Promise<any> => {
-
-    const response = await axiosInstance.patch(
-        `/v2/internship-applications/${id}/update-status/`,
-        {
-            status,
-            company_notes,
-        },
-    );
-
-    return response.data;
-};
-
-export interface CompanyUser {
-
-    id: number;
-
-    user: number;
-
-    display_name?: string;
-
-    email?: string;
-
-    company: number;
-
-    company_name?: string;
-
-    designation: string;
-
-    role:
-        | "owner"
-        | "admin"
-        | "hr"
-        | "recruiter";
-
-    can_post_jobs: boolean;
-
-    can_edit_jobs: boolean;
-
-    can_delete_jobs: boolean;
-
-    can_view_applications: boolean;
-
-    can_update_application_status: boolean;
-
-    is_primary: boolean;
-
-    is_active: boolean;
-
-    joined_at: string;
-}
-
-export const getCompanyUsers = async (): Promise<CompanyUser[]> => {
-
-    const response = await axiosInstance.get(
-        "/v2/company-users/"
-    );
-
-    return response.data;
-};
-
-export const getCompanyUser = async (
-    id: number,
-): Promise<CompanyUser> => {
-
-    const response = await axiosInstance.get(
-        `/v2/company-users/${id}/`
-    );
-
-    return response.data;
-};
-
-export const getMyCompanyProfile = async (): Promise<CompanyUser> => {
-
-    const response = await axiosInstance.get(
-        "/v2/company-users/my-profile/"
-    );
-
-    return response.data;
-};
-
-export const createCompanyUser = async (
-    data: Partial<CompanyUser>,
-): Promise<any> => {
-
-    const response = await axiosInstance.post(
-        "/v2/company-users/",
-        data,
-    );
-
-    return response.data;
-};
-
-export const updateCompanyUser = async (
-    id: number,
-    data: Partial<CompanyUser>,
-): Promise<any> => {
-
-    const response = await axiosInstance.patch(
-        `/v2/company-users/${id}/`,
-        data,
-    );
-
-    return response.data;
-};
-
-export const deleteCompanyUser = async (
-    id: number,
-): Promise<void> => {
-
-    await axiosInstance.delete(
-        `/v2/company-users/${id}/`,
-    );
-};
 
 // ======================================================
 // COURSE CONTENT
@@ -2439,17 +1896,6 @@ export interface InternshipCompany {
     employee_count: number;
 
     is_verified: boolean;
-}
-
-export interface InternshipApplication {
-
-    id: number;
-
-    resume?: string;
-
-    created_at: string;
-
-    updated_at: string;
 }
 
 export interface InternshipDetails {
@@ -2769,6 +2215,26 @@ export const updateCompanyProfile = async (
   return response.data;
 };
 
+// ======================================================
+// COMPANY DASHBOARD
+// ======================================================
+
+export interface CompanyDashboardStats {
+    active_jobs: number;
+    active_internships: number;
+    total_applications: number;
+    pending_applications: number;
+}
+
+export interface CompanyDashboard {
+    company: CompanyUser;
+    stats: CompanyDashboardStats;
+    recent_jobs: Job[];
+    recent_internships: Internship[];
+    recent_job_applications: JobApplication[];
+    recent_internship_applications: InternshipApplication[];
+}
+
 
 
 export interface ActivePlanCategory {
@@ -3043,4 +2509,636 @@ export const getMyCreditBalances = async (): Promise<{
 }> => {
     const response = await axiosInstance.get('/credits/my-balances/');
     return response.data;
+};
+
+// ======================================================
+// PUBLIC KNOWMATO PROFILE
+// ======================================================
+
+export interface PublicProfileEducation {
+  education_level: string;
+  grade_year: string;
+  stream_category: string;
+  stream: string;
+}
+
+export interface PublicProfile {
+  display_name: string;
+  role: string;
+  profile_photo: string | null;
+  full_name: string | null;
+  about: string | null;
+
+  education: PublicProfileEducation;
+
+  skills: string[];
+  languages: string[];
+  learning_goals: string[];
+}
+
+export interface PublicProfileStatistics {
+  courses_completed: number;
+  certificates: number;
+  assessments_completed: number;
+  assessments_passed: number;
+  doubts_completed: number;
+  internships_selected: number;
+  jobs_offered: number;
+}
+
+export interface PublicProfileCourse {
+  course_id: number;
+  title: string;
+  slug: string;
+  thumbnail: string | null;
+  category: string | null;
+  language: string | null;
+  difficulty: string | null;
+
+  status: "active" | "completed";
+
+  progress_percentage: number;
+
+  completed_at: string | null;
+
+  certificate_available: boolean;
+}
+
+export interface PublicProfileCertificate {
+  course_title: string;
+  certificate_number: string;
+  issued_at: string | null;
+  completed_at: string | null;
+  percentage: number;
+  certificate_url: string | null;
+}
+
+export interface PublicProfileAssessment {
+  assignment_id: number;
+  title: string;
+  status: string;
+
+  score: number;
+  percentage: number;
+
+  is_passed: boolean;
+
+  submitted_at: string | null;
+}
+
+export interface PublicProfileDoubt {
+  title: string;
+  category: string | null;
+  status: string;
+  preferred_explanation: string | null;
+  created_at: string | null;
+}
+
+export interface PublicProfileInternship {
+  title: string;
+  company: string | null;
+  duration: string | null;
+  location: string | null;
+  status: "selected";
+}
+
+export interface PublicProfileJob {
+  title: string;
+  company: string | null;
+  location: string | null;
+  status: "offered";
+}
+
+export interface PublicProfileAchievement {
+  type: string;
+  title: string;
+  count: number;
+}
+
+export interface PublicProfileData {
+  profile: PublicProfile;
+
+  statistics: PublicProfileStatistics;
+
+  courses: PublicProfileCourse[];
+
+  certificates: PublicProfileCertificate[];
+
+  assessments: PublicProfileAssessment[];
+
+  doubts: PublicProfileDoubt[];
+
+  internships: PublicProfileInternship[];
+
+  jobs: PublicProfileJob[];
+
+  achievements: PublicProfileAchievement[];
+}
+
+export interface PublicProfileResponse {
+  success: boolean;
+  status: number;
+  message: string;
+  data: PublicProfileData;
+}
+
+/**
+ * Get a user's public KnowMato profile.
+ *
+ * IMPORTANT:
+ * This endpoint does NOT require authentication.
+ *
+ * Example:
+ * getPublicProfile("Explorer_7281")
+ *
+ * GET:
+ * /api/accounts/public/Explorer_7281/
+ */
+export const getPublicProfile = async (
+  displayName: string
+): Promise<PublicProfileResponse> => {
+  const encodedDisplayName = encodeURIComponent(displayName);
+
+  const response = await axiosInstance.get<PublicProfileResponse>(
+    `/api/accounts/public/${encodedDisplayName}/`
+  );
+
+  return response.data;
+};
+
+
+
+
+// ==========================================================
+// JOBS
+// ==========================================================
+
+export interface Job {
+    company_name: string;
+    id: number;
+    company: number;
+    title: string;
+    description: string;
+    responsibilities?: string;
+    requirements?: string;
+    skills: string[];
+    location: string;
+    job_type: string;
+    experience_level: string;
+    salary_min?: number | string | null;
+    salary_max?: number | string | null;
+    vacancies: number;
+    application_deadline?: string | null;
+    is_active: boolean;
+    status: "draft" | "published" | "closed";
+    created_by?: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface JobApplication {
+    id: number;
+    job: number;
+    student: number;
+
+    student_name?: string;
+    job_title?: string;
+    company_name?: string;
+
+    cover_letter?: string;
+    resume_url?: string | null;
+    status: string;
+    company_notes?: string;
+    applied_at: string;
+    updated_at: string;
+}
+
+export interface ApplyJobRequest {
+    job: number;
+    cover_letter?: string;
+    resume_url?: string;
+}
+
+// Get all jobs
+export const getJobs = async (
+    params?: {
+        company?: number;
+        location?: string;
+        job_type?: string;
+        ordering?: string;
+    },
+): Promise<Job[]> => {
+    const response = await axiosInstance.get("/v2/jobs/", {
+        params,
+    });
+
+    return response.data;
+};
+
+// Get single job
+export const getJob = async (id: number): Promise<Job> => {
+    const response = await axiosInstance.get(`/v2/jobs/${id}/`);
+
+    return response.data;
+};
+
+// Create job
+export const createJob = async (data: Partial<Job>): Promise<Job> => {
+    const response = await axiosInstance.post("/v2/jobs/", data);
+
+    return response.data;
+};
+
+// Update job
+export const updateJob = async (
+    id: number,
+    data: Partial<Job>,
+): Promise<Job> => {
+    const response = await axiosInstance.patch(`/v2/jobs/${id}/`, data);
+
+    return response.data;
+};
+
+// Delete job
+export const deleteJob = async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/v2/jobs/${id}/`);
+};
+
+// ==========================================================
+// JOB APPLICATIONS
+// ==========================================================
+
+// Apply for job
+export const applyForJob = async (
+    data: ApplyJobRequest,
+): Promise<JobApplication> => {
+    const response = await axiosInstance.post(
+        "/v2/job-applications/apply/",
+        data,
+    );
+
+    return response.data;
+};
+
+// Get my job applications
+export const getMyJobApplications = async (): Promise<
+    JobApplication[]
+> => {
+    const response = await axiosInstance.get(
+        "/v2/job-applications/my-applications/",
+    );
+
+    return response.data;
+};
+
+// Get job applications
+export const getJobApplications = async (
+    params?: {
+        job?: number;
+        status?: string;
+    },
+): Promise<JobApplication[]> => {
+    const response = await axiosInstance.get("/v2/job-applications/", {
+        params,
+    });
+
+    return response.data;
+};
+
+// Get single job application
+export const getJobApplication = async (
+    id: number,
+): Promise<JobApplication> => {
+    const response = await axiosInstance.get(
+        `/v2/job-applications/${id}/`,
+    );
+
+    return response.data;
+};
+
+// Withdraw job application
+export const withdrawJobApplication = async (
+    id: number,
+): Promise<{
+    success: boolean;
+    message: string;
+}> => {
+    const response = await axiosInstance.post(
+        `/v2/job-applications/${id}/withdraw/`,
+    );
+
+    return response.data;
+};
+
+// Update job application status
+export const updateJobApplicationStatus = async (
+    id: number,
+    status: string,
+    company_notes = "",
+): Promise<JobApplication> => {
+    const response = await axiosInstance.patch(
+        `/v2/job-applications/${id}/update-status/`,
+        {
+            status,
+            company_notes,
+        },
+    );
+
+    return response.data;
+};
+
+// ==========================================================
+// INTERNSHIPS
+// ==========================================================
+
+export interface Internship {
+    company_name: import("react/jsx-runtime").JSX.Element;
+    id: number;
+    company: number;
+    title: string;
+    description: string;
+    responsibilities?: string;
+    requirements?: string;
+    skills: string;
+    location: string;
+    internship_type: string;
+    duration_months: number;
+    stipend?: number | string | null;
+    vacancies: number;
+    ppo_available: boolean;
+    certificate_provided: boolean;
+    application_deadline?: string | null;
+    status: "draft" | "published" | "closed";
+    is_active: boolean;
+    created_by?: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface InternshipApplication {
+    id: number;
+    internship: number;
+    student: number;
+    student_name?: string;
+    internship_title?: string;
+    company_name?: string;
+    cover_letter?: string;
+    resume_url?: string | null;
+    status: string;
+    company_notes?: string;
+    applied_at: string;
+    updated_at: string;
+    resume?: string;
+    created_at?: string;
+}
+export interface ApplyInternshipRequest {
+    internship: number;
+    cover_letter?: string;
+    resume_url?: string;
+}
+
+// Get all internships
+export const getInternships = async (
+    params?: {
+        company?: number;
+        location?: string;
+        internship_type?: string;
+        ordering?: string;
+    },
+): Promise<Internship[]> => {
+    const response = await axiosInstance.get("/v2/internships/", {
+        params,
+    });
+
+    return response.data;
+};
+
+// Get single internship
+export const getInternship = async (
+    id: number,
+): Promise<Internship> => {
+    const response = await axiosInstance.get(`/v2/internships/${id}/`);
+
+    return response.data;
+};
+
+// Create internship
+export const createInternship = async (
+    data: Partial<Internship>,
+): Promise<Internship> => {
+    const response = await axiosInstance.post("/v2/internships/", data);
+
+    return response.data;
+};
+
+// Update internship
+export const updateInternship = async (
+    id: number,
+    data: Partial<Internship>,
+): Promise<Internship> => {
+    const response = await axiosInstance.patch(
+        `/v2/internships/${id}/`,
+        data,
+    );
+
+    return response.data;
+};
+
+// Delete internship
+export const deleteInternship = async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/v2/internships/${id}/`);
+};
+
+// ==========================================================
+// INTERNSHIP APPLICATIONS
+// ==========================================================
+
+// Apply for internship
+export const applyForInternship = async (
+    data: ApplyInternshipRequest,
+): Promise<InternshipApplication> => {
+    const response = await axiosInstance.post(
+        "/v2/internship-applications/apply/",
+        data,
+    );
+
+    return response.data;
+};
+
+// Get my internship applications
+export const getMyInternshipApplications = async (): Promise<
+    InternshipApplication[]
+> => {
+    const response = await axiosInstance.get(
+        "/v2/internship-applications/my-applications/",
+    );
+
+    return response.data;
+};
+
+// Get internship applications
+export const getInternshipApplications = async (
+    params?: {
+        internship?: number;
+        status?: string;
+    },
+): Promise<InternshipApplication[]> => {
+    const response = await axiosInstance.get(
+        "/v2/internship-applications/",
+        {
+            params,
+        },
+    );
+
+    return response.data;
+};
+
+// Get single internship application
+export const getInternshipApplication = async (
+    id: number,
+): Promise<InternshipApplication> => {
+    const response = await axiosInstance.get(
+        `/v2/internship-applications/${id}/`,
+    );
+
+    return response.data;
+};
+
+// Withdraw internship application
+export const withdrawInternshipApplication = async (
+    id: number,
+): Promise<{
+    success: boolean;
+    message: string;
+}> => {
+    const response = await axiosInstance.post(
+        `/v2/internship-applications/${id}/withdraw/`,
+    );
+
+    return response.data;
+};
+
+// Update internship application status
+export const updateInternshipApplicationStatus = async (
+    id: number,
+    status: string,
+    company_notes = "",
+): Promise<InternshipApplication> => {
+    const response = await axiosInstance.patch(
+        `/v2/internship-applications/${id}/update-status/`,
+        {
+            status,
+            company_notes,
+        },
+    );
+
+    return response.data;
+};
+
+// ==========================================================
+// COMPANY USERS
+// ==========================================================
+
+export interface CompanyUser {
+    id: number;
+    user: number;
+    display_name?: string;
+    email?: string;
+    company: number;
+    company_name?: string;
+    designation?: string;
+    role: "owner" | "admin" | "hr" | "recruiter";
+    can_post_jobs: boolean;
+    can_edit_jobs: boolean;
+    can_delete_jobs: boolean;
+    can_view_applications: boolean;
+    can_update_application_status: boolean;
+    is_primary: boolean;
+    is_active: boolean;
+    joined_at: string;
+}
+
+// Get all company users
+export const getCompanyUsers = async (): Promise<CompanyUser[]> => {
+    const response = await axiosInstance.get("/v2/company-users/");
+
+    return response.data;
+};
+
+// Get single company user
+export const getCompanyUser = async (
+    id: number,
+): Promise<CompanyUser> => {
+    const response = await axiosInstance.get(`/v2/company-users/${id}/`);
+
+    return response.data;
+};
+
+// Get my company profile
+export const getMyCompanyProfile = async (): Promise<CompanyUser> => {
+    const response = await axiosInstance.get(
+        "/v2/company-users/my-profile/",
+    );
+
+    return response.data;
+};
+
+// Create company user
+export const createCompanyUser = async (
+    data: Partial<CompanyUser>,
+): Promise<CompanyUser> => {
+    const response = await axiosInstance.post("/v2/company-users/", data);
+
+    return response.data;
+};
+
+// Update company user
+export const updateCompanyUser = async (
+    id: number,
+    data: Partial<CompanyUser>,
+): Promise<CompanyUser> => {
+    const response = await axiosInstance.patch(
+        `/v2/company-users/${id}/`,
+        data,
+    );
+
+    return response.data;
+};
+
+// Delete company user
+export const deleteCompanyUser = async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/v2/company-users/${id}/`);
+};
+
+// ==========================================================
+// COMPANY DASHBOARD
+// ==========================================================
+
+export interface CompanyDashboardStats {
+    active_jobs: number;
+    active_internships: number;
+    total_applications: number;
+    pending_applications: number;
+}
+
+export interface CompanyDashboard {
+    company: CompanyUser;
+    stats: CompanyDashboardStats;
+    recent_jobs: Job[];
+    recent_internships: Internship[];
+    recent_job_applications: JobApplication[];
+    recent_internship_applications: InternshipApplication[];
+}
+
+// Get company dashboard
+export const getCompanyDashboard = async (): Promise<CompanyDashboard> => {
+    const response = await axiosInstance.get(
+        "/v2/company-users/dashboard/",
+    );
+
+    // Backend wraps the payload:
+    // { success, status, message, data: { company, stats, recent_* } }
+    const payload = response.data?.data ?? response.data;
+
+    return payload as CompanyDashboard;
 };

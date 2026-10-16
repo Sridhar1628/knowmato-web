@@ -5,8 +5,6 @@ export type ActiveMode = 'regular' | 'knowmatoPlus';
 
 interface AuthState {
   isAuthenticated: boolean;
-  accessToken: string | null;
-  refreshToken: string | null;
   user: any;
 
   language: 'en' | 'ta';
@@ -17,8 +15,6 @@ interface AuthState {
 
 const initialState: AuthState = {
   isAuthenticated: false,
-  accessToken: null,
-  refreshToken: null,
   user: null,
 
   language: 'ta',
@@ -33,14 +29,8 @@ const authSlice = createSlice({
 
   reducers: {
     loginSuccess: (state, action: PayloadAction<any>) => {
-      console.log('Reducer received:', action.payload);
-
       state.isAuthenticated = true;
-      state.accessToken = action.payload.access;
-      state.refreshToken = action.payload.refresh;
       state.user = action.payload.user;
-
-      // Do not overwrite saved language
 
       state.knowmatoPlusEnabled =
         action.payload.user?.knowmato_plus_enabled || false;
@@ -54,15 +44,10 @@ const authSlice = createSlice({
         state.activeMode = 'regular';
         localStorage.setItem('active_mode', 'regular');
       }
-
-      console.log('Reducer user:', state.user);
-      console.log('Knowmato+ enabled:', state.knowmatoPlusEnabled);
     },
 
     logout: (state) => {
       state.isAuthenticated = false;
-      state.accessToken = null;
-      state.refreshToken = null;
       state.user = null;
 
       state.language = 'ta';
