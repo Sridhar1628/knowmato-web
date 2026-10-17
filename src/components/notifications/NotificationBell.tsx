@@ -183,6 +183,33 @@ export default function NotificationBell() {
   const openingRef = useRef(false);
   const openRef = useRef(false);
 
+  const notificationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playedNotificationIdsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const audio = new Audio("/sounds/notification.mp3");
+    audio.preload = "auto";
+    notificationAudioRef.current = audio;
+
+    return () => {
+      audio.pause();
+      notificationAudioRef.current = null;
+    };
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    const audio = notificationAudioRef.current;
+    if (!audio) return;
+
+    // Allow the same sound to play again for a later notification.
+    audio.currentTime = 0;
+
+    void audio.play().catch((error: unknown) => {
+      // Browsers may block sound until the user interacts with the page.
+      console.debug("Notification sound could not play:", error);
+    });
+  }, []);
+
   useEffect(() => {
     openRef.current = open;
   }, [open]);
@@ -315,6 +342,15 @@ export default function NotificationBell() {
 
           const incoming = payload.notification;
 
+          const isNewNotification = !playedNotificationIdsRef.current.has(
+            incoming.id
+          );
+
+          if (isNewNotification) {
+            playedNotificationIdsRef.current.add(incoming.id);
+            playNotificationSound();
+          }
+
           setNotifications((current) => {
             const existing = current.some(
               (item) => item.id === incoming.id
@@ -409,7 +445,7 @@ export default function NotificationBell() {
         }
       }
     };
-  }, [refreshNotifications, updateUnreadCount]);
+  }, [refreshNotifications, updateUnreadCount, playNotificationSound]);
 
   const handleMarkRead = async (
     notification: AppNotification
