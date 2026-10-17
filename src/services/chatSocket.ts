@@ -1,3 +1,4 @@
+
 import { WS_BASE_URL } from "@/config/env";
 
 let chatSocket: WebSocket | null = null;
@@ -6,32 +7,17 @@ type SocketCallback = () => void;
 
 export const connectChatSocket = (
   sessionId: number,
-  token: string,
+  _token: string,
   onMessage: (data: any) => void,
   onConnected?: SocketCallback,
   onDisconnected?: SocketCallback
 ) => {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("💬 CONNECT CHAT SOCKET CALLED");
-  console.log("💬 Session ID:", sessionId);
-  console.log("💬 Token exists:", !!token);
-  console.log("💬 WS_BASE_URL:", WS_BASE_URL);
-
   if (!sessionId) {
-    console.error(
-      "❌ Cannot connect chat socket: sessionId missing"
-    );
+    console.error("Cannot connect chat socket: sessionId missing");
     return;
   }
 
-  if (!token) {
-    console.error(
-      "❌ Cannot connect chat socket: token missing"
-    );
-    return;
-  }
-
-  // Prevent duplicate connections
+  // Prevent duplicate connections.
   if (
     chatSocket &&
     (
@@ -39,99 +25,36 @@ export const connectChatSocket = (
       chatSocket.readyState === WebSocket.CONNECTING
     )
   ) {
-    console.log(
-      "⚠️ Chat WS already connected/connecting"
-    );
     return;
   }
 
-  const url =
-    `${WS_BASE_URL}/ws/chat/${sessionId}/?token=${encodeURIComponent(token)}`;
-
-  console.log(
-    "💬 CHAT WS URL:",
-    url.replace(/token=.*$/, "token=***")
-  );
+  // Browser WebSocket authentication uses the Django session cookie.
+  // Never put access tokens in the URL or query string.
+  const baseUrl = WS_BASE_URL.replace(/\/+$/, "");
+  const url = `${baseUrl}/ws/chat/${sessionId}/`;
 
   const socket = new WebSocket(url);
-
   chatSocket = socket;
 
-  // -----------------------------------------
-  // CONNECTED
-  // -----------------------------------------
-
   socket.onopen = () => {
-    console.log(
-      "✅💬 CHAT WEBSOCKET CONNECTED"
-    );
-
     onConnected?.();
   };
 
-  // -----------------------------------------
-  // MESSAGE
-  // -----------------------------------------
-
   socket.onmessage = (event) => {
-    console.log(
-      "📩💬 CHAT RAW MESSAGE:",
-      event.data
-    );
-
     try {
       const data = JSON.parse(event.data);
-
-      console.log(
-        "📩💬 CHAT MESSAGE:",
-        data
-      );
-
       onMessage(data);
-
-    } catch (error) {
-      console.error(
-        "❌ CHAT PARSE ERROR:",
-        error
-      );
+    } catch {
+      console.error("Unable to parse chat WebSocket message");
     }
   };
 
-  // -----------------------------------------
-  // ERROR
-  // -----------------------------------------
-
-  socket.onerror = (error) => {
-    console.error(
-      "❌💬 CHAT WEBSOCKET ERROR:",
-      error
-    );
+  socket.onerror = () => {
+    // Avoid logging socket URLs, message contents, or credentials.
+    console.error("Chat WebSocket connection error");
   };
 
-  // -----------------------------------------
-  // CLOSED
-  // -----------------------------------------
-
-  socket.onclose = (event) => {
-    console.log(
-      "🔌💬 CHAT WEBSOCKET CLOSED"
-    );
-
-    console.log(
-      "🔌 Close code:",
-      event.code
-    );
-
-    console.log(
-      "🔌 Close reason:",
-      event.reason
-    );
-
-    console.log(
-      "🔌 Clean:",
-      event.wasClean
-    );
-
+  socket.onclose = () => {
     if (chatSocket === socket) {
       chatSocket = null;
     }
@@ -139,7 +62,6 @@ export const connectChatSocket = (
     onDisconnected?.();
   };
 };
-
 
 // =================================================
 // SEND MESSAGE
@@ -153,14 +75,7 @@ export const sendChatMessage = (
     [key: string]: any;
   }
 ) => {
-
-  if (
-    !chatSocket ||
-    chatSocket.readyState !== WebSocket.OPEN
-  ) {
-    console.log(
-      "❌ Chat socket not ready"
-    );
+  if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
     return;
   }
 
@@ -172,19 +87,12 @@ export const sendChatMessage = (
   );
 };
 
-
 // =================================================
 // TYPING
 // =================================================
 
-export const sendTypingStatus = (
-  isTyping: boolean
-) => {
-
-  if (
-    !chatSocket ||
-    chatSocket.readyState !== WebSocket.OPEN
-  ) {
+export const sendTypingStatus = (isTyping: boolean) => {
+  if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
     return;
   }
 
@@ -196,19 +104,12 @@ export const sendTypingStatus = (
   );
 };
 
-
 // =================================================
 // READ RECEIPT
 // =================================================
 
-export const sendReadReceipt = (
-  messageIds: number[]
-) => {
-
-  if (
-    !chatSocket ||
-    chatSocket.readyState !== WebSocket.OPEN
-  ) {
+export const sendReadReceipt = (messageIds: number[]) => {
+  if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
     return;
   }
 
@@ -220,22 +121,17 @@ export const sendReadReceipt = (
   );
 };
 
-
 // =================================================
 // DISCONNECT
 // =================================================
 
 export const disconnectChatSocket = () => {
-
   if (!chatSocket) {
     return;
   }
 
-  console.log(
-    "🔌 Disconnecting chat socket..."
-  );
-
-  chatSocket.close();
-
+  const socket = chatSocket;
   chatSocket = null;
+
+  socket.close();
 };

@@ -1,649 +1,221 @@
-// services/compilerSocketService.ts
 
-import { WS_BASE_URL } from '../config/env';
+import { WS_BASE_URL } from "../config/env";
 
 type EventHandler = (event: string, data: any) => void;
 
-// ============================================================
-// GLOBAL SOCKET STATE
-// ============================================================
-
 let socket: WebSocket | null = null;
 
-let currentToken: string | null = null;
+// Retained only as a connection-generation identifier.
+// Never store the JWT here or include it in a WebSocket URL.
+let connectionRequested = false;
 
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-
 let manualDisconnect = false;
 
-// ============================================================
-// MULTIPLE LISTENERS
-// ============================================================
-//
-// IMPORTANT:
-//
-// Previously we had:
-//
-// let globalHandler: EventHandler | undefined;
-//
-// That meant the newest component replaced the previous listener.
-//
-// Now every component gets its own listener.
-//
-// Example:
-//
-// CodeCompiler       -> listener A
-// Agent Result       -> listener B
-// Assessment Screen  -> listener C
-//
-// All of them receive events from the SAME WebSocket.
-//
-
 const listeners = new Set<EventHandler>();
-
-// ============================================================
-// MESSAGE QUEUE
-// ============================================================
-
 let messageQueue: any[] = [];
 
-// ============================================================
-// SOCKET STATE HELPERS
-// ============================================================
+const isSocketOpen = () => socket?.readyState === WebSocket.OPEN;
+const isSocketConnecting = () => socket?.readyState === WebSocket.CONNECTING;
 
-const isSocketOpen = () => {
-  return socket?.readyState === WebSocket.OPEN;
-};
-
-const isSocketConnecting = () => {
-  return socket?.readyState === WebSocket.CONNECTING;
-};
-
-// ============================================================
-// NOTIFY ALL LISTENERS
-// ============================================================
-
-const notifyListeners = (
-  event: string,
-  data: any
-) => {
-  if (listeners.size === 0) {
-    console.log(
-      '⚠️ Compiler WS event received but no listeners are registered:',
-      event
-    );
-
-    return;
-  }
-
-  console.log(
-    `👂 Notifying ${listeners.size} Compiler WS listener(s):`,
-    event
-  );
-
+const notifyListeners = (event: string, data: any) => {
   listeners.forEach((handler) => {
     try {
       handler(event, data);
-    } catch (error) {
-      console.error(
-        '❌ Compiler WS listener error:',
-        error
-      );
+    } catch {
+      console.error("Compiler WebSocket listener error");
     }
   });
 };
 
-// ============================================================
-// SUBSCRIBE
-// ============================================================
-//
-// This is the NEW recommended API.
-//
-// A component can subscribe to the shared compiler socket.
-//
-// It returns an unsubscribe function.
-//
-// Example:
-//
-// const unsubscribe = subscribeCompilerSocket(handleEvent);
-//
-// return () => unsubscribe();
-//
-
 export const subscribeCompilerSocket = (
   handler: EventHandler
 ): (() => void) => {
-  if (typeof handler !== 'function') {
-    console.warn(
-      '⚠️ subscribeCompilerSocket called without a valid handler'
-    );
-
+  if (typeof handler !== "function") {
     return () => {};
   }
 
   listeners.add(handler);
 
-  console.log(
-    `👂 Compiler WS listener added (total ${listeners.size})`
-  );
-
   return () => {
-    if (!listeners.has(handler)) {
-      return;
-    }
-
     listeners.delete(handler);
-
-    console.log(
-      `👂 Compiler WS listener removed (total ${listeners.size})`
-    );
   };
 };
 
-// ============================================================
-// CONNECT
-// ============================================================
-
 export const connectCompilerSocket = (
-  token: string,
+  _token: string,
   onEvent?: EventHandler
 ): (() => void) => {
-  if (!token) {
-    console.warn(
-      '❌ Compiler WS: missing token'
-    );
-
-    return () => {};
-  }
-
-  // ----------------------------------------------------------
-  // Register listener if supplied
-  // ----------------------------------------------------------
-
   let unsubscribe = () => {};
 
   if (onEvent) {
     unsubscribe = subscribeCompilerSocket(onEvent);
   }
 
-  currentToken = token;
+  connectionRequested = true;
   manualDisconnect = false;
 
-  // ----------------------------------------------------------
-  // Already connected with same token
-  // ----------------------------------------------------------
-
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN &&
-    currentToken === token
-  ) {
-    console.log(
-      '⚠️ Compiler WS already connected'
-    );
-
+  if (socket && (isSocketOpen() || isSocketConnecting())) {
     return unsubscribe;
   }
-
-  // ----------------------------------------------------------
-  // Already connecting with same token
-  // ----------------------------------------------------------
-
-  if (
-    socket &&
-    socket.readyState === WebSocket.CONNECTING &&
-    currentToken === token
-  ) {
-    console.log(
-      '⏳ Compiler WS connection already in progress'
-    );
-
-    return unsubscribe;
-  }
-
-  // ----------------------------------------------------------
-  // Close previous socket
-  // ----------------------------------------------------------
 
   if (socket) {
-    console.log(
-      '🔄 Closing previous Compiler WS'
-    );
-
-    const oldSocket = socket;
-
+    const previousSocket = socket;
     socket = null;
 
     try {
-      oldSocket.close();
-    } catch (error) {
-      console.error(
-        '❌ Error closing previous Compiler WS:',
-        error
-      );
+      previousSocket.close();
+    } catch {
+      console.error("Unable to close previous compiler WebSocket");
     }
   }
 
-  // ----------------------------------------------------------
-  // Build URL
-  // ----------------------------------------------------------
-
-  const url =
-    `${WS_BASE_URL}/ws/compiler/?token=${encodeURIComponent(
-      token
-    )}`;
-
-  console.log(
-    '🌐 Connecting Compiler WS:',
-    url
-  );
+  const baseUrl = WS_BASE_URL.replace(/\/+$/, "");
+  const url = `${baseUrl}/ws/compiler/`;
 
   const ws = new WebSocket(url);
-
-  // IMPORTANT:
-  // Only this socket can modify global socket state.
-
   socket = ws;
 
-  // ==========================================================
-  // OPEN
-  // ==========================================================
-
   ws.onopen = () => {
-    // Ignore stale socket
-    if (socket !== ws) {
-      console.log(
-        '⚠️ Ignoring stale Compiler WS open'
-      );
+    if (socket !== ws) return;
 
-      return;
-    }
-
-    console.log(
-      '✅ Compiler WS connected'
-    );
-
-    // Clear reconnect timer
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
     }
 
-    // --------------------------------------------------------
-    // Send queued messages
-    // --------------------------------------------------------
-
     if (messageQueue.length > 0) {
-      console.log(
-        `📤 Sending ${messageQueue.length} queued Compiler WS message(s)`
-      );
-
-      const queuedMessages = [
-        ...messageQueue,
-      ];
-
+      const queuedMessages = [...messageQueue];
       messageQueue = [];
 
-      for (const message of queuedMessages) {
+      for (let index = 0; index < queuedMessages.length; index++) {
         try {
-          ws.send(
-            JSON.stringify(message)
-          );
-
-          console.log(
-            '📤 Queued Compiler WS message sent:',
-            message
-          );
-        } catch (error) {
-          console.error(
-            '❌ Failed to send queued Compiler WS message:',
-            error
-          );
-
-          // Put it back into the queue
-          messageQueue.unshift(message);
+          ws.send(JSON.stringify(queuedMessages[index]));
+        } catch {
+          messageQueue.unshift(...queuedMessages.slice(index));
+          break;
         }
       }
     }
   };
 
-  // ==========================================================
-  // MESSAGE
-  // ==========================================================
-
   ws.onmessage = (event) => {
-    // Ignore stale socket
-    if (socket !== ws) {
-      console.log(
-        '⚠️ Ignoring message from stale Compiler WS'
-      );
-
-      return;
-    }
+    if (socket !== ws) return;
 
     try {
-      const parsed = JSON.parse(
-        event.data
-      );
+      const parsed = JSON.parse(event.data);
+      const eventName = parsed?.event;
 
-      console.log(
-        '📩 RAW Compiler WS:',
-        parsed
-      );
-
-      const eventName =
-        parsed?.event;
-
-      const data =
-        parsed?.data;
-
-      if (!eventName) {
-        console.warn(
-          '⚠️ Compiler WS message has no event:',
-          parsed
-        );
-
+      if (typeof eventName !== "string" || !eventName) {
         return;
       }
 
-      console.log(
-        '📩 Compiler WS event:',
-        {
-          event: eventName,
-          data,
-        }
-      );
-
-      // ------------------------------------------------------
-      // Broadcast to all subscribers
-      // ------------------------------------------------------
-
-      notifyListeners(
-        eventName,
-        data
-      );
-    } catch (error) {
-      console.error(
-        '❌ Compiler WS parse error:',
-        error
-      );
+      notifyListeners(eventName, parsed?.data);
+    } catch {
+      console.error("Unable to parse compiler WebSocket message");
     }
   };
 
-  // ==========================================================
-  // ERROR
-  // ==========================================================
+  ws.onerror = () => {
+    if (socket !== ws) return;
 
-  ws.onerror = (event) => {
-    if (socket !== ws) {
-      return;
-    }
-
-    console.error(
-      '❌ Compiler WS error occurred:',
-      event
-    );
+    console.error("Compiler WebSocket connection error");
   };
 
-  // ==========================================================
-  // CLOSE
-  // ==========================================================
-
-  ws.onclose = (event) => {
-    // Ignore stale socket
-    if (socket !== ws) {
-      console.log(
-        '⚠️ Ignoring close event from stale Compiler WS'
-      );
-
-      return;
-    }
-
-    console.log(
-      '🔌 Compiler WS disconnected',
-      {
-        code: event.code,
-        reason: event.reason,
-        wasClean: event.wasClean,
-      }
-    );
+  ws.onclose = () => {
+    if (socket !== ws) return;
 
     socket = null;
 
-    // --------------------------------------------------------
-    // Manual disconnect
-    // --------------------------------------------------------
-
-    if (manualDisconnect) {
-      console.log(
-        '🚪 Manual disconnect – no reconnect'
-      );
-
+    if (manualDisconnect || !connectionRequested) {
       return;
     }
 
-    // --------------------------------------------------------
-    // No token
-    // --------------------------------------------------------
-
-    if (!currentToken) {
-      console.log(
-        '🚫 No token – no reconnect'
-      );
-
-      return;
-    }
-
-    // --------------------------------------------------------
-    // Already scheduled
-    // --------------------------------------------------------
-
-    if (reconnectTimeout) {
-      return;
-    }
-
-    // --------------------------------------------------------
-    // Reconnect
-    // --------------------------------------------------------
+    if (reconnectTimeout) return;
 
     reconnectTimeout = setTimeout(() => {
       reconnectTimeout = null;
 
-      if (
-        !currentToken ||
-        manualDisconnect
-      ) {
-        return;
+      if (!manualDisconnect && connectionRequested) {
+        // Reconnect using the authenticated browser session cookie.
+        connectCompilerSocket("");
       }
-
-      console.log(
-        '🔄 Reconnecting Compiler WS...'
-      );
-
-      connectCompilerSocket(
-        currentToken
-      );
     }, 3000);
   };
 
   return unsubscribe;
 };
 
-// ============================================================
-// DISCONNECT
-// ============================================================
-//
-// This is a REAL global disconnect.
-//
-// Only use this when the entire application/user session
-// genuinely needs to terminate the compiler connection.
-//
-// Individual components should use the unsubscribe function
-// returned by connectCompilerSocket() / subscribeCompilerSocket().
-//
-// ============================================================
-
 export const disconnectCompilerSocket = () => {
-  console.log(
-    '🛑 Disconnecting Compiler WS'
-  );
-
   manualDisconnect = true;
+  connectionRequested = false;
 
-  currentToken = null;
-
-  // Clear reconnect timer
   if (reconnectTimeout) {
     clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
   }
 
-  // Don't leave old compile messages
-  // after a true global disconnect.
   messageQueue = [];
 
-  if (socket) {
-    const ws = socket;
+  const currentSocket = socket;
+  socket = null;
 
-    socket = null;
-
+  if (currentSocket) {
     try {
-      ws.close();
-    } catch (error) {
-      console.error(
-        '❌ Error closing Compiler WS:',
-        error
-      );
+      currentSocket.close();
+    } catch {
+      console.error("Unable to close compiler WebSocket");
     }
   }
 
-  // Remove all listeners because this is
-  // an intentional GLOBAL disconnect.
   listeners.clear();
-
-  console.log(
-    '👂 All Compiler WS listeners removed'
-  );
 };
 
-// ============================================================
-// SEND MESSAGE
-// ============================================================
-
-export const sendCompilerMessage = (
-  message: any
-) => {
-  // ----------------------------------------------------------
-  // Connected → send immediately
-  // ----------------------------------------------------------
-
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN
-  ) {
+export const sendCompilerMessage = (message: any) => {
+  if (socket && socket.readyState === WebSocket.OPEN) {
     try {
-      socket.send(
-        JSON.stringify(message)
-      );
-
-      console.log(
-        '📤 Compiler WS message sent:',
-        message
-      );
-    } catch (error) {
-      console.error(
-        '❌ Failed to send Compiler WS message:',
-        error
-      );
-
-      // Preserve message
+      socket.send(JSON.stringify(message));
+    } catch {
       messageQueue.push(message);
     }
 
     return;
   }
 
-  // ----------------------------------------------------------
-  // Connecting → queue
-  // ----------------------------------------------------------
+  messageQueue.push(message);
 
   if (
-    socket &&
-    socket.readyState === WebSocket.CONNECTING
+    socket?.readyState === WebSocket.CONNECTING ||
+    manualDisconnect ||
+    !connectionRequested
   ) {
-    console.log(
-      '⏳ Compiler WS still connecting. Queueing message:',
-      message
-    );
-
-    messageQueue.push(message);
-
     return;
   }
 
-  // ----------------------------------------------------------
-  // No active socket
-  // ----------------------------------------------------------
-
-  console.warn(
-    '⚠️ Compiler WS unavailable. Queueing message:',
-    message
-  );
-
-  messageQueue.push(message);
-
-  // Reconnect if possible
-  if (
-    currentToken &&
-    !manualDisconnect
-  ) {
-    console.log(
-      '🔄 No active socket. Starting reconnect...'
-    );
-
-    connectCompilerSocket(
-      currentToken
-    );
-  }
+  connectCompilerSocket("");
 };
 
-// ============================================================
-// OPTIONAL STATUS HELPERS
-// ============================================================
-
 export const isCompilerSocketConnected = (): boolean => {
-  return (
-    socket?.readyState ===
-    WebSocket.OPEN
-  );
+  return socket?.readyState === WebSocket.OPEN;
 };
 
 export const isCompilerSocketConnecting = (): boolean => {
-  return (
-    socket?.readyState ===
-    WebSocket.CONNECTING
-  );
+  return socket?.readyState === WebSocket.CONNECTING;
 };
 
 export const getCompilerSocketState = () => {
-  if (!socket) {
-    return 'DISCONNECTED';
-  }
+  if (!socket) return "DISCONNECTED";
 
   switch (socket.readyState) {
     case WebSocket.CONNECTING:
-      return 'CONNECTING';
-
+      return "CONNECTING";
     case WebSocket.OPEN:
-      return 'CONNECTED';
-
+      return "CONNECTED";
     case WebSocket.CLOSING:
-      return 'CLOSING';
-
+      return "CLOSING";
     case WebSocket.CLOSED:
-      return 'CLOSED';
-
+      return "CLOSED";
     default:
-      return 'UNKNOWN';
+      return "UNKNOWN";
   }
 };

@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getMyReviews, updateReview, StudentReview } from "@/services/reviewService";
-import { getTokens } from "@/services/storageService";
 import { WS_BASE_URL } from "@/config/env";
 import AlertService from "@/services/alertService";
 import { useTranslation } from "react-i18next"; // ✅ added
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 
 export default function StudentReviewsPage() {
   const { t, i18n } = useTranslation();
@@ -18,6 +19,9 @@ export default function StudentReviewsPage() {
   const [editRating, setEditRating] = useState(5);
   const [editFeedback, setEditFeedback] = useState("");
   const [updating, setUpdating] = useState(false);
+
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.id;
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -44,64 +48,80 @@ export default function StudentReviewsPage() {
   );
 
   // Real-time WebSocket
-  useEffect(() => {
-    let socket: WebSocket | null = null;
-    const connect = async () => {
-      try {
-        const tokens = await getTokens();
-        if (!tokens?.access) return;
-        const tokenParts = tokens.access.split(".");
-        if (tokenParts.length < 2) {
-          console.error("Invalid access token.");
-          return;
-        }
+  
+  
+useEffect(() => {
+  if (userId === undefined || userId === null) {
+    return;
+  }
 
-        let payload: { user_id?: number | string };
-        try {
-          payload = JSON.parse(atob(tokenParts[1]));
-        } catch (tokenError) {
-          console.error("Unable to decode access token.", tokenError);
-          return;
-        }
+  let socket: WebSocket | null = null;
+  let cancelled = false;
 
-        const userId = payload.user_id;
-        if (userId === undefined || userId === null) {
-          console.error("User ID missing from access token.");
-          return;
-        }
+  const baseUrl = WS_BASE_URL
+    .replace(/^http:\/\//, "ws://")
+    .replace(/^https:\/\//, "wss://")
+    .replace(/\/+$/, "");
 
-        socket = new WebSocket(
-          `${WS_BASE_URL}/ws/user/${userId}/?token=${encodeURIComponent(tokens.access)}`
-        );
-        wsRef.current = socket;
+  socket = new WebSocket(`${baseUrl}/ws/user/${userId}/`);
 
-        socket.onopen = () => console.log("🔥 REVIEW WS CONNECTED");
-        socket.onmessage = (event) => {
-          const msg = JSON.parse(event.data);
-          if (!msg?.event) return;
-          if (msg.event === "REVIEW_ADDED") {
-            setReviews((prev) => {
-              if (prev.find((r) => r.review_id === msg.data.review_id)) return prev;
-              return [msg.data, ...prev];
-            });
+  wsRef.current = socket;
+
+  socket.onmessage = (event) => {
+    if (cancelled) return;
+
+    try {
+      const msg = JSON.parse(event.data);
+
+      if (!msg?.event || !msg?.data) return;
+
+      if (msg.event === "REVIEW_ADDED") {
+        setReviews((prev) => {
+          if (prev.some((review) => review.review_id === msg.data.review_id)) {
+            return prev;
           }
-          if (msg.event === "REVIEW_UPDATED") {
-            setReviews((prev) =>
-              prev.map((r) => (r.review_id === msg.data.review_id ? msg.data : r))
-            );
-          }
-        };
-        socket.onerror = () => console.error("WS ERROR");
-        socket.onclose = () => console.log("WS CLOSED");
-      } catch (err) {
-        console.error("WS setup failed", err);
+
+          return [msg.data, ...prev];
+        });
       }
-    };
-    connect();
-    return () => {
-      socket?.close();
-    };
-  }, []);
+
+      if (msg.event === "REVIEW_UPDATED") {
+        setReviews((prev) =>
+          prev.map((review) =>
+            review.review_id === msg.data.review_id
+              ? msg.data
+              : review
+          )
+        );
+      }
+    } catch {
+      console.error("Unable to process review WebSocket message");
+    }
+  };
+
+  socket.onerror = () => {
+    if (!cancelled) {
+      console.error("Review WebSocket connection error");
+    }
+  };
+
+  socket.onclose = () => {
+    if (wsRef.current === socket) {
+      wsRef.current = null;
+    }
+  };
+
+  return () => {
+    cancelled = true;
+
+    if (wsRef.current === socket) {
+      wsRef.current = null;
+    }
+
+    socket?.close();
+  };
+}, [userId]);
+
 
   useEffect(() => {
     fetchReviews();

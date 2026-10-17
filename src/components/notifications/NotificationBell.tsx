@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { getTokens } from "@/services/storageService";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import {
@@ -254,6 +253,7 @@ export default function NotificationBell() {
       }, delay);
     };
 
+    
     const connect = async () => {
       if (
         stoppedRef.current ||
@@ -275,23 +275,16 @@ export default function NotificationBell() {
       openingRef.current = true;
 
       try {
-        const tokens = await getTokens();
-
         if (stoppedRef.current) return;
 
-        if (!tokens?.access) {
-          // Wait for the authenticated layout to mount again.
-          scheduleReconnect();
-          return;
-        }
-
-        const url = new URL(getWebSocketUrl());
-        url.searchParams.set("token", tokens.access);
-
-        const socket = new WebSocket(url.toString());
+        // Browser authentication uses the backend session cookie.
+        // Do not put JWTs in WebSocket URLs.
+        const socket = new WebSocket(getWebSocketUrl());
         socketRef.current = socket;
 
         socket.onopen = () => {
+          if (socketRef.current !== socket) return;
+
           reconnectAttemptRef.current = 0;
 
           if (pingTimerRef.current) {
@@ -306,6 +299,8 @@ export default function NotificationBell() {
         };
 
         socket.onmessage = (event) => {
+          if (socketRef.current !== socket) return;
+
           let payload: NotificationSocketMessage;
 
           try {
@@ -314,8 +309,9 @@ export default function NotificationBell() {
             return;
           }
 
-          if (payload.type !== "NOTIFICATION") return;
-          if (!payload.notification) return;
+          if (payload.type !== "NOTIFICATION" || !payload.notification) {
+            return;
+          }
 
           const incoming = payload.notification;
 
@@ -333,13 +329,11 @@ export default function NotificationBell() {
             return [incoming, ...current];
           });
 
-          // The backend event may contain the latest read state.
-          // Re-fetch the authoritative count to avoid count drift.
           void updateUnreadCount();
         };
 
         socket.onerror = () => {
-          // onclose handles reconnect scheduling.
+          // onclose schedules reconnection.
         };
 
         socket.onclose = () => {
@@ -351,13 +345,14 @@ export default function NotificationBell() {
 
           scheduleReconnect();
         };
-      } catch (err) {
-        console.error("Notification WebSocket error:", err);
+      } catch {
+        console.error("Unable to initialize notification WebSocket");
         scheduleReconnect();
       } finally {
         openingRef.current = false;
       }
     };
+
 
     connectRef.current = connect;
     void connect();

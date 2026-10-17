@@ -679,65 +679,16 @@ function normalizeReply(
 // If your project uses a different key, add it here.
 // ============================================================
 
-function getAccessToken(): string | null {
-  if (
-    typeof window === "undefined"
-  ) {
-    return null;
-  }
 
-  const keys = [
-    "accessToken",
-    "access_token",
-    "access",
-    "token",
-    "jwt",
-  ];
+function createSocketUrl(path: string): string {
+  const baseUrl = WS_BASE_URL
+    .replace(/^http:\/\//, "ws://")
+    .replace(/^https:\/\//, "wss://")
+    .replace(/\/+$/, "");
 
-  for (
-    const key of keys
-  ) {
-    try {
-      const value =
-        window.localStorage.getItem(
-          key,
-        );
-
-      if (value) {
-        return value;
-      }
-    } catch {
-      // Ignore localStorage failures.
-    }
-  }
-
-  return null;
+  return `${baseUrl}${path}`;
 }
 
-
-// ============================================================
-// SOCKET URL
-// ============================================================
-
-function createSocketUrl(
-  path: string,
-): string {
-  const token =
-    getAccessToken();
-
-  const separator =
-    path.includes("?")
-      ? "&"
-      : "?";
-
-  if (!token) {
-    return `${WS_BASE_URL}${path}`;
-  }
-
-  return `${WS_BASE_URL}${path}${separator}token=${encodeURIComponent(
-    token,
-  )}`;
-}
 
 
 // ============================================================
@@ -1160,11 +1111,6 @@ export default function DiscussionForumWeb({
               courseId,
             );
 
-          console.log(
-            "[DiscussionForum] discussions response:",
-            response,
-          );
-
           const list =
             extractList<DiscussionThread>(
               response,
@@ -1224,11 +1170,6 @@ export default function DiscussionForumWeb({
               threadId,
             );
 
-          console.log(
-            `[DiscussionForum] replies response for ${threadId}:`,
-            response,
-          );
-
           const list =
             extractList<DiscussionReply>(
               response,
@@ -1273,12 +1214,6 @@ export default function DiscussionForumWeb({
         const data =
           event.data ??
           event;
-
-        console.log(
-          "📩 [DiscussionForum] COURSE WS:",
-          type,
-          data,
-        );
 
 
         // ------------------------------------------------------
@@ -1461,11 +1396,6 @@ export default function DiscussionForumWeb({
         const currentThreadId =
           expandedThreadRef.current;
 
-        console.log(
-          "📩 [DiscussionForum] THREAD WS:",
-          type,
-          data,
-        );
 
 
         if (
@@ -2045,13 +1975,6 @@ export default function DiscussionForumWeb({
             ),
           );
 
-        console.log(
-          "🔌 [DiscussionForum] Connecting COURSE WebSocket:",
-          url.replace(
-            /token=[^&]+/,
-            "token=***",
-          ),
-        );
 
         setCourseSocketState(
           "connecting",
@@ -2075,9 +1998,6 @@ export default function DiscussionForumWeb({
               return;
             }
 
-            console.log(
-              "✅ [DiscussionForum] COURSE WebSocket connected",
-            );
 
             setCourseSocketState(
               "connected",
@@ -2142,12 +2062,6 @@ export default function DiscussionForumWeb({
               return;
             }
 
-            console.log(
-              "🔌 [DiscussionForum] COURSE WebSocket closed:",
-              event.code,
-              event.reason,
-            );
-
             courseSocketRef.current =
               null;
 
@@ -2211,9 +2125,6 @@ export default function DiscussionForumWeb({
       if (
         courseSocketRef.current
       ) {
-        console.log(
-          "🔌 [DiscussionForum] Disconnecting COURSE WebSocket",
-        );
 
         courseSocketRef.current.close();
         courseSocketRef.current =
@@ -2279,17 +2190,6 @@ export default function DiscussionForumWeb({
               threadId,
             ),
           );
-
-
-        console.log(
-          "🔌 [DiscussionForum] Connecting THREAD WebSocket:",
-          url.replace(
-            /token=[^&]+/,
-            "token=***",
-          ),
-        );
-
-
         setThreadSocketState(
           "connecting",
         );
@@ -2313,10 +2213,6 @@ export default function DiscussionForumWeb({
             ) {
               return;
             }
-
-            console.log(
-              `✅ [DiscussionForum] THREAD WebSocket connected: ${threadId}`,
-            );
 
             setThreadSocketState(
               "connected",
@@ -2380,13 +2276,6 @@ export default function DiscussionForumWeb({
             ) {
               return;
             }
-
-            console.log(
-              `🔌 [DiscussionForum] THREAD WebSocket closed: ${threadId}`,
-              event.code,
-              event.reason,
-            );
-
             threadSocketRef.current =
               null;
 
@@ -2610,11 +2499,6 @@ export default function DiscussionForumWeb({
           );
 
 
-        console.log(
-          "[DiscussionForum] create response:",
-          response,
-        );
-
 
         const created =
           extractObject<DiscussionThread>(
@@ -2718,11 +2602,6 @@ export default function DiscussionForumWeb({
             },
           );
 
-
-        console.log(
-          `[DiscussionForum] reply response for ${threadId}:`,
-          response,
-        );
 
 
         const created =

@@ -1,35 +1,23 @@
-import { WS_BASE_URL } from '../config/env';
 
-import {
-  SOUND_NOTIFICATION_EVENTS,
-} from '@/services/versionSocketEvents';
+import { WS_BASE_URL } from "../config/env";
 
-import {
-  playAlertSound,
-} from '@/services/notificationSoundService';
+import { SOUND_NOTIFICATION_EVENTS } from "@/services/versionSocketEvents";
+import { playAlertSound } from "@/services/notificationSoundService";
 
 let socket: WebSocket | null = null;
-let currentToken: string | null = null;
-let reconnectTimeout: NodeJS.Timeout | null = null;
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let manualDisconnect = false;
+let connectionRequested = false;
 
-type MessageHandler = (
-  event: string,
-  data: any
-) => void;
+type MessageHandler = (event: string, data: any) => void;
 
 let globalMessageHandler: MessageHandler | undefined;
 
 export const connectSocket = async (
-  token: string,
+  _token: string,
   onMessage?: MessageHandler
 ) => {
-  if (!token) {
-    console.log('❌ Missing WS token');
-    return;
-  }
-
-  currentToken = token;
+  connectionRequested = true;
   manualDisconnect = false;
 
   if (onMessage) {
@@ -43,19 +31,17 @@ export const connectSocket = async (
       socket.readyState === WebSocket.CONNECTING
     )
   ) {
-    console.log('⚠️ WS already connected');
     return;
   }
 
-  const url =
-    `${WS_BASE_URL}/ws/doubts/?token=${token}`;
+  const baseUrl = WS_BASE_URL.replace(/\/+$/, "");
+  const url = `${baseUrl}/ws/doubts/`;
 
-  console.log('🌐 Connecting WS:', url);
+  const ws = new WebSocket(url);
+  socket = ws;
 
-  socket = new WebSocket(url);
-
-  socket.onopen = () => {
-    console.log('✅ WS Connected');
+  ws.onopen = () => {
+    if (socket !== ws) return;
 
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
@@ -63,107 +49,67 @@ export const connectSocket = async (
     }
   };
 
-  socket.onmessage = (event) => {
+  ws.onmessage = (event) => {
+    if (socket !== ws) return;
+
     try {
       const parsed = JSON.parse(event.data);
 
-      console.log('📩 WS Event:', parsed);
-
-      if (parsed.event) {
+      if (parsed?.event) {
         const eventName = String(parsed.event);
 
-        /**
-         * ======================================================
-         * GENERAL NOTIFICATION SOUND
-         * ======================================================
-         *
-         * Play alert.mp3 only for the same events used by
-         * the Android application.
-         */
-        if (
-          SOUND_NOTIFICATION_EVENTS.has(eventName)
-        ) {
-          console.log(
-            '🔔 Playing notification sound for event:',
-            eventName
-          );
-
+        if (SOUND_NOTIFICATION_EVENTS.has(eventName)) {
           void playAlertSound();
         }
 
-        /**
-         * Pass the event to the existing application handler.
-         */
-        globalMessageHandler?.(
-          eventName,
-          parsed.data
-        );
+        globalMessageHandler?.(eventName, parsed.data);
       }
-    } catch (err) {
-      console.log(
-        '❌ WS Parse Error:',
-        err
-      );
+    } catch {
+      console.error("Unable to parse WebSocket notification");
     }
   };
 
-  socket.onerror = (error) => {
-    console.log(
-      '❌ WS Error:',
-      error
-    );
+  ws.onerror = () => {
+    if (socket !== ws) return;
+    console.error("Notification WebSocket connection error");
   };
 
-  socket.onclose = () => {
-    console.log(
-      '🔌 WS Disconnected'
-    );
+  ws.onclose = () => {
+    if (socket !== ws) return;
 
     socket = null;
 
-    if (manualDisconnect) {
-      console.log(
-        '🚪 Manual disconnect - no reconnect'
-      );
+    if (manualDisconnect || !connectionRequested) {
       return;
     }
 
-    if (!currentToken) {
-      console.log(
-        '🚫 No token - no reconnect'
-      );
+    if (reconnectTimeout) {
       return;
     }
 
     reconnectTimeout = setTimeout(() => {
-      console.log(
-        '🔄 Reconnecting WS...'
-      );
+      reconnectTimeout = null;
 
-      connectSocket(
-        currentToken!,
-        globalMessageHandler
-      );
+      if (!manualDisconnect && connectionRequested) {
+        void connectSocket("", globalMessageHandler);
+      }
     }, 3000);
   };
 };
 
 export const disconnectSocket = () => {
-  console.log('🛑 Disconnecting WS');
-
   manualDisconnect = true;
-  currentToken = null;
+  connectionRequested = false;
 
   if (reconnectTimeout) {
-    clearTimeout(
-      reconnectTimeout
-    );
-
+    clearTimeout(reconnectTimeout);
     reconnectTimeout = null;
   }
 
-  if (socket) {
-    socket.close();
-    socket = null;
+  const currentSocket = socket;
+  socket = null;
+
+  if (currentSocket) {
+    currentSocket.close();
   }
 };
