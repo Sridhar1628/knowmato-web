@@ -217,53 +217,25 @@ export default function BecomeTutorPage() {
         );
       }
 
+      
       // ========================================================
       // SUBMIT APPLICATION
       // ========================================================
 
-      const response =
-        await submitTutorApplication(
-          formData,
-        );
+      const response = await submitTutorApplication(formData);
 
-      console.log(
-        "Tutor application response:",
-        response,
-      );
+      console.log("Tutor application response:", response);
 
-      
       // ========================================================
       // EXTRACT AND VALIDATE APPLICATION ID
-      // Supports both the API envelope and Axios response shapes.
       // ========================================================
 
-      const rawResponse = response as unknown as {
-        data?: {
-          application_id?: number | string;
-          id?: number | string;
-          data?: {
-            application_id?: number | string;
-            id?: number | string;
-          };
-        };
-        application_id?: number | string;
-        id?: number | string;
-      };
-
-      // Axios may wrap the API response in its own `data` property.
-      const payload = rawResponse?.data ?? rawResponse;
-
-      const applicationIdValue =
-        payload?.data?.application_id ??
-        payload?.application_id ??
-        payload?.data?.id ??
-        payload?.id;
-
-      const parsedApplicationId = Number(applicationIdValue);
+      const applicationId = response?.data?.application_id;
+      const parsedApplicationId = Number(applicationId);
 
       if (
-        applicationIdValue === undefined ||
-        applicationIdValue === null ||
+        applicationId === undefined ||
+        applicationId === null ||
         !Number.isSafeInteger(parsedApplicationId) ||
         parsedApplicationId <= 0
       ) {
@@ -273,7 +245,7 @@ export default function BecomeTutorPage() {
         );
 
         throw new Error(
-          "Your application may have been submitted, but its ID could not be read. Please contact support before submitting again."
+          "The application may have been submitted, but its ID could not be read. Please contact support before submitting again."
         );
       }
 

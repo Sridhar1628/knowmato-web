@@ -179,8 +179,10 @@ export default function TutorApplicationDetailPage() {
   }
 
   const resumeUrl = application.resume
-    ? `${API_HOST}${application.resume}`
-    : null;
+  ? application.resume.startsWith("http")
+    ? application.resume
+    : `${API_HOST.replace(/\/+$/, "")}/${application.resume.replace(/^\/+/, "")}`
+  : null;
 
   const status = statusConfig[application.status] ?? statusConfig.pending;
 
