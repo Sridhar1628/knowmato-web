@@ -231,15 +231,49 @@ export default function BecomeTutorPage() {
         response,
       );
 
+      
       // ========================================================
-      // VALIDATE APPLICATION ID
+      // EXTRACT AND VALIDATE APPLICATION ID
+      // Supports both the API envelope and Axios response shapes.
       // ========================================================
 
+      const rawResponse = response as unknown as {
+        data?: {
+          application_id?: number | string;
+          id?: number | string;
+          data?: {
+            application_id?: number | string;
+            id?: number | string;
+          };
+        };
+        application_id?: number | string;
+        id?: number | string;
+      };
+
+      // Axios may wrap the API response in its own `data` property.
+      const payload = rawResponse?.data ?? rawResponse;
+
+      const applicationIdValue =
+        payload?.data?.application_id ??
+        payload?.application_id ??
+        payload?.data?.id ??
+        payload?.id;
+
+      const parsedApplicationId = Number(applicationIdValue);
+
       if (
-        !response?.application_id
+        applicationIdValue === undefined ||
+        applicationIdValue === null ||
+        !Number.isSafeInteger(parsedApplicationId) ||
+        parsedApplicationId <= 0
       ) {
+        console.error(
+          "Unexpected tutor application response:",
+          response
+        );
+
         throw new Error(
-          "The application was submitted, but no application ID was returned.",
+          "Your application may have been submitted, but its ID could not be read. Please contact support before submitting again."
         );
       }
 
@@ -247,10 +281,7 @@ export default function BecomeTutorPage() {
       // UPDATE SUCCESS STATE
       // ========================================================
 
-      setApplicationId(
-        response.application_id,
-      );
-
+      setApplicationId(parsedApplicationId);
       setSubmitted(true);
 
       // ========================================================
@@ -259,8 +290,9 @@ export default function BecomeTutorPage() {
 
       AlertService.success(
         "Application Submitted",
-        "Your tutor application has been submitted successfully. Our team will review your profile.",
+        "Your tutor application has been submitted successfully. Our team will review your profile."
       );
+
     } catch (error: unknown) {
       console.error(
         "Tutor application error:",
