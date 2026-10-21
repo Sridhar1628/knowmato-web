@@ -2371,3 +2371,26 @@ export const adminDeleteUser = async (userId: number) => {
 export const adminToggleUserActive = async (userId: number) => {
   return await apiPost(`/accounts/admin/users/${userId}/toggle-active/`, {});
 };
+
+export const getTutorApplicationResume = async (
+  applicationId: number
+): Promise<Blob> => {
+  const response = await apiGet(
+    `/accounts/v1/admin/tutor-applications/${applicationId}/resume/`,
+    { responseType: 'blob' }
+  );
+
+  if (!(response instanceof Blob)) {
+    throw new Error('The resume endpoint did not return a PDF blob.');
+  }
+
+  if (
+    response.type &&
+    response.type !== 'application/pdf' &&
+    !response.type.includes('octet-stream')
+  ) {
+    throw new Error('The server did not return a PDF file.');
+  }
+
+  return response;
+};

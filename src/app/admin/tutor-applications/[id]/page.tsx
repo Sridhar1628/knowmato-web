@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import AlertService from "@/services/alertService";
+
+import AdminLayout from "@/app/admin/AdminLayout";
+import { API_HOST } from "@/config/env";
 import {
   getTutorApplicationDetail,
+  getTutorApplicationResume,
   approveTutorApplication,
   rejectTutorApplication,
 } from "@/services/v1Service";
-import AdminLayout from "@/app/admin/AdminLayout";
-import { API_HOST } from "@/config/env";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,6 +104,41 @@ export default function TutorApplicationDetailPage() {
   }, [id]);
 
   // ------ approve & reject logic ------
+
+  const handleViewResume = async () => {
+    if (!application?.id) {
+      return;
+    }
+
+    // Open synchronously during the click to avoid popup blockers.
+    const resumeWindow = window.open("about:blank", "_blank");
+
+    if (!resumeWindow) {
+      alert("Please allow pop-ups to view the resume.");
+      return;
+    }
+
+    try {
+      resumeWindow.document.title = "Loading resume...";
+
+      const pdfBlob = await getTutorApplicationResume(application.id);
+
+      if (pdfBlob.type && !pdfBlob.type.includes("pdf")) {
+        throw new Error("The server did not return a PDF.");
+      }
+
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      resumeWindow.location.href = objectUrl;
+
+      // Release the object URL after the browser has had time to load it.
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (error) {
+      resumeWindow.close();
+
+      console.error("Unable to open tutor resume:", error);
+      alert("Unable to open the resume. Please check your login and try again.");
+    }
+  };
   const handleApproveClick = () => setConfirmAction("approve");
   const handleRejectClick = () => setConfirmAction("reject");
   const cancelAction = () => setConfirmAction(null);
@@ -178,11 +215,24 @@ export default function TutorApplicationDetailPage() {
     );
   }
 
-  const resumeUrl = application.resume
-  ? application.resume.startsWith("http")
-    ? application.resume
-    : `${API_HOST.replace(/\/+$/, "")}/${application.resume.replace(/^\/+/, "")}`
-  : null;
+  
+  const resumeUrl = (() => {
+    const resume = application.resume?.trim();
+
+    if (!resume) return null;
+
+    try {
+      // Use the API hostname, not the /api/ endpoint path.
+      const apiOrigin = new URL(API_HOST).origin;
+
+      // Correctly resolves paths such as /media/tutor_applications/file.pdf.
+      return new URL(resume, apiOrigin).toString();
+    } catch (error) {
+      console.error("Invalid API host or resume URL:", error);
+      return null;
+    }
+  })();
+
 
   const status = statusConfig[application.status] ?? statusConfig.pending;
 
@@ -326,35 +376,14 @@ export default function TutorApplicationDetailPage() {
               </div>
             </section>
 
-            {/* Resume */}
-            {resumeUrl && (
-              <section className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 sm:p-8 border border-white/10 shadow-2xl">
-                <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-3">
-                  <span className="w-1.5 h-6 bg-gradient-to-b from-violet-400 to-fuchsia-400 rounded-full" />
-                  📄 Resume
-                </h2>
-                <a
-                  href={resumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-400/30 hover:bg-violet-500/30 hover:text-white px-6 py-3 font-semibold transition"
-                >
-                  <span>View Resume</span>
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                </a>
-              </section>
+            {application.resume && (
+              <button
+                type="button"
+                onClick={handleViewResume}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2"
+              >
+                <span>View Resume</span>
+              </button>
             )}
 
             {/* Action Buttons – only if pending */}

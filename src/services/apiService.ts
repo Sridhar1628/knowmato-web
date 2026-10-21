@@ -1,8 +1,11 @@
 import axiosInstance from '../api/axiosInstance';
-import { AxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-export const apiGet = async (url: string) => {
-  const response = await axiosInstance.get(url);
+export const apiGet = async (
+  url: string,
+  config?: AxiosRequestConfig
+) => {
+  const response = await axiosInstance.get(url, config);
   return response.data;
 };
 
@@ -52,12 +55,11 @@ export const apiPatch = async (
   data?: any,
   config?: AxiosRequestConfig
 ) => {
-  const response =
-    await axiosInstance.patch(
-      url,
-      data,
-      config
-    );
+  const response = await axiosInstance.patch(
+    url,
+    data,
+    config
+  );
 
   return response.data;
 };
