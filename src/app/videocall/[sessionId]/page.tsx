@@ -14,6 +14,7 @@ import axios from "@/api/axiosInstance";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { useCall } from "@/contexts/CallContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 import AlertService from "@/services/alertService";
 
 // ----- Agora App ID -----
@@ -40,6 +41,7 @@ const ProfileCard: React.FC = () => (
 
 const VideoCallScreen: React.FC = () => {
   const router = useRouter();
+  const { refreshAuth } = useAuthContext();
   const params = useParams();
 
   const sessionIdParam = Array.isArray(params.sessionId)
@@ -221,15 +223,24 @@ const VideoCallScreen: React.FC = () => {
     }
   };
 
-  const exitCallScreen = (completed: boolean) => {
+  const exitCallScreen = async (completed: boolean) => {
+    // Refresh the cookie-authenticated account before entering a protected route.
+    // This prevents navigation from racing with stale client-side auth state.
+    try {
+      await refreshAuth();
+    } catch (error) {
+      console.error("Could not refresh authentication before leaving the call:", error);
+    }
+
     if (userRole === "tutor") {
       router.replace("/tutor/dashboard");
+      return;
+    }
+
+    if (completed && sessionId) {
+      router.replace(`/student/submit-review/${sessionId}`);
     } else {
-      if (completed) {
-        router.replace(`/student/submit-review/${sessionId}`);
-      } else {
-        router.replace("/student/dashboard");
-      }
+      router.replace("/student/dashboard");
     }
   };
 
