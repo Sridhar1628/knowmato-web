@@ -10,7 +10,7 @@ import {
   sendTypingStatus,
   sendReadReceipt,
 } from "@/services/chatSocket";
-import { getTokens } from "@/services/storageService";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { endSession } from "@/services/sessionService";
 import axiosInstance from "@/api/axiosInstance";
 import { createReport } from "@/services/v1Service";
@@ -42,6 +42,7 @@ const ChatScreen = () => {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.sessionId as string;
+  const { user, loading: authLoading } = useAuthContext();
 
   // State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -317,58 +318,38 @@ const ChatScreen = () => {
   // ----- Lifecycle: Load user and session -----
   
   useEffect(() => {
+    if (authLoading) return;
+
     let cancelled = false;
 
     const loadUserAndSession = async () => {
       try {
-        const tokens = await getTokens();
-
-        console.log("[CHAT DIAG] Token lookup:", {
-          tokensFound: Boolean(tokens),
-          accessFound: Boolean(tokens?.access),
-        });
-
-        if (!tokens?.access) {
-          console.error("[CHAT DIAG] No access token available");
-          return;
+        if (!user?.id) {
+          throw new Error("No authenticated user found.");
         }
 
-        const payload = JSON.parse(
-          atob(tokens.access.split(".")[1])
-        );
-
-        const userId = Number(payload.user_id);
-
-        console.log("[CHAT DIAG] Decoded user:", {
-          userId,
-          validUserId: Number.isFinite(userId) && userId > 0,
-          sessionId,
-        });
+        const userId = Number(user.id);
 
         if (!Number.isFinite(userId) || userId <= 0) {
-          throw new Error("Invalid user ID in access token");
+          throw new Error("Invalid authenticated user ID.");
         }
 
-        if (cancelled) return;
-
         setCurrentUserId(userId);
-        setCurrentUserName(payload.display_name || "");
+        setCurrentUserName(user.display_name || "");
 
-        const res = await axiosInstance.get(
-          `/v1/session/${sessionId}/`
-        );
-
-        const body = res?.data;
-        const data: SessionDetails = body?.data ?? body;
-
-        console.log("[CHAT DIAG] Session data:", data);
+        const res = await axiosInstance.get(`/v1/session/${sessionId}/`);
+        const data: SessionDetails = res?.data?.data ?? res?.data;
 
         if (!data?.student_id || !data?.tutor_id) {
-          throw new Error("Session response is missing student_id or tutor_id");
+          throw new Error("Session response is missing participant IDs.");
         }
 
         const studentId = Number(data.student_id);
         const tutorId = Number(data.tutor_id);
+
+        if (userId !== studentId && userId !== tutorId) {
+          throw new Error("Authenticated user does not belong to this session.");
+        }
 
         if (cancelled) return;
 
@@ -377,26 +358,16 @@ const ChatScreen = () => {
         if (userId === studentId) {
           setOtherUserName(data.tutor || "Tutor");
           setOtherUserId(tutorId);
-        } else if (userId === tutorId) {
+        } else {
           setOtherUserName(data.student || "Student");
           setOtherUserId(studentId);
-        } else {
-          console.error("[CHAT DIAG] User does not belong to session", {
-            userId,
-            studentId,
-            tutorId,
-            sessionId,
-          });
-          setOtherUserId(null);
         }
       } catch (error) {
         if (!cancelled) {
-          console.error("[CHAT DIAG] Failed to load user/session:", error);
+          console.error("Failed to load chat user/session:", error);
         }
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
     };
 
@@ -405,7 +376,7 @@ const ChatScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [authLoading, user, sessionId]);
 
   // ----- Fetch messages -----
   useEffect(() => {
@@ -494,23 +465,6 @@ const ChatScreen = () => {
           }
         );
 
-        const tokens =
-          await getTokens();
-
-        if (!tokens?.access) {
-
-          console.error(
-            "❌ No access token available"
-          );
-
-          if (mounted) {
-            setOnlineStatus(
-              "offline"
-            );
-          }
-
-          return;
-        }
 
         if (mounted) {
           setOnlineStatus(
@@ -522,7 +476,7 @@ const ChatScreen = () => {
 
           Number(sessionId),
 
-          tokens.access,
+          "",
 
           handleSocketEvent,
 
@@ -660,12 +614,11 @@ const ChatScreen = () => {
 
       try {
 
-        const tokens =
-          await getTokens();
 
-        if (!tokens?.access) {
-          return;
-        }
+
+
+
+
 
         setOnlineStatus(
           "connecting"
@@ -675,7 +628,7 @@ const ChatScreen = () => {
 
           Number(sessionId),
 
-          tokens.access,
+          "",
 
           handleSocketEvent,
 
@@ -1321,3 +1274,4 @@ const ChatScreen = () => {
 };
 
 export default ChatScreen;
+
