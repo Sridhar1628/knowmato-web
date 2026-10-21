@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { getTokens } from "@/services/storageService";
+
 import { connectSocket, disconnectSocket } from "@/services/versionSocketService";
 import { getOnlineTutors, getDoubtDetails, extendMatchingWait, requestStudentRefund, cancelDoubt } from "@/services/v1Service";
 import { useTranslation } from "react-i18next";
@@ -85,12 +85,8 @@ export default function MatchingScreen() {
 
     const initSocket = async () => {
       try {
-        const tokens = await getTokens();
-        if (!tokens?.access) {
-          throw new Error("Authentication token missing");
-        }
-
-        connectSocket(tokens.access, (event, data) => {
+        // Use the existing cookie/session authentication; do not read JWTs from storage.
+        connectSocket("", (event, data) => {
           if (!isMounted) return;
           console.log(`🔍 Matching event [${doubtId}]:`, event, data);
 
