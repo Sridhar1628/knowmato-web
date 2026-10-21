@@ -76,16 +76,32 @@ export function AuthProvider({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  
   const refreshAuth = useCallback(async (): Promise<void> => {
     try {
+      console.log('[AUTH DEBUG] Checking authenticated account...');
+
       const response = await checkAuthentication();
-      setUser(extractAuthUser(response));
-    } catch {
+
+      console.log('[AUTH DEBUG] Profile API response:', response);
+
+      const profile = extractAuthUser(response);
+
+      console.log('[AUTH DEBUG] Extracted authenticated user:', {
+        id: profile?.id,
+        role: profile?.role,
+        authenticated: Boolean(profile),
+      });
+
+      setUser(profile);
+    } catch (error) {
+      console.error('[AUTH DEBUG] Profile request failed:', error);
       setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     void refreshAuth();
