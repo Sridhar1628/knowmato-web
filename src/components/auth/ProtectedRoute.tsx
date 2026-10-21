@@ -1,7 +1,7 @@
-'use client';
+ 'use client';
 
 import { ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthContext } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
@@ -14,57 +14,57 @@ export default function ProtectedRoute({
   role,
 }: ProtectedRouteProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
-  const {
-    user,
-    loading,
-    authenticated,
-  } = useAuthContext();
+  const { user, loading, authenticated } = useAuthContext();
 
   useEffect(() => {
+    console.log('[GUARD DEBUG]', {
+      pathname,
+      loading,
+      authenticated,
+      userId: user?.id,
+      userRole: user?.role,
+      requiredRole: role,
+    });
+
     if (loading) return;
 
-    // Not authenticated
     if (!authenticated || !user) {
+      console.error('[GUARD DEBUG] Redirecting: account unavailable', {
+        pathname,
+      });
       router.replace('/login');
       return;
     }
 
-    // Wrong role
     if (user.role !== role) {
+      console.error('[GUARD DEBUG] Redirecting: role mismatch', {
+        pathname,
+        actualRole: user.role,
+        requiredRole: role,
+      });
       router.replace('/login');
     }
-  }, [loading, authenticated, user, role, router]);
+  }, [loading, authenticated, user, role, pathname, router]);
 
-  // Still checking session
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
         <div className="flex flex-col items-center">
           <div className="h-14 w-14 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-
           <h2 className="mt-6 text-2xl font-bold text-white">
             Verifying your session...
           </h2>
-
-          <p className="mt-2 text-gray-300">
-            Please wait...
-          </p>
+          <p className="mt-2 text-gray-300">Please wait...</p>
         </div>
       </div>
     );
   }
 
-  // Authentication failed
-  if (!authenticated || !user) {
+  if (!authenticated || !user || user.role !== role) {
     return null;
   }
 
-  // Wrong role
-  if (user.role !== role) {
-    return null;
-  }
-
-  // Everything is OK
   return <>{children}</>;
 }
