@@ -103,71 +103,66 @@ const StudentChatHistoryScreen =
     // Fetch Messages
     // -----------------------------------------------------------------------
 
-    const fetchMessages =
-      useCallback(
-        async () => {
-          if (!sessionId) {
-            const errorMessage =
-              "Chat session was not found.";
+    
+    const fetchMessages = useCallback(async () => {
+      if (!sessionId) {
+        const message = "Chat session was not found.";
+        setError(message);
+        setMessages([]);
+        setLoading(false);
 
-            setLoading(false);
-            setError(
-              errorMessage,
-            );
+        AlertService.warning("Session Not Found", message, []);
+        return;
+      }
 
-            AlertService.warning(
-              "Session Not Found",
-              errorMessage,
-              [],
-            );
+      try {
+        setLoading(true);
+        setError(null);
 
-            return;
+        const response = await apiGet(`chat/messages/${sessionId}/`);
+
+        // apiGet returns the response body, not AxiosResponse.
+        const extractMessages = (value: any): Message[] => {
+          if (Array.isArray(value)) return value;
+
+          if (value && typeof value === "object") {
+            if (Array.isArray(value.data)) return value.data;
+            if (Array.isArray(value.messages)) return value.messages;
+            if (Array.isArray(value.results)) return value.results;
+
+            if (value.data && typeof value.data === "object") {
+              if (Array.isArray(value.data.messages)) return value.data.messages;
+              if (Array.isArray(value.data.results)) return value.data.results;
+            }
           }
 
-          try {
-            setLoading(true);
-            setError(null);
+          return [];
+        };
 
-            const res =
-              await apiGet(
-                `chat/messages/${sessionId}/`,
-              );
+        const messagesArray = extractMessages(response);
 
-            setMessages(
-              Array.isArray(res)
-                ? res
-                : [],
-            );
-          } catch (err: any) {
-            console.error(
-              "Chat history error:",
-              err,
-            );
+        console.log("[CHAT HISTORY] Response:", response);
+        console.log("[CHAT HISTORY] Messages loaded:", messagesArray.length);
 
-            const errorMessage =
-              err?.response?.data
-                ?.message ||
-              err?.response?.data
-                ?.error ||
-              err?.message ||
-              t(
-                "chatHistory.loadError",
-              );
+        setMessages(messagesArray);
+      } catch (err: any) {
+        console.error("[CHAT HISTORY] Failed to load messages:", err);
 
-            setError(
-              errorMessage,
-            );
+        const message =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message ||
+          t("chatHistory.loadError");
 
-            AlertService.error(
-              "Unable to Load Chat",
-              errorMessage,
-            );
-          } finally {
-            setLoading(false);
-          }
-        },
-        [sessionId, t],
-      );
+        setError(message);
+        setMessages([]);
+
+        AlertService.error("Unable to Load Chat", message);
+      } finally {
+        setLoading(false);
+      }
+    }, [sessionId, t]);
+
 
     // -----------------------------------------------------------------------
     // Fetch on mount / session change

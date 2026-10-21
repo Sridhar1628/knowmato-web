@@ -2319,6 +2319,7 @@
   "loading": "Loading requests...",
   "loadError": "Failed to load requests.",
   "filter": "🔍 Filter",
+  "ongoing": "⏳ Ongoing",
   "newRequests": "🆕 New Requests",
   "completed": "✅ Completed",
   "oldest": "🕒 Oldest",
