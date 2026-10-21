@@ -105,19 +105,65 @@ const VideoCallScreen: React.FC = () => {
       try {
         setIsLoading(true);
 
-        // Use cookie/session authentication; never read JWTs from storage.
-        const sessionRes = await axios.get(`/v1/session/${sessionId}/`);
-        const sessionData = sessionRes?.data?.data ?? sessionRes?.data;
-        const currentUserId = Number(user?.id ?? user?.user_id ?? 0);
-        const studentId = Number(sessionData?.student_id ?? sessionData?.student?.id);
-        const tutorId = Number(sessionData?.tutor_id ?? sessionData?.tutor?.id);
+        // Resolve the signed-in user from the cookie-authenticated profile API.
+        // Do not read JWTs from localStorage or decode tokens in the browser.
+        const [profileRes, sessionRes] = await Promise.all([
+          axios.get("accounts/profile/"),
+          axios.get(`/v1/session/${sessionId}/`),
+        ]);
 
-        if (!currentUserId) throw new Error("Authenticated user information is unavailable.");
+        const profilePayload = profileRes?.data?.data ?? profileRes?.data;
+        const profileUser =
+          profilePayload?.user ??
+          profilePayload?.profile ??
+          profilePayload?.data?.user ??
+          profilePayload;
+        const sessionData = sessionRes?.data?.data ?? sessionRes?.data;
+
+        const currentUserId = Number(
+          profileUser?.id ??
+          profileUser?.user_id ??
+          profileUser?.user?.id ??
+          0
+        );
+        const studentId = Number(
+          sessionData?.student_id ??
+          sessionData?.student?.id ??
+          sessionData?.student?.user_id ??
+          0
+        );
+        const tutorId = Number(
+          sessionData?.tutor_id ??
+          sessionData?.tutor?.id ??
+          sessionData?.tutor?.user_id ??
+          0
+        );
+
+        if (!currentUserId) {
+          console.error("Profile response did not contain a user ID:", profileRes?.data);
+          throw new Error("Unable to identify the signed-in user. Please refresh and log in again.");
+        }
+
         if (currentUserId === studentId) setUserRole("student");
         else if (currentUserId === tutorId) setUserRole("tutor");
-        else throw new Error("You are not a participant in this video session.");
+        else {
+          console.error("Video session participant mismatch:", {
+            currentUserId,
+            studentId,
+            tutorId,
+          });
+          throw new Error("Your account is not a participant in this video session.");
+        }
+
         setUserId(currentUserId);
-        setUserName(user?.display_name || user?.first_name || "Participant");
+        setUserName(
+          profileUser?.display_name ||
+          profileUser?.first_name ||
+          profileUser?.name ||
+          user?.display_name ||
+          user?.first_name ||
+          "Participant"
+        );
 
         const res = await axios.post(`sessions/${sessionId}/start-video/`);
         const { channel_name, token, uid } = res.data;
