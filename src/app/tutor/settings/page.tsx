@@ -11,6 +11,7 @@ import {
 } from "@/services/languageService";
 import { useTranslation } from "react-i18next";
 import AlertService from "@/services/alertService";
+import { toggleOnline } from '@/services/v1Service';
 
 export default function TutorSettingsPage() {
   const { t, i18n } = useTranslation();
@@ -78,17 +79,33 @@ export default function TutorSettingsPage() {
   // Online Status
   // --------------------------------------------------
 
-  const handleOnlineStatusToggle = (newValue: boolean) => {
-    setOnlineStatus(newValue);
+  const [updatingOnlineStatus, setUpdatingOnlineStatus] = useState(false);
 
-    // TODO: Call API to update tutor online/offline status.
+  const handleOnlineStatusToggle = async (newValue: boolean) => {
+    if (updatingOnlineStatus) return;
 
-    AlertService.success(
-      newValue ? "🟢" : "⚪",
-      newValue
-        ? t("settings.onlineNow")
-        : t("settings.offlineNow")
-    );
+    setUpdatingOnlineStatus(true);
+
+    try {
+      await toggleOnline(newValue);
+      setOnlineStatus(newValue);
+
+      AlertService.success(
+        newValue ? '🟢' : '⚪',
+        newValue
+          ? t('settings.onlineNow')
+          : t('settings.offlineNow')
+      );
+    } catch (error) {
+      console.error('Failed to update tutor online status:', error);
+
+      AlertService.error(
+        'Error',
+        'Could not update your online status. Please try again.'
+      );
+    } finally {
+      setUpdatingOnlineStatus(false);
+    }
   };
 
   // --------------------------------------------------

@@ -17,6 +17,7 @@ import {
 } from "@/store/tutorDashboardRealtime";
 
 import NotificationBell from "@/components/notifications/NotificationBell";
+import { toggleOnline, sendHeartbeat } from '@/services/v1Service';
 
 interface WalletState {
   real: number;
@@ -133,6 +134,37 @@ export default function TutorLayoutContent({
   // =========================================
   // INITIAL SOCKET CONNECTION
   // =========================================
+
+  useEffect(() => {
+    let active = true;
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+
+    const activateTutor = async () => {
+      try {
+        await toggleOnline(true);
+
+        if (!active) return;
+
+        console.log('[TUTOR PRESENCE] Tutor is online');
+
+        // Keep the existing online heartbeat alive.
+        heartbeatTimer = setInterval(() => {
+          void sendHeartbeat().catch((error) => {
+            console.error('[TUTOR PRESENCE] Heartbeat failed:', error);
+          });
+        }, 30_000);
+      } catch (error) {
+        console.error('[TUTOR PRESENCE] Could not activate tutor:', error);
+      }
+    };
+
+    void activateTutor();
+
+    return () => {
+      active = false;
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+    };
+  }, []);
   useEffect(() => {
     let mounted = true;
     const initSocket = async () => {
