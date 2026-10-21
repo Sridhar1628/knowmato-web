@@ -1,8 +1,10 @@
+
+
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getTokens } from "@/services/storageService";
+
 import {
   connectChatSocket,
   sendChatMessage,
@@ -61,7 +63,7 @@ const VideoCallScreen: React.FC = () => {
   } = useCall();
 
   // User info
-  const user = useSelector((state: RootState) => state.auth.user);
+  const user = useSelector((state: RootState) => state.auth.user) as (RootState["auth"]["user"] & { id?: number; user_id?: number; display_name?: string; first_name?: string }) | null;
   const [userRole, setUserRole] = useState<string | null>(user?.role || null);
   const [userId, setUserId] = useState<number | null>(null);
   const [userName, setUserName] = useState("");
@@ -103,18 +105,19 @@ const VideoCallScreen: React.FC = () => {
       try {
         setIsLoading(true);
 
-        const tokens = await getTokens();
-        if (!tokens?.access) throw new Error("No token");
-
-        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
-        const currentUserId = Number(payload.user_id);
-
+        // Use cookie/session authentication; never read JWTs from storage.
         const sessionRes = await axios.get(`/v1/session/${sessionId}/`);
-        if (currentUserId === Number(sessionRes.data.student_id)) {
-          setUserRole("student");
-        } else {
-          setUserRole("tutor");
-        }
+        const sessionData = sessionRes?.data?.data ?? sessionRes?.data;
+        const currentUserId = Number(user?.id ?? user?.user_id ?? 0);
+        const studentId = Number(sessionData?.student_id ?? sessionData?.student?.id);
+        const tutorId = Number(sessionData?.tutor_id ?? sessionData?.tutor?.id);
+
+        if (!currentUserId) throw new Error("Authenticated user information is unavailable.");
+        if (currentUserId === studentId) setUserRole("student");
+        else if (currentUserId === tutorId) setUserRole("tutor");
+        else throw new Error("You are not a participant in this video session.");
+        setUserId(currentUserId);
+        setUserName(user?.display_name || user?.first_name || "Participant");
 
         const res = await axios.post(`sessions/${sessionId}/start-video/`);
         const { channel_name, token, uid } = res.data;
@@ -229,11 +232,8 @@ const VideoCallScreen: React.FC = () => {
 
     const initChatSocket = async () => {
       try {
-        const tokens = getTokens();
-        const token = tokens?.access;
-        if (!token) return;
-
-        connectChatSocket(sessionId, token, (data: any) => {
+        // Use the existing cookie/session-authenticated chat socket.
+        connectChatSocket(sessionId, "", (data: any) => {
           if (!mounted) return;
 
           // END_SESSION_REQUEST
