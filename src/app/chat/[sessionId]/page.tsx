@@ -315,14 +315,42 @@ const ChatScreen = () => {
   }, []);
 
   // ----- Lifecycle: Load user and session -----
+  
   useEffect(() => {
+    let cancelled = false;
+
     const loadUserAndSession = async () => {
       try {
         const tokens = await getTokens();
-        if (!tokens?.access) return;
 
-        const payload = JSON.parse(atob(tokens.access.split(".")[1]));
+        console.log("[CHAT DIAG] Token lookup:", {
+          tokensFound: Boolean(tokens),
+          accessFound: Boolean(tokens?.access),
+        });
+
+        if (!tokens?.access) {
+          console.error("[CHAT DIAG] No access token available");
+          return;
+        }
+
+        const payload = JSON.parse(
+          atob(tokens.access.split(".")[1])
+        );
+
         const userId = Number(payload.user_id);
+
+        console.log("[CHAT DIAG] Decoded user:", {
+          userId,
+          validUserId: Number.isFinite(userId) && userId > 0,
+          sessionId,
+        });
+
+        if (!Number.isFinite(userId) || userId <= 0) {
+          throw new Error("Invalid user ID in access token");
+        }
+
+        if (cancelled) return;
+
         setCurrentUserId(userId);
         setCurrentUserName(payload.display_name || "");
 
@@ -330,48 +358,53 @@ const ChatScreen = () => {
           `/v1/session/${sessionId}/`
         );
 
-        console.log(
-          "📦 SESSION API RESPONSE:",
-          JSON.stringify(res.data, null, 2)
-        );
-
         const body = res?.data;
+        const data: SessionDetails = body?.data ?? body;
 
-        const data: SessionDetails =
-          body?.data ?? body;
+        console.log("[CHAT DIAG] Session data:", data);
 
-        if (!data) {
-          throw new Error(
-            "Session data not found."
-          );
+        if (!data?.student_id || !data?.tutor_id) {
+          throw new Error("Session response is missing student_id or tutor_id");
         }
-
-        console.log(
-          "📦 SESSION DATA:",
-          JSON.stringify(data, null, 2)
-        );
-
-        setSessionDetails(data);
 
         const studentId = Number(data.student_id);
         const tutorId = Number(data.tutor_id);
 
+        if (cancelled) return;
+
+        setSessionDetails(data);
+
         if (userId === studentId) {
-          setOtherUserName(data.tutor);
-          setOtherUserId(Number(data.tutor_id));
+          setOtherUserName(data.tutor || "Tutor");
+          setOtherUserId(tutorId);
         } else if (userId === tutorId) {
-          setOtherUserName(data.student);
-          setOtherUserId(Number(data.student_id));
+          setOtherUserName(data.student || "Student");
+          setOtherUserId(studentId);
         } else {
-          console.warn("User does not belong to this session");
+          console.error("[CHAT DIAG] User does not belong to session", {
+            userId,
+            studentId,
+            tutorId,
+            sessionId,
+          });
+          setOtherUserId(null);
         }
-      } catch (err) {
-        console.error("Failed to load session/user:", err);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("[CHAT DIAG] Failed to load user/session:", error);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
-    loadUserAndSession();
+
+    void loadUserAndSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId]);
 
   // ----- Fetch messages -----
