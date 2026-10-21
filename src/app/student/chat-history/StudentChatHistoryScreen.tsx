@@ -230,15 +230,11 @@ const StudentChatHistoryScreen =
     const renderMessage = (
       item: Message,
     ) => {
-      const isOwn =
-        currentUser &&
-        Number(
-          item.sender_id,
-        ) ===
-          Number(
-            currentUser.id,
-          );
+      const isStudent = currentUser?.role === "student";
 
+      const isOwn = isStudent
+        ? Number(item.sender_id) === Number(currentUser?.id)
+        : Number(item.sender_id) !== Number(currentUser?.id);
       return (
         <div
           key={item.id}

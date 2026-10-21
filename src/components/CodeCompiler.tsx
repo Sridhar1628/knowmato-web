@@ -4,10 +4,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import CodeEditor from '@uiw/react-textarea-code-editor';
 import AlertService from '@/services/alertService';
-import { getTokens } from '@/services/storageService';
 import {
   connectCompilerSocket,
   sendCompilerMessage,
+  getCompilerSocketState,
+  isCompilerSocketConnected,
 } from '@/services/compilerSocketService';
 
 type Language = 'python' | 'Java' | 'C' | 'cpp' | 'html';
@@ -60,6 +61,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMounted = useRef(true);
+  const executionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---------- Sync props ----------
   useEffect(() => {
@@ -69,56 +71,6 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   useEffect(() => {
     setSourceCode(initialCode);
   }, [initialCode]);
-
-  // ---------- WebSocket lifecycle ----------
-  useEffect(() => {
-    isMounted.current = true;
-
-    let unsubscribe: (() => void) | undefined;
-
-    const initSocket = async () => {
-      try {
-        const tokens = await getTokens();
-
-        if (!tokens?.access) {
-          console.warn(
-            '❌ No access token, cannot connect compiler WS'
-          );
-
-          return;
-        }
-
-        console.log(
-          '🔌 Connecting/subscribing to Compiler WS'
-        );
-
-        unsubscribe = connectCompilerSocket(
-          tokens.access,
-          handleSocketEvent
-        );
-      } catch (err) {
-        console.error(
-          'Failed to connect compiler WS:',
-          err
-        );
-      }
-    };
-
-    initSocket();
-
-    return () => {
-      isMounted.current = false;
-
-      // IMPORTANT:
-      // Only remove THIS component's listener.
-      // Do NOT disconnect the shared socket.
-      unsubscribe?.();
-
-      console.log(
-        '👂 CodeCompiler listener removed'
-      );
-    };
-  }, []);
 
   // ---------- WebSocket event handler ----------
   const handleSocketEvent = useCallback(
@@ -188,6 +140,50 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     },
     [onExecutionResult]
   );
+
+  // ---------- WebSocket lifecycle (session-cookie authentication) ----------
+  useEffect(() => {
+    isMounted.current = true;
+
+    console.log('[COMPILER] Connecting with the browser session cookie');
+
+    // Browsers automatically include eligible cookies in the WebSocket
+    // handshake. No localStorage/JWT lookup or token query parameter is used.
+    const unsubscribe = connectCompilerSocket('', handleSocketEvent);
+
+    return () => {
+      isMounted.current = false;
+      // This component removes only its own listener. The shared socket
+      // remains available to other compiler consumers.
+      unsubscribe?.();
+      console.log('[COMPILER] CodeCompiler listener removed');
+    };
+  }, [handleSocketEvent]);
+
+  // ---------- Fail-safe for missing compiler responses ----------
+  useEffect(() => {
+    if (executionTimeout.current) {
+      clearTimeout(executionTimeout.current);
+      executionTimeout.current = null;
+    }
+
+    if (isRunning && language !== 'html') {
+      executionTimeout.current = setTimeout(() => {
+        setIsRunning(false);
+        setTerminalInput('');
+        setTerminalOutput((prev) =>
+          `${prev}${prev ? '\\n\\n' : ''}❌ No completion response received from the compiler within 2 minutes.`,
+        );
+      }, 120000);
+    }
+
+    return () => {
+      if (executionTimeout.current) {
+        clearTimeout(executionTimeout.current);
+        executionTimeout.current = null;
+      }
+    };
+  }, [isRunning, language]);
 
   // ---------- Auto-scroll terminal ----------
   useEffect(() => {
@@ -267,10 +263,11 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   };
 
   // ---------- Run (interactive) ----------
-  const handleRun = () => {
+  const handleRun = async () => {
     if (isRunning) return;
-    if (sourceCode.trim().length === 0) {
-      AlertService.warning("Empty Code", "Please enter some source code before running.",[]);
+
+    if (!sourceCode.trim()) {
+      AlertService.warning('Empty Code', 'Please enter some source code before running.', []);
       return;
     }
 
@@ -280,23 +277,59 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     }
 
     if (!questionId) {
-      AlertService.error("Compiler Error", "No question ID was provided. Cannot compile this code.");
+      AlertService.error(
+        'Compiler Error',
+        'No question ID was provided. Cannot compile this code.',
+      );
       return;
     }
 
-    console.log('▶️ Starting interactive run...');
-    setIsRunning(true);
     setTerminalOutput('');
     setTerminalInput('');
+    setIsRunning(true);
 
-    sendCompilerMessage({
-      type: 'compile',
-      payload: {
-        question_id: questionId,
-        language: language,
-        source_code: sourceCode,
-      },
-    });
+    try {
+      // connectCompilerSocket uses the existing browser session cookie.
+      if (!isCompilerSocketConnected()) {
+        connectCompilerSocket('');
+        const deadline = Date.now() + 10000;
+
+        while (Date.now() < deadline && !isCompilerSocketConnected()) {
+          if (!isMounted.current) return;
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+      }
+
+      if (!isCompilerSocketConnected()) {
+        throw new Error(
+          `Compiler WebSocket did not connect (state: ${getCompilerSocketState()}). Check Network > Socket and confirm the server accepts session-cookie authentication.`,
+        );
+      }
+
+      console.log('[COMPILER] Sending compile request', {
+        questionId,
+        language,
+        sourceLength: sourceCode.length,
+      });
+
+      sendCompilerMessage({
+        type: 'compile',
+        payload: {
+          question_id: questionId,
+          language,
+          source_code: sourceCode,
+        },
+      });
+    } catch (error) {
+      console.error('[COMPILER] Run failed:', error);
+      setIsRunning(false);
+
+      const message =
+        error instanceof Error ? error.message : 'Unable to connect to the compiler.';
+
+      setTerminalOutput(`❌ ${message}`);
+      AlertService.error('Compiler Error', message);
+    }
   };
 
   // ---------- Stop execution ----------
