@@ -2219,7 +2219,7 @@ export const adminAdjustCredits = async (
   payload: AdminAdjustCreditsPayload
 ): Promise<AdminAdjustCreditsResponse> => {
   const response = await apiPost(
-    "/credits/admin/adjust-credits/",
+    "/credits/admin/adjust/",
     payload
   );
 
