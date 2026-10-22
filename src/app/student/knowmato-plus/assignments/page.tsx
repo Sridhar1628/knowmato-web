@@ -69,9 +69,12 @@ export default function AssignmentsListPage() {
   const [startingId, setStartingId] =
     useState<number | null>(null);
 
-  // assignmentId -> attemptId
+  // assignmentId -> attemptId and current attempt status
   const [attemptedAssignments, setAttemptedAssignments] =
     useState<Record<number, number>>({});
+
+  const [attemptStatuses, setAttemptStatuses] =
+    useState<Record<number, string>>({});
 
   // --------------------------------------------------------------------
   // Fetch assignments and attempted status
@@ -128,39 +131,33 @@ export default function AssignmentsListPage() {
           dashboard?.recent_assessments ??
           [];
 
-        const attemptMap: Record<
-          number,
-          number
-        > = {};
+        const attemptMap: Record<number, number> = {};
+        const statusMap: Record<number, string> = {};
 
         if (Array.isArray(recent)) {
-          recent.forEach(
-            (item: any) => {
-              if (
-                item.assignment_id &&
-                item.attempt_id
-              ) {
-                // If multiple attempts exist,
-                // keep the first/latest mapping
-                // returned by the backend.
-                if (
-                  !attemptMap[
-                    item.assignment_id
-                  ]
-                ) {
-                  attemptMap[
-                    item.assignment_id
-                  ] =
-                    item.attempt_id;
-                }
-              }
-            },
-          );
+          recent.forEach((item: any) => {
+            const assignmentId = Number(
+              item.assignment_id ?? item.assignment,
+            );
+            const attemptId = Number(item.attempt_id ?? item.id);
+
+            if (
+              Number.isFinite(assignmentId) &&
+              assignmentId > 0 &&
+              Number.isFinite(attemptId) &&
+              attemptId > 0 &&
+              !attemptMap[assignmentId]
+            ) {
+              attemptMap[assignmentId] = attemptId;
+              statusMap[assignmentId] = String(
+                item.status ?? item.attempt_status ?? '',
+              ).toLowerCase();
+            }
+          });
         }
 
-        setAttemptedAssignments(
-          attemptMap,
-        );
+        setAttemptedAssignments(attemptMap);
+        setAttemptStatuses(statusMap);
       } catch (error: any) {
         console.error(
           'Error fetching assignments:',
@@ -232,44 +229,54 @@ export default function AssignmentsListPage() {
   // Start assessment
   // --------------------------------------------------------------------
 
-  const handleStart = async (
-    assignmentId: number,
-  ) => {
-    if (startingId !== null) {
-      return;
-    }
+  const handleStart = async (assignmentId: number) => {
+    if (startingId !== null) return;
 
     setStartingId(assignmentId);
 
     try {
-      const response =
-        await startAssessment(
-          assignmentId,
-        );
+      const response: any = await startAssessment(assignmentId);
 
-      if (!response?.id) {
-        AlertService.error(
-          'Unable to Start Assessment',
-          t(
-            'assignments.startError',
-            'Could not start assessment.',
-          ),
-        );
+      // apiPost returns the API envelope:
+      // { success, status, message, data: { id, resume, is_new, ... } }.
+      const attempt = response?.data ?? response;
+      const attemptId = Number(attempt?.id);
 
-        return;
+      if (
+        response?.success === false ||
+        !Number.isFinite(attemptId) ||
+        attemptId <= 0
+      ) {
+        throw new Error(
+          response?.message ||
+            t(
+              'assignments.startError',
+              'Could not start assessment.',
+            ),
+        );
       }
 
+      setAttemptedAssignments((previous) => ({
+        ...previous,
+        [assignmentId]: attemptId,
+      }));
+      setAttemptStatuses((previous) => ({
+        ...previous,
+        [assignmentId]: String(
+          attempt?.status ?? 'in_progress',
+        ).toLowerCase(),
+      }));
+
+      // New and resumed attempts both open the attempt route.
       router.push(
-        `/student/knowmato-plus/assignments/${response.id}/assessment`,
+        `/student/knowmato-plus/assignments/${attemptId}/assessment`,
       );
     } catch (error: any) {
-      console.error(
-        'Start assessment error:',
-        error,
-      );
+      console.error('Start assessment error:', error);
 
       const errorMessage =
         error?.response?.data?.message ||
+        error?.response?.data?.detail ||
         error?.response?.data?.error ||
         error?.message ||
         t(
@@ -277,15 +284,7 @@ export default function AssignmentsListPage() {
           'Could not start assessment.',
         );
 
-      // --------------------------------------------------------------
-      // Custom Alert
-      // API errors use exactly TWO arguments.
-      // --------------------------------------------------------------
-
-      AlertService.error(
-        'Unable to Start Assessment',
-        errorMessage,
-      );
+      AlertService.error('Unable to Start Assessment', errorMessage);
     } finally {
       setStartingId(null);
     }
@@ -453,6 +452,15 @@ export default function AssignmentsListPage() {
                     assignment.id
                   ];
 
+                const attemptStatus =
+                  attemptStatuses[assignment.id] || '';
+
+                const isInProgress =
+                  !!attemptId &&
+                  !['submitted', 'completed', 'expired', 'graded'].includes(
+                    attemptStatus,
+                  );
+
                 return (
                   <div
                     key={assignment.id}
@@ -587,20 +595,13 @@ export default function AssignmentsListPage() {
                           )}
                         </button>
                       )
-                    ) : isAttempted ? (
+                    ) : isAttempted && !isInProgress ? (
                       <button
                         type="button"
-                        onClick={() =>
-                          handleViewResult(
-                            attemptId,
-                          )
-                        }
+                        onClick={() => handleViewResult(attemptId)}
                         className="mt-4 w-full rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-500/25 transition-all hover:from-cyan-600 hover:to-blue-600"
                       >
-                        {t(
-                          'assignments.viewResult',
-                          'View Result',
-                        )}
+                        {t('assignments.viewResult', 'View Result')}
                       </button>
                     ) : (
                       <button
@@ -626,9 +627,14 @@ export default function AssignmentsListPage() {
                             )}
                           </span>
                         ) : (
-                          t(
-                            'assignments.attemptNow',
-                          )
+                          isAttempted
+                            ? t(
+                                'assignments.continueAssessment',
+                                'Continue Assessment',
+                              )
+                            : t(
+                                'assignments.attemptNow',
+                              )
                         )}
                       </button>
                     )}
