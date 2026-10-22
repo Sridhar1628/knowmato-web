@@ -109,14 +109,8 @@ export default function LoginPage() {
       localStorage.setItem('role', role);
       localStorage.setItem('display_name', user.display_name ?? '');
 
+      
       dispatch(loginSuccess({ user }));
-
-      await refreshAuth();
-
-      AlertService.success(
-        t('toast.loginSuccess') || 'Login successful 🎉',
-        'You have been logged in successfully.',
-      );
 
       const roleRoutes: Record<string, string> = {
         student: '/student/dashboard',
@@ -125,7 +119,20 @@ export default function LoginPage() {
         company: '/company/dashboard',
       };
 
-      router.push(roleRoutes[role] || '/');
+      const destination = roleRoutes[role];
+
+      if (!destination) {
+        throw new Error(`Unsupported account role: ${role}`);
+      }
+
+      AlertService.success(
+        t('toast.loginSuccess') || 'Login successful 🎉',
+        'You have been logged in successfully.',
+        () => {
+          router.replace(destination);
+        },
+      );
+
     } catch (error: unknown) {
       let errorMsg = 'Login failed. Please try again.';
 

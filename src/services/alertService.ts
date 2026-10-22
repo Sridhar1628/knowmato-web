@@ -65,9 +65,11 @@ class AlertServiceClass {
   // SUCCESS
   // =====================================================
 
+  
   success(
     title: string,
     message: string,
+    onPress?: () => void,
   ): void {
     this.show({
       type: 'success',
@@ -77,10 +79,12 @@ class AlertServiceClass {
         {
           text: 'OK',
           style: 'default',
+          onPress,
         },
       ],
     });
   }
+
 
   // =====================================================
   // ERROR

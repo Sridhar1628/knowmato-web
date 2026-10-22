@@ -514,9 +514,15 @@ export default function KnowMatoPlusDashboard() {
             <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-violet-300">
               KNOWMATO+
             </p>
-            <h1 className="text-2xl font-extrabold leading-tight text-transparent [background:linear-gradient(100deg,#c4b5fd,#f0abfc,#67e8f9)] bg-clip-text sm:text-3xl lg:text-4xl">
-              Welcome back, {displayName}!
+            
+            <h1 className="text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-4xl">
+              Welcome back,{' '}
+              <span className="text-fuchsia-300">
+                {displayName || 'Learner'}
+              </span>
+              !
             </h1>
+
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">
               Your learning, assessment results, and career progress — all in one place.
             </p>
