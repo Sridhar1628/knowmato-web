@@ -1,4 +1,3 @@
-
 import axios, {
   AxiosError,
   InternalAxiosRequestConfig,
@@ -9,6 +8,8 @@ import { parseApiError } from '@/utils/errors/apiErrorParser.ts';
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://api.knowmato.in/api/';
+
+const CSRF_URL = `${API_BASE_URL}accounts/web-session/csrf/`;
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -21,24 +22,37 @@ const axiosInstance = axios.create({
 
 const SAFE_METHODS = new Set(['get', 'head', 'options']);
 
+type RetryConfig = InternalAxiosRequestConfig & {
+  _csrfRetry?: boolean;
+};
+
 let csrfToken: string | null = null;
 let csrfRequest: Promise<string> | null = null;
 
-async function getCsrfToken(): Promise<string> {
+async function getCsrfToken(forceRefresh = false): Promise<string> {
+  if (forceRefresh) {
+    csrfToken = null;
+  }
+
   if (csrfToken) {
     return csrfToken;
   }
 
   if (!csrfRequest) {
     csrfRequest = axios
-      .get(`${API_BASE_URL}accounts/web-session/csrf/`, {
+      .get(CSRF_URL, {
         withCredentials: true,
         timeout: 30000,
+        headers: {
+          Accept: 'application/json',
+        },
       })
       .then((response) => {
-        const token = response.data?.csrf_token;
+        const token =
+          response.data?.csrf_token ??
+          response.data?.csrfToken;
 
-        if (typeof token !== 'string' || !token) {
+        if (typeof token !== 'string' || !token.trim()) {
           throw new Error('Unable to obtain CSRF token.');
         }
 
@@ -61,19 +75,19 @@ axiosInstance.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     config.withCredentials = true;
 
+    // This web client must never send a locally stored JWT.
+    config.headers.delete('Authorization');
+
     const method = (config.method || 'get').toLowerCase();
 
     if (
       typeof window !== 'undefined' &&
-      !SAFE_METHODS.has(method)
+      !SAFE_METHODS.has(method) &&
+      !config.url?.includes('accounts/web-session/csrf/')
     ) {
       const token = await getCsrfToken();
-
       config.headers.set('X-CSRFToken', token);
     }
-
-    // Never attach web JWTs to requests.
-    config.headers.delete('Authorization');
 
     return config;
   },
@@ -82,34 +96,42 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as RetryConfig | undefined;
+
+    if (!originalRequest) {
+      return Promise.reject(parseApiError(error));
+    }
+
+    const method = (originalRequest.method || 'get').toLowerCase();
+    const responseData = error.response?.data as
+      | { code?: string; detail?: string; message?: string }
+      | undefined;
+
+    const isCsrfFailure =
+      error.response?.status === 403 &&
+      (
+        responseData?.code === 'CSRF_FAILED' ||
+        /csrf|csrf token|csrf verification/i.test(
+          `${responseData?.detail || ''} ${responseData?.message || ''}`,
+        )
+      );
 
     if (
-      error.response?.status === 403 &&
-      originalRequest &&
-      !SAFE_METHODS.has(
-        (originalRequest.method || 'get').toLowerCase(),
-      )
+      typeof window !== 'undefined' &&
+      isCsrfFailure &&
+      !SAFE_METHODS.has(method) &&
+      !originalRequest._csrfRetry
     ) {
-      // Refresh the CSRF token once and retry a CSRF-rejected request.
-      const config = originalRequest as InternalAxiosRequestConfig & {
-        _csrfRetry?: boolean;
-      };
+      originalRequest._csrfRetry = true;
 
-      if (
-        !config._csrfRetry &&
-        typeof window !== 'undefined'
-      ) {
-        config._csrfRetry = true;
-        resetCsrfToken();
+      try {
+        const token = await getCsrfToken(true);
+        originalRequest.headers.set('X-CSRFToken', token);
 
-        try {
-          const token = await getCsrfToken();
-          config.headers.set('X-CSRFToken', token);
-          return axiosInstance(config);
-        } catch {
-          // Return the original API error below.
-        }
+        // Retry once only for a confirmed CSRF failure.
+        return await axiosInstance(originalRequest);
+      } catch {
+        // Preserve the original request error.
       }
     }
 
