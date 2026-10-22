@@ -12,21 +12,22 @@ import {
 interface ResultData {
   id: number;
   assignment_id: number;
-  assignment_title: string;
+  assignment_title?: string;
   status: string;
   submitted_at: string;
-  mcq_score: number;
-  programming_score: number;
-  total_marks: number;
-  percentage: number;
+  mcq_score: number | string;
+  programming_score: number | string;
+  total_score: number | string;
+  percentage: number | string;
   is_passed: boolean;
   statistics?: {
-    // you can extend as needed
     total_questions?: number;
     correct_mcq?: number;
     total_mcq?: number;
     passed_programming?: number;
     total_programming?: number;
+    mcq_answered?: number;
+    programming_answered?: number;
   };
 }
 
@@ -95,7 +96,9 @@ export default function AssessmentResultPage() {
             {t('result.title')}
           </h1>
           <p className="mt-2 text-white/70">
-            {result.assignment_title ? `${t('result.assignment')}: ${result.assignment_title}` : ''}
+            {result.assignment_title
+              ? `${t('result.assignment')}: ${result.assignment_title}`
+              : `${t('result.assignment')} #${result.assignment_id}`}
           </p>
         </div>
 
@@ -126,9 +129,13 @@ export default function AssessmentResultPage() {
             <p className="text-xs text-white/50">{t('result.programmingScore')}</p>
             <p className="text-2xl font-bold text-violet-300">{result.programming_score}</p>
           </div>
-          <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-center">
-            <p className="text-xs text-white/50">{t('result.totalScore')}</p>
-            <p className="text-2xl font-bold text-white">{result.total_marks}</p>
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+            <p className="text-xs text-white/50">
+              {t('result.totalScore')}
+            </p>
+            <p className="text-2xl font-bold text-white">
+              {Number(result.total_score).toFixed(2)}
+            </p>
           </div>
           <div className="rounded-xl bg-white/5 border border-white/10 p-4 text-center">
             <p className="text-xs text-white/50">{t('result.percentage')}</p>
@@ -168,18 +175,7 @@ export default function AssessmentResultPage() {
           >
             {t('result.viewReview')}
           </button>
-          <button
-            onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}/review/mcq`)}
-            className="rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
-          >
-            {t('result.mcqReview')}
-          </button>
-          <button
-            onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}/review/programming`)}
-            className="rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
-          >
-            {t('result.programmingReview')}
-          </button>
+          
           <button
             onClick={() => router.push('/student/knowmato-plus/assignments')}
             className="rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white hover:bg-white/20 transition"

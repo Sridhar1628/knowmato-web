@@ -2439,6 +2439,23 @@
     "mcqReview": "MCQ Review",
     "programmingReview": "Programming Review",
     "backToAssignments": "Back to Assignments"
+  },
+  "review": {
+    "backToResult": "Back to Result",
+    "title": "Assessment Review",
+    "subtitle": "Review your answers and programming submissions",
+    "loadError": "Failed to load assessment review.",
+    "noMCQ": "No MCQ questions found.",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "marks": "Marks",
+    "obtained": "Obtained",
+    "explanation": "Explanation",
+    "noProgramming": "No programming questions found.",
+    "yourCode": "Your Code",
+    "noCode": "No code submitted.",
+    "passedCases": "Passed Cases",
+    "feedback": "Feedback"
   }
 
 }
