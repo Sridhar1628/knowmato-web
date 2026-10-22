@@ -2419,6 +2419,26 @@
       "cancelled": "Cancelled",
       "expired": "Expired"
     }
+},
+  "result": {
+    "title": "Assessment Result",
+    "assignment": "Assignment",
+    "invalidAttempt": "Invalid assessment attempt.",
+    "loadError": "Unable to load the assessment result. Please try again.",
+    "passed": "Congratulations! You Passed",
+    "failed": "You Did Not Pass",
+    "submittedAt": "Submitted At",
+    "mcqScore": "MCQ Score",
+    "programmingScore": "Programming Score",
+    "totalScore": "Total Score",
+    "percentage": "Percentage",
+    "totalQuestions": "Total Questions",
+    "correctMCQ": "Correct MCQs",
+    "passedProgramming": "Passed Programming",
+    "viewReview": "View Full Review",
+    "mcqReview": "MCQ Review",
+    "programmingReview": "Programming Review",
+    "backToAssignments": "Back to Assignments"
   }
 
 }

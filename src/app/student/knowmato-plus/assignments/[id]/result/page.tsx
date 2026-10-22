@@ -163,19 +163,19 @@ export default function AssessmentResultPage() {
         {/* Action buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => router.push(`/student/knowmato-plus/attempt/${assignmentId}/review`)}
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}/review`)}
             className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg hover:from-violet-600 hover:to-fuchsia-600 transition"
           >
             {t('result.viewReview')}
           </button>
           <button
-            onClick={() => router.push(`/student/knowmato-plus/attempt/${assignmentId}/review/mcq`)}
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}/review/mcq`)}
             className="rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
           >
             {t('result.mcqReview')}
           </button>
           <button
-            onClick={() => router.push(`/student/knowmato-plus/attempt/${assignmentId}/review/programming`)}
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${assignmentId}/review/programming`)}
             className="rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-bold text-white hover:bg-white/20 transition"
           >
             {t('result.programmingReview')}

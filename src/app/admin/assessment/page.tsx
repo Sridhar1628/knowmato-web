@@ -1,17 +1,39 @@
+
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import AdminLayout from "@/app/admin/AdminLayout";
 import AlertService from "@/services/alertService";
 import {
   getAssignments,
-  Assignment,
-  updateAssignmentExpiry,
+  type Assignment,
 } from "@/services/assessmentService";
 
-// ---------- Animated Stat Card (reused from admin dashboard) ----------
+const getExpiryDate = (value: string | null | undefined): Date | null => {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const isAssignmentExpired = (
+  assignment: Assignment,
+  now: Date,
+): boolean => {
+  if (assignment.status?.toLowerCase() === "expired") return true;
+
+  const expiryDate = getExpiryDate(assignment.date_of_expiry);
+  return expiryDate !== null && expiryDate < now;
+};
+
+const formatExpiryDate = (value: string | null | undefined): string => {
+  const date = getExpiryDate(value);
+  return date ? date.toLocaleDateString() : "Not set";
+};
+
+// ---------- Animated Stat Card ----------
 const StatCard = ({
   label,
   value,
@@ -25,7 +47,7 @@ const StatCard = ({
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ duration: 0.3 }}
-    className="flex items-center justify-between rounded-xl bg-white/5 backdrop-blur-md p-4 border border-white/10 hover:border-white/20 transition-all"
+    className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-md transition-all hover:border-white/20"
   >
     <span className="text-sm font-medium text-white/70">{label}</span>
     <span className="text-xl font-bold" style={{ color }}>
@@ -45,15 +67,17 @@ const QuickAction = ({
   path: string;
 }) => {
   const router = useRouter();
+
   return (
     <motion.button
+      type="button"
       whileHover={{ scale: 1.03, borderColor: "rgba(167, 139, 250, 0.6)" }}
       whileTap={{ scale: 0.98 }}
       onClick={() => router.push(path)}
-      className="flex items-center gap-2 bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/10 hover:border-violet-400/40 transition-all text-left"
+      className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur-md transition-all hover:border-violet-400/40"
     >
       <span className="text-2xl">{icon}</span>
-      <span className="font-semibold text-white/80 text-sm">{title}</span>
+      <span className="text-sm font-semibold text-white/80">{title}</span>
     </motion.button>
   );
 };
@@ -61,34 +85,35 @@ const QuickAction = ({
 export default function AdminAssessmentDashboard() {
   const router = useRouter();
 
-  // ─── state ──────────────────────────────────────
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ─── computed stats ─────────────────────────────
   const now = new Date();
   const total = assignments.length;
-  const active = assignments.filter((a) => {
-    const expired =
-      a.status?.toLowerCase() === "expired" ||
-      new Date(a.date_of_expiry) < now;
-    return !expired;
-  }).length;
-  const expired = total - active;
+  const expired = assignments.filter((assignment) =>
+    isAssignmentExpired(assignment, now),
+  ).length;
+  const active = total - expired;
 
-  // ─── fetch assignments ──────────────────────────
   const fetchAssignments = useCallback(async () => {
     try {
       const data = await getAssignments();
-      // sort by expiry soonest first
-      const sorted = (data || []).sort(
-        (a, b) =>
-          new Date(a.date_of_expiry).getTime() -
-          new Date(b.date_of_expiry).getTime()
-      );
+
+      const sorted = [...(data || [])].sort((a, b) => {
+        const dateA = getExpiryDate(a.date_of_expiry);
+        const dateB = getExpiryDate(b.date_of_expiry);
+
+        // Assignments with a known expiry date appear first.
+        if (!dateA && !dateB) return a.id - b.id;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+
+        return dateA.getTime() - dateB.getTime();
+      });
+
       setAssignments(sorted);
-    } catch (error) {
+    } catch {
       AlertService.error("Load Failed", "Failed to load assignments");
     } finally {
       setLoading(false);
@@ -97,23 +122,25 @@ export default function AdminAssessmentDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchAssignments();
+    void fetchAssignments();
   }, [fetchAssignments]);
 
-  // ─── handle refresh ─────────────────────────────
   const handleRefresh = () => {
+    if (refreshing) return;
+
     setRefreshing(true);
-    fetchAssignments();
+    void fetchAssignments();
   };
 
-  // ─── loading skeleton ───────────────────────────
   if (loading && !refreshing) {
     return (
       <AdminLayout>
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
             <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
-            <p className="mt-4 text-white/60">Loading assessment data...</p>
+            <p className="mt-4 text-white/60">
+              Loading assessment data...
+            </p>
           </div>
         </div>
       </AdminLayout>
@@ -122,37 +149,40 @@ export default function AdminAssessmentDashboard() {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
+      <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
         {/* Background blobs */}
-        <div className="absolute top-0 -left-20 w-72 h-72 bg-purple-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" />
-        <div className="absolute top-0 -right-20 w-72 h-72 bg-fuchsia-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute -bottom-20 left-40 w-72 h-72 bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000" />
+        <div className="animate-blob absolute left-[-5rem] top-0 h-72 w-72 rounded-full bg-purple-500/20 mix-blend-multiply blur-3xl" />
+        <div className="animate-blob animation-delay-2000 absolute right-[-5rem] top-0 h-72 w-72 rounded-full bg-fuchsia-500/20 mix-blend-multiply blur-3xl" />
+        <div className="animate-blob animation-delay-4000 absolute -bottom-20 left-40 h-72 w-72 rounded-full bg-cyan-500/20 mix-blend-multiply blur-3xl" />
 
         <div className="relative z-10 p-4 sm:p-6 lg:p-8">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center justify-between mb-8"
+            className="mb-8 flex flex-col justify-between sm:flex-row sm:items-center"
           >
             <div>
-              <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 flex items-center gap-2">
+              <h1 className="flex items-center gap-2 bg-gradient-to-r from-violet-300 via-fuchsia-300 to-cyan-300 bg-clip-text text-3xl font-extrabold text-transparent">
                 📚 Assessment Dashboard
               </h1>
-              <p className="text-white/70 mt-1">
+              <p className="mt-1 text-white/70">
                 Manage assignments, questions, and MCQs.
               </p>
             </div>
+
             <button
+              type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 text-violet-300 font-medium hover:bg-white/20 hover:text-white transition disabled:opacity-50 mt-4 sm:mt-0"
+              className="mt-4 flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 font-medium text-violet-300 backdrop-blur-md transition hover:bg-white/20 hover:text-white disabled:opacity-50 sm:mt-0"
             >
               <svg
                 className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -166,14 +196,16 @@ export default function AdminAssessmentDashboard() {
           </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 }}
-              className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
+              className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl"
             >
-              <h2 className="font-semibold text-white/80 mb-4">📊 Assignment Stats</h2>
+              <h2 className="mb-4 font-semibold text-white/80">
+                📊 Assignment Stats
+              </h2>
               <div className="space-y-3">
                 <StatCard label="Total" value={total} color="#818cf8" />
                 <StatCard label="Active" value={active} color="#34d399" />
@@ -181,15 +213,17 @@ export default function AdminAssessmentDashboard() {
               </div>
             </motion.div>
 
-            {/* Placeholder for further stats (e.g., total questions) - you can add API calls for those */}
+            {/* Question Bank */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
+              className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl"
             >
-              <h2 className="font-semibold text-white/80 mb-4">❓ Question Bank</h2>
-              <div className="space-y-3 text-white/50 text-sm">
+              <h2 className="mb-4 font-semibold text-white/80">
+                ❓ Question Bank
+              </h2>
+              <div className="space-y-3 text-sm text-white/50">
                 <p>📝 Programming questions</p>
                 <p>📋 MCQ items</p>
                 <p className="text-xs">(Coming soon with stats)</p>
@@ -201,9 +235,11 @@ export default function AdminAssessmentDashboard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
-              className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-2xl"
+              className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl"
             >
-              <h2 className="font-semibold text-white/80 mb-4">⚡ Admin Actions</h2>
+              <h2 className="mb-4 font-semibold text-white/80">
+                ⚡ Admin Actions
+              </h2>
               <div className="grid grid-cols-2 gap-2">
                 <QuickAction
                   title="Manage Assignments"
@@ -227,7 +263,7 @@ export default function AdminAssessmentDashboard() {
                 />
                 <QuickAction
                   title="Analytics"
-                  icon="📝"
+                  icon="📈"
                   path="/admin/assessment/analytics"
                 />
               </div>
@@ -240,66 +276,76 @@ export default function AdminAssessmentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <h2 className="font-semibold text-white/80 mb-4">📋 All Assignments</h2>
+            <h2 className="mb-4 font-semibold text-white/80">
+              📋 All Assignments
+            </h2>
+
             {assignments.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 backdrop-blur-xl p-12 text-center">
+              <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center backdrop-blur-xl">
                 <p className="text-white/50">No assignments found.</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {assignments.map((assignment) => {
-                  const isExpired =
-                    assignment.status?.toLowerCase() === "expired" ||
-                    new Date(assignment.date_of_expiry) < now;
+                  const isExpired = isAssignmentExpired(assignment, now);
+
                   return (
                     <motion.div
                       key={assignment.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl shadow-lg transition hover:border-violet-400/40"
+                      className="flex flex-col justify-between rounded-2xl border border-white/10 bg-white/5 p-5 shadow-lg backdrop-blur-xl transition hover:border-violet-400/40 sm:flex-row sm:items-center"
                     >
                       <div className="mb-3 sm:mb-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
                           <span className="text-sm font-bold text-white">
                             Assignment #{assignment.id}
                           </span>
-                          <span className="rounded-full bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold text-violet-300 border border-violet-400/30">
+
+                          <span className="rounded-full border border-violet-400/30 bg-violet-400/20 px-2 py-0.5 text-[10px] font-bold text-violet-300">
                             Batch {assignment.batch}
                           </span>
+
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
                               isExpired
-                                ? "bg-red-400/20 text-red-300 border border-red-400/30"
-                                : "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30"
+                                ? "border-red-400/30 bg-red-400/20 text-red-300"
+                                : "border-emerald-400/30 bg-emerald-400/20 text-emerald-300"
                             }`}
                           >
                             {isExpired ? "Expired" : "Active"}
                           </span>
                         </div>
+
                         <p className="text-xs text-white/50">
-                          Total Score: {assignment.total_marks || "N/A"} • Expiry:{" "}
-                          {new Date(assignment.date_of_expiry).toLocaleDateString()}
+                          Total Score: {assignment.total_marks || "N/A"}
+                          {" • "}Expiry:{" "}
+                          {formatExpiryDate(assignment.date_of_expiry)}
                           {assignment.time && ` at ${assignment.time}`}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
+                          type="button"
                           onClick={() =>
                             router.push(
-                              `/admin/assessment/assignments/${assignment.id}`
+                              `/admin/assessment/assignments/${assignment.id}`,
                             )
                           }
-                          className="rounded-lg bg-violet-500/20 px-3 py-1.5 text-xs font-bold text-violet-300 border border-violet-400/30 hover:bg-violet-500/30 transition"
+                          className="rounded-lg border border-violet-400/30 bg-violet-500/20 px-3 py-1.5 text-xs font-bold text-violet-300 transition hover:bg-violet-500/30"
                         >
                           View Details
                         </button>
+
                         <button
+                          type="button"
                           onClick={() =>
                             router.push(
-                              `/admin/assessment/assignments/${assignment.id}/edit`
+                              `/admin/assessment/assignments/${assignment.id}/edit`,
                             )
                           }
-                          className="rounded-lg bg-fuchsia-500/20 px-3 py-1.5 text-xs font-bold text-fuchsia-300 border border-fuchsia-400/30 hover:bg-fuchsia-500/30 transition"
+                          className="rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-bold text-fuchsia-300 transition hover:bg-fuchsia-500/30"
                         >
                           Edit Expiry
                         </button>

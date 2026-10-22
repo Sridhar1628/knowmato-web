@@ -183,7 +183,7 @@ export default function MCQQuizPage() {
           <p className="text-4xl mb-4">📭</p>
           <p className="text-white/70">{error || t('mcq.noQuestions')}</p>
           <button
-            onClick={() => router.push(`/student/knowmato-plus/attempt/${attemptId}`)}
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)}
             className="mt-4 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2 text-sm font-bold text-white shadow-lg"
           >
             {t('mcq.backToAssignment')}
@@ -263,7 +263,7 @@ export default function MCQQuizPage() {
 
             <div className="mt-6 text-center">
               <button
-                onClick={() => router.push(`/student/knowmato-plus/attempt/${attemptId}/result`)}
+                onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}/result`)}
                 className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
               >
                 {t('mcq.viewFullResult')}
@@ -286,7 +286,7 @@ export default function MCQQuizPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push(`/student/knowmato-plus/attempt/${attemptId}`)}
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)}
             className="mb-4 flex items-center gap-1 text-sm font-semibold text-violet-300 hover:text-violet-200 transition-colors"
           >
             ← {t('mcq.backToAssignment')}

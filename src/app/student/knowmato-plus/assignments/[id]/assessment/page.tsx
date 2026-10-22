@@ -333,7 +333,7 @@ export default function AssessmentPage() {
           <div className="rounded-xl bg-white/5 p-4"><p className="text-xs text-white/45">Percentage</p><p className="mt-1 text-2xl font-bold text-violet-300">{finalResult?.percentage != null ? `${Number(finalResult.percentage).toFixed(0)}%` : '—'}</p></div>
         </div>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <button onClick={() => router.push(`/student/knowmato-plus/attempt/${attemptId}/result`)} className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-3 text-sm font-bold">View Full Result</button>
+          <button onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}/result`)} className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-7 py-3 text-sm font-bold">View Full Result</button>
           <button onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)} className="rounded-xl border border-white/15 bg-white/5 px-7 py-3 text-sm font-bold text-white/75">Back to Assignment</button>
         </div>
       </div>

@@ -279,7 +279,7 @@ export default function AssessmentDashboard() {
                   </p>
                   <button
                     onClick={() =>
-                      router.push(`/student/knowmato-plus/attempt/${item.id}/result`)
+                      router.push(`/student/knowmato-plus/assi/${item.id}/result`)
                     }
                     className="mt-4 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 py-2 text-xs font-bold text-white shadow-lg shadow-violet-500/25 hover:from-violet-600 hover:to-fuchsia-600 transition-all"
                   >

@@ -58,13 +58,29 @@ export const getLanguages = async (): Promise<
    ASSIGNMENTS
 ========================================================== */
 
+export interface AssignmentAttemptSummary {
+  id: number;
+  assignment: number;
+  attempt_number: number;
+  status: "in_progress" | "submitted" | "expired" | "abandoned";
+  submitted_at: string | null;
+  programming_score: string;
+  mcq_score: string;
+  total_score: string;
+  percentage: string;
+  is_passed: boolean;
+  is_locked: boolean;
+}
+
 export interface Assignment {
   id: number;
   status: string;
-  time: string;
-  date_of_expiry: string;
+  time: string | null;
+  date_of_expiry: string | null;
   batch: number;
   total_marks: string;
+  pass_percentage?: number;
+  my_attempt: AssignmentAttemptSummary | null;
 }
 
 export interface CreateAssignmentPayload {
