@@ -9,7 +9,6 @@ import {
   getCourseEnrollmentStatus,
   purchaseCourse,
   type Course,
-  type CourseEnrollmentStatus,
   getMyCreditBalances,
 } from "@/services/v2Service";
 
@@ -942,15 +941,8 @@ export default function KnowmatoPlusCoursesPage() {
                               event.stopPropagation();
                               openEnrollModal(course);
                             }}
-                            disabled={insufficientBalance && !creditsLoading}
-                            title={insufficientBalance
-                              ? t("knowmatoCourses.insufficientCreditsTooltip", "Insufficient credits")
-                              : t("knowmatoCourses.enrollButton", "Enroll")}
-                            className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${
-                              insufficientBalance
-                                ? "cursor-not-allowed bg-gray-500/50 opacity-70"
-                                : "bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25 hover:opacity-90"
-                            }`}
+                            title={t("knowmatoCourses.enrollButton", "Enroll")}
+                            className="rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2 focus:ring-offset-[#171333]"
                           >
                             {t("knowmatoCourses.enrollButton", "Enroll")}
                           </button>
@@ -1030,6 +1022,136 @@ export default function KnowmatoPlusCoursesPage() {
           </p>
         </div>
       </button>
+
+      {/* ================================================================
+          Course Enrollment Confirmation Modal
+      ================================================================= */}
+      {showEnrollModal && selectedCourse && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEnrollModal();
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="enrollment-modal-title"
+            aria-describedby="enrollment-modal-description"
+            className="w-full max-w-md rounded-2xl border border-violet-400/20 bg-[#171333] p-6 text-white shadow-2xl"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-300">
+                  KnowMato+
+                </p>
+                <h2 id="enrollment-modal-title" className="mt-2 text-xl font-bold">
+                  Confirm Enrollment
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={closeEnrollModal}
+                disabled={enrollLoading}
+                aria-label="Close enrollment dialog"
+                className="rounded-lg px-2 py-1 text-2xl leading-none text-white/60 transition hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p id="enrollment-modal-description" className="mt-3 text-sm leading-6 text-white/65">
+              Review the course details below before confirming your enrollment.
+            </p>
+
+            <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/45">
+                Selected course
+              </p>
+              <h3 className="mt-2 break-words text-lg font-bold text-white">
+                {selectedCourse.title}
+              </h3>
+              {selectedCourse.subtitle && (
+                <p className="mt-1 text-sm text-white/55">
+                  {selectedCourse.subtitle}
+                </p>
+              )}
+
+              <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-sm">
+                <span className="text-white/60">Course type</span>
+                <span className="font-semibold capitalize text-white">
+                  {selectedCourse.course_type}
+                </span>
+              </div>
+
+              {selectedCourse.course_type === "free" ? (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-white/60">Enrollment cost</span>
+                  <span className="font-bold text-emerald-300">Free</span>
+                </div>
+              ) : (
+                <>
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-white/60">Required credits</span>
+                    <span className="font-semibold text-white">
+                      {Number(selectedCourse.course_credit_cost ?? 0).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-white/60">Available credits</span>
+                    <span className="font-semibold text-white">
+                      {creditsLoading ? "Loading..." : courseCredits.toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {selectedCourse.course_type === "free" ? (
+              <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3">
+                <p className="text-sm leading-5 text-emerald-200">
+                  This is a free course. No credits will be deducted from your account.
+                </p>
+              </div>
+            ) : !creditsLoading && !canEnroll(selectedCourse) ? (
+              <div className="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/10 p-3">
+                <p className="text-sm leading-5 text-rose-200">
+                  You do not have enough credits to enroll in this course.
+                  Please add credits to your account and try again.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs leading-5 text-white/45">
+                The required credits will be deducted when you confirm enrollment.
+              </p>
+            )}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={closeEnrollModal}
+                disabled={enrollLoading}
+                className="flex-1 rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleEnroll}
+                disabled={
+                  enrollLoading ||
+                  (selectedCourse.course_type !== "free" &&
+                    (creditsLoading || !canEnroll(selectedCourse)))
+                }
+                className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-violet-500/20 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2 focus:ring-offset-[#171333] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {enrollLoading ? "Enrolling..." : "Confirm Enrollment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </div>
   );
