@@ -90,6 +90,7 @@ export default function DashboardSidebar({ open, onClose, pathname }: DashboardS
     { icon: "📋", label: t("sidebar.myDoubts"), href: "/student/my-doubts" },
     { icon: "📰", label: t("currentAffairs.title"), href: "/student/current-affairs" },
     { icon: "🧑‍🎓", label: t("studentProfile.myProfile"), href: "/student/profile" },
+    { icon: "⚙️", label: t("sidebar.settings"), href: "/student/knowmato-plus/settings" },
     {
       icon: "✨",
       label: t("knowmatoPlus.knowmatoPlus"),
