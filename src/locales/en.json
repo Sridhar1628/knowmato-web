@@ -140,7 +140,8 @@
     "leaderboard": "Leaderboard",
     "settings": "Settings",
     "home": "Home",
-    "credits":"Credits"
+    "credits":"Credits",
+    "collapse": "Collapse Sidebar"
   },
   "tutorSidebar": {
     "browseDoubts": "Browse Doubts",

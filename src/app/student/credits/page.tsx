@@ -26,7 +26,7 @@ import {
   PurchaseHistoryResponse,
 } from "@/services/v2Service"; // adjust import path
 
-const TABS = ["Overview", "Active Plans", "History", "Buy Credits"] as const;
+const TABS = ["Buy Credits", "Overview", "Active Plans", "History"] as const;
 type Tab = (typeof TABS)[number];
 
 const CreditPlansPage = () => {
@@ -42,7 +42,7 @@ const CreditPlansPage = () => {
   // UI states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("Overview");
+  const [activeTab, setActiveTab] = useState<Tab>("Buy Credits");
   const [purchasingPlanId, setPurchasingPlanId] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<CreditPlan | null>(null);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);

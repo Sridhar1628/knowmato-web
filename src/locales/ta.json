@@ -138,7 +138,8 @@
     "leaderboard": "தலைவர் பட்டியல்",
     "settings": "அமைப்புகள்",
     "home": "முகப்பு",
-    "credits":"கிரெடிட்கள்"
+    "credits":"கிரெடிட்கள்",
+    "collapse": "பக்கப்பட்டியை சுருக்கவும் "
   },
   "tutorSidebar": {
     "browseDoubts": "சந்தேகங்களை உலாவுக",

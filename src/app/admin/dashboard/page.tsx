@@ -219,6 +219,7 @@ export default function AdminDashboardPage() {
               <QuickAction title="Jobs" icon="💼" path="/admin/jobs" />
               <QuickAction title="Assessment" icon="📚" path="/admin/assessment" />
               <QuickAction title="Company Applications" icon="🏢" path="/admin/company-applications" />
+              <QuickAction title="Credits Management" icon="💳" path="/admin/credits" />
             </div>
           </motion.div>
 
