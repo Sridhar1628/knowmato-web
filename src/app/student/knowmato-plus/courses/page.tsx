@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +15,96 @@ import {
 
 import AlertService from "@/services/alertService";
 
+type NormalizedEnrollment = {
+  found: boolean;
+  enrolled: boolean;
+  progress: number;
+};
+
+function normalizeEnrollmentResponse(input: unknown): NormalizedEnrollment {
+  const queue: unknown[] = [input];
+  const seen = new Set<object>();
+  let progressValue: unknown = 0;
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object") continue;
+    if (seen.has(current as object)) continue;
+    seen.add(current as object);
+
+    const record = current as Record<string, unknown>;
+    const enrollmentKeys = [
+      "is_enrolled",
+      "isEnrolled",
+      "enrolled",
+      "is_enrolled_in_course",
+      "has_enrolled",
+    ];
+
+    for (const key of enrollmentKeys) {
+      if (typeof record[key] === "boolean") {
+        const rawProgress =
+          record.progress_percentage ??
+          record.progress ??
+          record.completion_percentage ??
+          progressValue;
+        const parsedProgress = Number(rawProgress);
+        return {
+          found: true,
+          enrolled: record[key] as boolean,
+          progress: Number.isFinite(parsedProgress)
+            ? Math.min(100, Math.max(0, parsedProgress))
+            : 0,
+        };
+      }
+    }
+
+    const statusText = String(
+      record.enrollment_status ?? record.enrollmentStatus ?? ""
+    ).toLowerCase();
+    if (statusText) {
+      const enrolled = ["enrolled", "active", "completed", "success"].includes(statusText);
+      const notEnrolled = ["not_enrolled", "not enrolled", "unenrolled", "inactive", "pending"].includes(statusText);
+      if (enrolled || notEnrolled) {
+        const parsedProgress = Number(
+          record.progress_percentage ?? record.progress ?? progressValue
+        );
+        return {
+          found: true,
+          enrolled,
+          progress: Number.isFinite(parsedProgress)
+            ? Math.min(100, Math.max(0, parsedProgress))
+            : 0,
+        };
+      }
+    }
+
+    if (
+      record.progress_percentage !== undefined ||
+      record.progress !== undefined
+    ) {
+      progressValue =
+        record.progress_percentage ?? record.progress ?? progressValue;
+    }
+
+    for (const [key, value] of Object.entries(record)) {
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
+        queue.push(value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item && typeof item === "object") queue.push(item);
+        }
+      }
+    }
+  }
+
+  return { found: false, enrolled: false, progress: 0 };
+}
+
 export default function KnowmatoPlusCoursesPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -26,6 +116,9 @@ export default function KnowmatoPlusCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [courseFilter, setCourseFilter] = useState<"all" | "free" | "paid">("all");
 
   const [enrolledCourseIds, setEnrolledCourseIds] =
     useState<Set<number> | null>(null);
@@ -107,57 +200,9 @@ export default function KnowmatoPlusCoursesPage() {
                 course.id,
               );
 
-            // Support:
-            //
-            // 1. { is_enrolled, progress_percentage }
-            //
-            // 2. { data: { is_enrolled, progress_percentage } }
-
-            const status: CourseEnrollmentStatus =
-              (() => {
-                if (
-                  rawStatus &&
-                  typeof rawStatus === "object" &&
-                  "data" in rawStatus
-                ) {
-                  const data = (
-                    rawStatus as {
-                      data?: unknown;
-                    }
-                  ).data;
-
-                  if (
-                    data &&
-                    typeof data === "object"
-                  ) {
-                    return data as CourseEnrollmentStatus;
-                  }
-                }
-
-                return rawStatus;
-              })();
-
-            const enrolled =
-              Boolean(status?.is_enrolled);
-
-            const rawProgress =
-              status?.progress_percentage ?? 0;
-
-            const numericProgress =
-              Number(rawProgress);
-
-            const progress =
-              Number.isFinite(
-                numericProgress,
-              )
-                ? Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      numericProgress,
-                    ),
-                  )
-                : 0;
+            const normalized = normalizeEnrollmentResponse(rawStatus);
+            const enrolled = normalized.enrolled;
+            const progress = normalized.progress;
 
             console.log(
               `COURSE ${course.id} ENROLLMENT STATUS:`,
@@ -267,7 +312,7 @@ export default function KnowmatoPlusCoursesPage() {
     courseId: number,
   ) => {
     router.push(
-      `/student/knowmato-plus/${courseId}`,
+      `/student/knowmato-plus/courses/${courseId}`,
     );
   };
 
@@ -501,6 +546,25 @@ export default function KnowmatoPlusCoursesPage() {
   // Loading skeleton
   // -----------------------------------------------------------------------
 
+  const filteredCourses = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return courses.filter((course) => {
+      const matchesType =
+        courseFilter === "all" ||
+        String(course.course_type || "").toLowerCase() === courseFilter;
+      const searchable = [
+        course.title,
+        course.subtitle,
+        course.description,
+        course.category_name,
+        course.instructor_name,
+        course.language,
+        course.difficulty,
+      ].filter(Boolean).join(" ").toLowerCase();
+      return matchesType && (!query || searchable.includes(query));
+    });
+  }, [courses, courseFilter, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
@@ -574,6 +638,38 @@ export default function KnowmatoPlusCoursesPage() {
           )}
         </div>
 
+        {/* Search and course-type filters */}
+        <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40">⌕</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search courses by title, topic, instructor..."
+              aria-label="Search courses"
+              className="w-full rounded-xl border border-white/10 bg-[#100d2c]/70 py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-violet-400"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Filter courses">
+            {(["all", "free", "paid"] as const).map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setCourseFilter(filter)}
+                aria-pressed={courseFilter === filter}
+                className={`rounded-xl px-4 py-2.5 text-sm font-semibold capitalize transition ${
+                  courseFilter === filter
+                    ? "bg-violet-600 text-white shadow-lg shadow-violet-500/20"
+                    : "border border-white/10 bg-white/5 text-white/65 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {filter === "all" ? "All Courses" : `${filter} Courses`}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ==============================================================
             Loading skeleton
         =============================================================== */}
@@ -629,12 +725,12 @@ export default function KnowmatoPlusCoursesPage() {
 
         {!loading &&
           !error &&
-          courses.length === 0 && (
+          filteredCourses.length === 0 && (
             <div className="mt-8 text-center text-white/50">
               <p>
-                {t(
-                  "knowmatoCourses.noCourses",
-                )}
+                {courses.length === 0
+                  ? t("knowmatoCourses.noCourses")
+                  : "No courses match your search or selected filter."}
               </p>
             </div>
           )}
@@ -645,9 +741,9 @@ export default function KnowmatoPlusCoursesPage() {
 
         {!loading &&
           !error &&
-          courses.length > 0 && (
+          filteredCourses.length > 0 && (
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.map(
+              {filteredCourses.map(
                 (course) => {
                   const isEnrolled =
                     enrolledCourseIds?.has(
@@ -673,18 +769,15 @@ export default function KnowmatoPlusCoursesPage() {
                   return (
                     <div
                       key={course.id}
-                      className={`rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition ${
-                        isEnrolled
-                          ? "cursor-pointer hover:-translate-y-1 hover:border-violet-500/30 hover:shadow-xl"
-                          : "hover:border-white/15"
-                      }`}
-                      onClick={() => {
-                        if (
-                          isEnrolled
-                        ) {
-                          handleCardClick(
-                            course.id,
-                          );
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`View ${course.title}`}
+                      className="cursor-pointer rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-xl transition hover:-translate-y-1 hover:border-violet-500/30 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-violet-400"
+                      onClick={() => handleCardClick(course.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleCardClick(course.id);
                         }
                       }}
                     >
@@ -838,59 +931,23 @@ export default function KnowmatoPlusCoursesPage() {
                               event.stopPropagation();
 
                               router.push(
-                                `/student/knowmato-plus/${course.id}`,
+                                `/student/knowmato-plus/courses/${course.id}`,
                               );
                             }}
                             className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:opacity-90"
                           >
-                            {progress >
-                              0 &&
-                            progress <
-                              100
-                              ? t(
-                                  "knowmatoCourses.continueLearning",
-                                  "Continue Learning",
-                                )
-                              : progress >=
-                                100
-                              ? t(
-                                  "knowmatoCourses.completed",
-                                  "Completed",
-                                )
-                              : t(
-                                  "knowmatoCourses.goToCourse",
-                                )}
+                            View Details
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-
-                              openEnrollModal(
-                                course,
-                              );
+                              handleCardClick(course.id);
                             }}
-                            disabled={
-                              insufficientBalance &&
-                              !creditsLoading
-                            }
-                            title={
-                              insufficientBalance
-                                ? t(
-                                    "knowmatoCourses.insufficientCreditsTooltip",
-                                  )
-                                : ""
-                            }
-                            className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${
-                              insufficientBalance
-                                ? "cursor-not-allowed bg-gray-500/50 opacity-70"
-                                : "bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25 hover:opacity-90"
-                            }`}
+                            className="rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90"
                           >
-                            {t(
-                              "knowmatoCourses.enrollButton",
-                            )}
+                            View Details
                           </button>
                         )}
                       </div>
@@ -918,169 +975,6 @@ export default function KnowmatoPlusCoursesPage() {
               )}
             </div>
           )}
-
-        {/* ==============================================================
-            Enrollment modal
-        =============================================================== */}
-
-        {showEnrollModal &&
-          selectedCourse && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-              onMouseDown={(event) => {
-                if (
-                  event.target ===
-                  event.currentTarget
-                ) {
-                  closeEnrollModal();
-                }
-              }}
-            >
-              <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/5 p-6 shadow-2xl backdrop-blur-xl">
-                {/* ------------------------------------------------------
-                    Modal title
-                ------------------------------------------------------- */}
-
-                <h2 className="text-xl font-bold text-white">
-                  {t(
-                    "knowmatoCourses.enrollModalTitle",
-                    {
-                      title:
-                        selectedCourse.title,
-                    },
-                  )}
-                </h2>
-
-                {/* ------------------------------------------------------
-                    Description
-                ------------------------------------------------------- */}
-
-                <p className="mt-2 text-white/70">
-                  {selectedCourse.subtitle ||
-                    selectedCourse.description}
-                </p>
-
-                {/* ------------------------------------------------------
-                    Course cost + balance
-                ------------------------------------------------------- */}
-
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="rounded-full border border-cyan-400/30 bg-cyan-500/20 px-3 py-1 text-sm font-semibold text-cyan-300">
-                    {selectedCourse.course_type ===
-                    "free"
-                      ? t(
-                          "knowmatoCourses.free",
-                        )
-                      : t(
-                          "knowmatoCourses.creditCost",
-                          {
-                            cost:
-                              selectedCourse.course_credit_cost,
-                          },
-                        )}
-                  </span>
-
-                  {selectedCourse.course_type !==
-                    "free" && (
-                    <span className="text-sm text-white/50">
-                      {t(
-                        "knowmatoCourses.yourBalance",
-                        {
-                          balance:
-                            courseCredits,
-                        },
-                      )}
-                    </span>
-                  )}
-                </div>
-
-                {/* ------------------------------------------------------
-                    Enrollment information
-                ------------------------------------------------------- */}
-
-                <div className="mt-4 rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-3">
-                  {selectedCourse.course_type ===
-                  "free" ? (
-                    <p className="text-sm text-cyan-300">
-                      {t(
-                        "knowmatoCourses.freeCourseMessage",
-                      )}
-                    </p>
-                  ) : !canEnroll(
-                      selectedCourse,
-                    ) ? (
-                    <p className="text-sm text-rose-400">
-                      {t(
-                        "knowmatoCourses.insufficientBalanceModal",
-                        {
-                          needed:
-                            selectedCourse.course_credit_cost,
-                          current:
-                            courseCredits,
-                        },
-                      )}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-cyan-300">
-                      {t(
-                        "knowmatoCourses.deductionMessage",
-                        {
-                          cost:
-                            selectedCourse.course_credit_cost,
-                        },
-                      )}
-                    </p>
-                  )}
-                </div>
-
-                {/* ------------------------------------------------------
-                    Modal actions
-                ------------------------------------------------------- */}
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={
-                      closeEnrollModal
-                    }
-                    disabled={
-                      enrollLoading
-                    }
-                    className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/20 disabled:opacity-50"
-                  >
-                    {t(
-                      "common.cancel",
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={
-                      handleEnroll
-                    }
-                    disabled={
-                      enrollLoading ||
-                      (selectedCourse.course_type !==
-                        "free" &&
-                        !canEnroll(
-                          selectedCourse,
-                        ))
-                    }
-                    className="rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {enrollLoading
-                      ? t(
-                          "knowmatoCourses.enrolling",
-                        )
-                      : t(
-                          "knowmatoCourses.confirmEnrollment",
-                        )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-      </div>
 
       {/* ================================================================
           KnowMato Agent Floating Button
@@ -1131,6 +1025,7 @@ export default function KnowmatoPlusCoursesPage() {
           </p>
         </div>
       </button>
+    </div>
     </div>
   );
 }

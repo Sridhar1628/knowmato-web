@@ -24,6 +24,96 @@ import type {
 import {getCourseProgress,completeLecture,} from "@/services/courseService";
 import AlertService from "@/services/alertService";
 
+type NormalizedEnrollment = {
+  found: boolean;
+  enrolled: boolean;
+  progress: number;
+};
+
+function normalizeEnrollmentResponse(input: unknown): NormalizedEnrollment {
+  const queue: unknown[] = [input];
+  const seen = new Set<object>();
+  let progressValue: unknown = 0;
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || typeof current !== "object") continue;
+    if (seen.has(current as object)) continue;
+    seen.add(current as object);
+
+    const record = current as Record<string, unknown>;
+    const enrollmentKeys = [
+      "is_enrolled",
+      "isEnrolled",
+      "enrolled",
+      "is_enrolled_in_course",
+      "has_enrolled",
+    ];
+
+    for (const key of enrollmentKeys) {
+      if (typeof record[key] === "boolean") {
+        const rawProgress =
+          record.progress_percentage ??
+          record.progress ??
+          record.completion_percentage ??
+          progressValue;
+        const parsedProgress = Number(rawProgress);
+        return {
+          found: true,
+          enrolled: record[key] as boolean,
+          progress: Number.isFinite(parsedProgress)
+            ? Math.min(100, Math.max(0, parsedProgress))
+            : 0,
+        };
+      }
+    }
+
+    const statusText = String(
+      record.enrollment_status ?? record.enrollmentStatus ?? ""
+    ).toLowerCase();
+    if (statusText) {
+      const enrolled = ["enrolled", "active", "completed", "success"].includes(statusText);
+      const notEnrolled = ["not_enrolled", "not enrolled", "unenrolled", "inactive", "pending"].includes(statusText);
+      if (enrolled || notEnrolled) {
+        const parsedProgress = Number(
+          record.progress_percentage ?? record.progress ?? progressValue
+        );
+        return {
+          found: true,
+          enrolled,
+          progress: Number.isFinite(parsedProgress)
+            ? Math.min(100, Math.max(0, parsedProgress))
+            : 0,
+        };
+      }
+    }
+
+    if (
+      record.progress_percentage !== undefined ||
+      record.progress !== undefined
+    ) {
+      progressValue =
+        record.progress_percentage ?? record.progress ?? progressValue;
+    }
+
+    for (const [key, value] of Object.entries(record)) {
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
+        queue.push(value);
+      } else if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item && typeof item === "object") queue.push(item);
+        }
+      }
+    }
+  }
+
+  return { found: false, enrolled: false, progress: 0 };
+}
+
 interface Lecture {
   id: number;
   title: string;
@@ -212,27 +302,14 @@ export default function CourseDetailPage() {
     try {
       const rawStatus = await getCourseEnrollmentStatus(courseId);
 
-      // The API/service may return either:
-      // 1. { is_enrolled, progress_percentage }
-      // 2. { data: { is_enrolled, progress_percentage } }
-      // 3. { success, status, message, data: { is_enrolled, ... } }
-      const status = (() => {
-        if (
-          rawStatus &&
-          typeof rawStatus === "object" &&
-          "data" in rawStatus
-        ) {
-          const data = (rawStatus as { data?: unknown }).data;
-
-          if (data && typeof data === "object") {
-            return data as { is_enrolled?: boolean };
-          }
-        }
-
-        return rawStatus as { is_enrolled?: boolean } | null;
-      })();
-
-      setIsEnrolled(Boolean(status?.is_enrolled));
+      const normalized = normalizeEnrollmentResponse(rawStatus);
+      console.log("[COURSE ENROLLMENT NORMALIZED]", {
+        courseId,
+        enrolled: normalized.enrolled,
+        found: normalized.found,
+        rawStatus,
+      });
+      setIsEnrolled(normalized.enrolled);
     } catch (err) {
       console.error("Failed to load course enrollment status:", err);
       setIsEnrolled(false);
