@@ -32,48 +32,48 @@ interface DiscussionForumWebProps {
 }
 
 
+
 // ============================================================
 // WEBSOCKET CONFIGURATION
 // ============================================================
-//
-// Production:
-//   wss://api.knowmato.in
-//
-// Local:
-//   ws://127.0.0.1:8000
-//
-// You can override this with:
-//
-// NEXT_PUBLIC_WS_BASE_URL=wss://api.knowmato.in
-//
-// IMPORTANT:
-// The paths below must match your Django Channels routing.
-// Based on the backend group names you already have:
-//
-//   discussion_course_<course_id>
-//   discussion_thread_<thread_id>
-//
-// ============================================================
 
-const WS_BASE_URL =
+const CONFIGURED_WS_URL =
   process.env.NEXT_PUBLIC_WS_BASE_URL ||
-  (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    "http://127.0.0.1:8000"
-  )
-    .replace(/^http:\/\//, "ws://")
-    .replace(/^https:\/\//, "wss://")
+  process.env.NEXT_PUBLIC_WS_URL;
+
+const CONFIGURED_API_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL;
+
+const DEFAULT_API_HOST =
+  process.env.NODE_ENV === "production"
+    ? "https://api.knowmato.in"
+    : "http://127.0.0.1:8000";
+
+function normalizeWebSocketHost(value: string): string {
+  const host = value.trim();
+
+  if (!host) {
+    throw new Error("WebSocket/API URL is configured but empty.");
+  }
+
+  return host
+    .replace(/^https:/i, "wss:")
+    .replace(/^http:/i, "ws:")
+    .replace(/\/api\/?$/i, "")
     .replace(/\/+$/, "");
+}
 
+const WS_BASE_URL = normalizeWebSocketHost(
+  CONFIGURED_WS_URL || CONFIGURED_API_URL || DEFAULT_API_HOST,
+);
 
-const COURSE_WS_PATH =
-  (courseId: number) =>
-    `/ws/discussion/course/${courseId}/`;
+// Keep these paths aligned with the Django Channels routing.
+const COURSE_WS_PATH = (courseId: number) =>
+  `/ws/discussion/course/${courseId}/`;
 
-
-const THREAD_WS_PATH =
-  (threadId: number) =>
-    `/ws/discussion/thread/${threadId}/`;
+const THREAD_WS_PATH = (threadId: number) =>
+  `/ws/discussion/thread/${threadId}/`;
 
 
 // ============================================================
@@ -681,12 +681,8 @@ function normalizeReply(
 
 
 function createSocketUrl(path: string): string {
-  const baseUrl = WS_BASE_URL
-    .replace(/^http:\/\//, "ws://")
-    .replace(/^https:\/\//, "wss://")
-    .replace(/\/+$/, "");
-
-  return `${baseUrl}${path}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${WS_BASE_URL}${normalizedPath}`;
 }
 
 
