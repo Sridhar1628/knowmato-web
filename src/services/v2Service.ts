@@ -2696,21 +2696,20 @@ export interface Job {
     updated_at: string;
 }
 
+
 export interface JobApplication {
-    id: number;
-    job: number;
-    student: number;
-
-    student_name?: string;
-    job_title?: string;
-    company_name?: string;
-
-    cover_letter?: string;
-    resume_url?: string | null;
-    status: string;
-    company_notes?: string;
-    applied_at: string;
-    updated_at: string;
+  id: number;
+  student: number;
+  student_name?: string;
+  job: number;
+  job_title?: string;
+  company_name?: string;
+  status: string;
+  cover_letter?: string | null;
+  resume_url?: string | null;
+  company_notes?: string | null;
+  applied_at: string;
+  updated_at?: string;
 }
 
 export interface ApplyJobRequest {
@@ -2834,16 +2833,12 @@ export const withdrawJobApplication = async (
 export const updateJobApplicationStatus = async (
     id: number,
     status: string,
-    company_notes = "",
+    company_notes?: string,
 ): Promise<JobApplication> => {
     const response = await axiosInstance.patch(
         `/v2/job-applications/${id}/update-status/`,
-        {
-            status,
-            company_notes,
-        },
+        { status, ...(company_notes !== undefined ? { company_notes } : {}) },
     );
-
     return response.data;
 };
 
@@ -2876,21 +2871,20 @@ export interface Internship {
 }
 
 export interface InternshipApplication {
-    id: number;
-    internship: number;
-    student: number;
-    student_name?: string;
-    internship_title?: string;
-    company_name?: string;
-    cover_letter?: string;
-    resume_url?: string | null;
-    status: string;
-    company_notes?: string;
-    applied_at: string;
-    updated_at: string;
-    resume?: string;
-    created_at?: string;
+  id: number;
+  student: number;
+  student_name?: string;
+  internship: number;
+  internship_title?: string;
+  company_name?: string;
+  status: string;
+  applied_at: string;
+  updated_at?: string;
+  cover_letter?: string | null;
+  resume_url?: string | null;
+  company_notes?: string | null;
 }
+
 export interface ApplyInternshipRequest {
     internship: number;
     cover_letter?: string;
@@ -3022,16 +3016,12 @@ export const withdrawInternshipApplication = async (
 export const updateInternshipApplicationStatus = async (
     id: number,
     status: string,
-    company_notes = "",
+    company_notes?: string,
 ): Promise<InternshipApplication> => {
     const response = await axiosInstance.patch(
         `/v2/internship-applications/${id}/update-status/`,
-        {
-            status,
-            company_notes,
-        },
+        { status, ...(company_notes !== undefined ? { company_notes } : {}) },
     );
-
     return response.data;
 };
 

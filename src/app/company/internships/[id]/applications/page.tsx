@@ -123,7 +123,11 @@ export default function CompanyInternshipApplicationsPage() {
 
       console.log("INTERNSHIP APPLICATIONS API RESPONSE:", res);
 
-      setApps(toArray<InternshipApplication>(res));
+      setApps(
+        toArray<InternshipApplication>(res).filter(
+          (app) => Number(app.internship) === numericInternshipId
+        )
+      );
     } catch (err: any) {
       console.error("LOAD INTERNSHIP APPLICATIONS ERROR:", err);
 
@@ -153,14 +157,14 @@ export default function CompanyInternshipApplicationsPage() {
     setUpdatingId(appId);
 
     try {
-      const notes = notesDraft[appId] ?? "";
+      const notes = notesDraft[appId] ?? apps.find((a) => a.id === appId)?.company_notes ?? "";
       await updateInternshipApplicationStatus(appId, status, notes);
 
       // Optimistic local update — no refetch needed
       setApps((prev) =>
         (Array.isArray(prev) ? prev : []).map((a) =>
           a.id === appId
-            ? { ...a, status, company_notes: notes || a.company_notes }
+            ? { ...a, status, company_notes: notes }
             : a
         )
       );
@@ -196,6 +200,7 @@ export default function CompanyInternshipApplicationsPage() {
       const matchesStatus = statusFilter ? a.status === statusFilter : true;
       const matchesSearch = q
         ? String(a.student).includes(q) ||
+          (a.student_name || "").toLowerCase().includes(q) ||
           (a.cover_letter || "").toLowerCase().includes(q)
         : true;
       return matchesStatus && matchesSearch;
@@ -265,7 +270,7 @@ export default function CompanyInternshipApplicationsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by student ID or cover letter..."
+              placeholder="Search by student name, ID or cover letter..."
               className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 transition focus:border-violet-400/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
             />
           </div>
@@ -383,10 +388,13 @@ export default function CompanyInternshipApplicationsPage() {
 
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-white">
-                        Student #{app.student}
+                        {app.student_name || `Student #${app.student}`}
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        {app.internship_title || `Internship #${app.internship}`}
                       </p>
                       <p className="text-xs text-white/50">
-                        Applied {formatDate(app.applied_at)}
+                        {app.company_name || "Company"} · Applied {formatDate(app.applied_at)}
                       </p>
                     </div>
                   </div>
@@ -478,7 +486,9 @@ export default function CompanyInternshipApplicationsPage() {
                         Update Status
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {STATUS_FLOW.map((s) => {
+                        {app.status === "withdrawn" ? (
+                          <p className="text-sm text-white/40">This application was withdrawn by the student.</p>
+                        ) : STATUS_FLOW.map((s) => {
                           const isActive = app.status === s;
                           return (
                             <button

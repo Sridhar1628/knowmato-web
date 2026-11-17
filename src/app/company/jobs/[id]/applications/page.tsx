@@ -199,7 +199,9 @@ export default function CompanyJobApplicationsPage() {
         `Application marked as ${selectedStatus}.`
       );
 
-      closeUpdateModal();
+      setUpdatingId(null);
+      setSelectedStatus("");
+      setCompanyNotes("");
     } catch (err: any) {
       console.error("UPDATE STATUS ERROR:", err);
       const detail =
@@ -227,6 +229,7 @@ export default function CompanyJobApplicationsPage() {
       const matchesStatus = statusFilter ? a.status === statusFilter : true;
       const matchesSearch = q
         ? String(a.student).includes(q) ||
+          (a.student_name || "").toLowerCase().includes(q) ||
           (a.cover_letter || "").toLowerCase().includes(q)
         : true;
       return matchesStatus && matchesSearch;
@@ -318,7 +321,7 @@ export default function CompanyJobApplicationsPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by student ID or cover letter..."
+                placeholder="Search by student name, ID or cover letter..."
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-white placeholder:text-white/30 transition focus:border-violet-400/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-violet-500/20"
               />
             </div>
@@ -436,7 +439,7 @@ export default function CompanyJobApplicationsPage() {
 
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-white">
-                        Student #{app.student}
+                        {app.student_name || `Student #${app.student}`}
                       </p>
                       <p className="text-xs text-white/50">
                         Applied {formatDate(app.applied_at)}
