@@ -380,12 +380,33 @@ export default function CourseDetailPage() {
 
     let cancelled = false;
 
+    // Select the first available lecture immediately. Progress APIs are
+    // supplemental and must never leave an enrolled learner on the lock view.
+    const orderedLectures = [...allLectures].sort(
+      (a, b) => a.order - b.order,
+    );
+    const firstLecture = orderedLectures[0] ?? null;
+
+    if (firstLecture) {
+      const firstSection = course.sections.find((section) =>
+        section.lectures.some((lecture) => lecture.id === firstLecture.id),
+      );
+      if (firstSection) setExpandedSections(new Set([firstSection.id]));
+      setActiveLectureId((current) =>
+        current && orderedLectures.some((lecture) => lecture.id === current)
+          ? current
+          : firstLecture.id,
+      );
+      setActiveQuizId(null);
+      setActiveTab("video");
+    }
+
     const initializeLearningState = async () => {
       try {
-        await loadCourseProgress();
-        await loadLectureProgress(
-          course.sections.flatMap((section) => section.lectures),
-        );
+        await Promise.allSettled([
+          loadCourseProgress(),
+          loadLectureProgress(orderedLectures),
+        ]);
 
         if (cancelled) return;
 
@@ -393,34 +414,26 @@ export default function CourseDetailPage() {
           () => null,
         );
 
+        if (cancelled) return;
+
         const lastLectureId = latestProgress?.last_lecture?.id;
-
-        const firstLecture =
-          course.sections
-            .flatMap((section) => section.lectures)
-            .sort((a, b) => a.order - b.order)[0] ?? null;
-
         const resumeLecture =
-          allLectures.find((lecture) => lecture.id === lastLectureId) ??
+          orderedLectures.find((lecture) => lecture.id === lastLectureId) ??
           firstLecture;
 
         if (resumeLecture) {
           const parentSection = course.sections.find((section) =>
-            section.lectures.some(
-              (lecture) => lecture.id === resumeLecture.id,
-            ),
+            section.lectures.some((lecture) => lecture.id === resumeLecture.id),
           );
 
-          if (parentSection) {
-            setExpandedSections(new Set([parentSection.id]));
-          }
-
+          if (parentSection) setExpandedSections(new Set([parentSection.id]));
           setActiveLectureId(resumeLecture.id);
           setActiveQuizId(null);
           setActiveTab("video");
         }
       } catch (err) {
-        console.error("Failed to initialize learning state:", err);
+        // The first lecture is already selected; keep learning accessible.
+        console.error("Failed to initialize learning progress:", err);
       }
     };
 
@@ -1470,7 +1483,7 @@ export default function CourseDetailPage() {
                     )}
                   </div>
                 </div>
-              ) : (
+              ) : !isEnrolled ? (
                 <div className="mx-auto max-w-md rounded-2xl border border-amber-500/20 bg-amber-500/10 p-8 text-center">
                   <div className="text-4xl">🔒</div>
                   <h2 className="mt-4 text-xl font-bold text-amber-200">
@@ -1494,6 +1507,27 @@ export default function CourseDetailPage() {
                       ? t("courseDetail.enrolling")
                       : t("courseDetail.enrollNow")}
                   </button>
+                </div>
+              ) : (
+                <div className="mx-auto max-w-2xl rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+                  <div className="text-4xl">📚</div>
+                  <h2 className="mt-4 text-xl font-bold text-violet-200">
+                    You are enrolled in this course
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-white/60">
+                    {allLectures.length > 0
+                      ? "Choose a lecture from the syllabus to start learning."
+                      : "Course content is not available yet. Please check back later."}
+                  </p>
+                  {allLectures.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("syllabus")}
+                      className="mt-5 rounded-lg bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 px-5 py-3 font-bold"
+                    >
+                      Open Course Syllabus
+                    </button>
+                  )}
                 </div>
               )}
             </section>

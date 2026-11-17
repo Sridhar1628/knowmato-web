@@ -929,25 +929,30 @@ export default function KnowmatoPlusCoursesPage() {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-
-                              router.push(
-                                `/student/knowmato-plus/courses/${course.id}`,
-                              );
+                              router.push(`/student/knowmato-plus/${course.id}`);
                             }}
                             className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/25 transition hover:opacity-90"
                           >
-                            View Details
+                            {t("knowmatoCourses.continueLearning", "Continue Learning")}
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
-                              handleCardClick(course.id);
+                              openEnrollModal(course);
                             }}
-                            className="rounded-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-violet-500/25 transition hover:opacity-90"
+                            disabled={insufficientBalance && !creditsLoading}
+                            title={insufficientBalance
+                              ? t("knowmatoCourses.insufficientCreditsTooltip", "Insufficient credits")
+                              : t("knowmatoCourses.enrollButton", "Enroll")}
+                            className={`rounded-lg px-4 py-2 text-sm font-bold text-white transition ${
+                              insufficientBalance
+                                ? "cursor-not-allowed bg-gray-500/50 opacity-70"
+                                : "bg-gradient-to-r from-violet-500 to-fuchsia-500 shadow-lg shadow-violet-500/25 hover:opacity-90"
+                            }`}
                           >
-                            View Details
+                            {t("knowmatoCourses.enrollButton", "Enroll")}
                           </button>
                         )}
                       </div>
