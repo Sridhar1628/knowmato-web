@@ -57,7 +57,7 @@ export default function LoginPage() {
   const dispatch = useDispatch();
 
   const {
-    refreshAuth,
+    setAuthenticatedUser,
   } = useAuthContext();
 
   const [isLoading, setIsLoading] =
@@ -87,7 +87,22 @@ export default function LoginPage() {
         throw new Error('Login response did not contain a user role.');
       }
 
-      const role = loginData.role as string;
+      const validRoles = [
+        'student',
+        'tutor',
+        'admin',
+        'company',
+      ] as const;
+
+      if (!validRoles.includes(loginData.role)) {
+        throw new Error(`Unsupported account role: ${loginData.role}`);
+      }
+
+      const role = loginData.role as
+        | 'student'
+        | 'tutor'
+        | 'admin'
+        | 'company';
 
       const profileResponse = await getProfileByRole(role);
       const profileUser = profileResponse?.user;
@@ -96,9 +111,15 @@ export default function LoginPage() {
         throw new Error('Unable to load your user profile.');
       }
 
+      const userId = Number(profileUser.id ?? loginData.user_id);
+
+      if (!Number.isInteger(userId) || userId <= 0) {
+        throw new Error('The authenticated profile did not contain a valid user ID.');
+      }
+
       const user = {
         ...profileUser,
-        id: profileUser.id ?? loginData.user_id,
+        id: userId,
         email: profileUser.email ?? loginData.email,
         role,
         display_name:
@@ -109,7 +130,10 @@ export default function LoginPage() {
       localStorage.setItem('role', role);
       localStorage.setItem('display_name', user.display_name ?? '');
 
-      
+      // Update the same auth state read by ProtectedRoute before navigation.
+      setAuthenticatedUser(user);
+
+      // Keep Redux synchronized for existing Redux-based components.
       dispatch(loginSuccess({ user }));
 
       const roleRoutes: Record<string, string> = {

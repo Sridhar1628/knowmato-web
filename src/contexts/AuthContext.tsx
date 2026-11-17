@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import {
   createContext,
@@ -7,14 +7,17 @@ import {
   useState,
   type ReactNode,
   useCallback,
+  useRef,
 } from 'react';
 
 import { checkAuthentication } from '@/services/userService';
 
-interface AuthUser {
+export type AuthRole = 'student' | 'tutor' | 'admin' | 'company';
+
+export interface AuthUser {
   id: number;
   email?: string;
-  role: 'student' | 'tutor' | 'admin' | 'company';
+  role: AuthRole;
   display_name?: string;
   first_name?: string;
   phone?: string;
@@ -28,11 +31,12 @@ interface AuthContextType {
   loading: boolean;
   authenticated: boolean;
   refreshAuth: () => Promise<void>;
+  setAuthenticatedUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const VALID_ROLES = new Set([
+const VALID_ROLES = new Set<AuthRole>([
   'student',
   'tutor',
   'admin',
@@ -59,9 +63,13 @@ function extractAuthUser(response: any): AuthUser | null {
       Number.isInteger(id) &&
       id > 0 &&
       typeof role === 'string' &&
-      VALID_ROLES.has(role)
+      VALID_ROLES.has(role as AuthRole)
     ) {
-      return { ...candidate, id, role } as AuthUser;
+      return {
+        ...candidate,
+        id,
+        role: role as AuthRole,
+      } as AuthUser;
     }
   }
 
@@ -76,8 +84,24 @@ export function AuthProvider({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  
+  // Prevent an older initial profile request from overwriting a newer login.
+  const authRequestVersion = useRef(0);
+
+  const setAuthenticatedUser = useCallback((authenticatedUser: AuthUser) => {
+    authRequestVersion.current += 1;
+    setUser(authenticatedUser);
+    setLoading(false);
+
+    console.log('[AUTH DEBUG] Authentication context updated from login:', {
+      id: authenticatedUser.id,
+      role: authenticatedUser.role,
+      authenticated: true,
+    });
+  }, []);
+
   const refreshAuth = useCallback(async (): Promise<void> => {
+    const requestVersion = ++authRequestVersion.current;
+
     try {
       console.log('[AUTH DEBUG] Checking authenticated account...');
 
@@ -93,15 +117,22 @@ export function AuthProvider({
         authenticated: Boolean(profile),
       });
 
-      setUser(profile);
+      // Ignore stale responses if a login happened while this request was pending.
+      if (requestVersion === authRequestVersion.current) {
+        setUser(profile);
+      }
     } catch (error) {
       console.error('[AUTH DEBUG] Profile request failed:', error);
-      setUser(null);
+
+      if (requestVersion === authRequestVersion.current) {
+        setUser(null);
+      }
     } finally {
-      setLoading(false);
+      if (requestVersion === authRequestVersion.current) {
+        setLoading(false);
+      }
     }
   }, []);
-
 
   useEffect(() => {
     void refreshAuth();
@@ -114,6 +145,7 @@ export function AuthProvider({
         loading,
         authenticated: Boolean(user),
         refreshAuth,
+        setAuthenticatedUser,
       }}
     >
       {children}
