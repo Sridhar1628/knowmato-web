@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 
 import AlertService from '@/services/alertService';
+import AssessmentRulesModal from '@/components/AssessmentRulesModal';
 import {
   getAssignments,
   type Assignment,
@@ -70,6 +71,7 @@ export default function AssignmentsListPage() {
   const [activeTab, setActiveTab] =
     useState<(typeof TABS_KEYS)[number]>('all');
   const [startingId, setStartingId] = useState<number | null>(null);
+  const [pendingAssignmentId, setPendingAssignmentId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +133,11 @@ export default function AssignmentsListPage() {
       return true;
     });
   }, [assignments, activeTab]);
+
+  const openAssessmentRules = (assignmentId: number) => {
+    if (startingId !== null) return;
+    setPendingAssignmentId(assignmentId);
+  };
 
   const handleStart = async (assignmentId: number) => {
     if (startingId !== null) return;
@@ -387,7 +394,7 @@ export default function AssignmentsListPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => void handleStart(assignment.id)}
+                      onClick={() => openAssessmentRules(assignment.id)}
                       disabled={startingId !== null}
                       className={`mt-4 w-full rounded-xl py-2.5 text-sm font-bold transition-all ${
                         isStarting
@@ -418,6 +425,16 @@ export default function AssignmentsListPage() {
           </div>
         )}
       </div>
+
+      <AssessmentRulesModal
+        open={pendingAssignmentId !== null}
+        onCancel={() => setPendingAssignmentId(null)}
+        onConfirm={() => {
+          const assignmentId = pendingAssignmentId;
+          setPendingAssignmentId(null);
+          if (assignmentId !== null) void handleStart(assignmentId);
+        }}
+      />
     </div>
   );
 }

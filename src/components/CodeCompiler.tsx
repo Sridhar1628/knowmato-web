@@ -29,6 +29,8 @@ export interface CodeCompilerProps {
 
   hideRunButton?: boolean;
   hideOutput?: boolean;
+  /** Disable clipboard paste and drag/drop in supervised assessments. */
+  disablePaste?: boolean;
 
   /**
    * Used by KnowMato Agent integration.
@@ -46,6 +48,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   onCodeChange,
   hideRunButton = false,
   hideOutput = false,
+  disablePaste = false,
   onExecutionResult,
 }) => {
   // ---------- State ----------
@@ -411,6 +414,31 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     if (onCodeChange) onCodeChange(value);
   };
 
+  // ---------- Assessment editor restrictions ----------
+  const blockPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!disablePaste) return;
+    event.preventDefault();
+  };
+
+  const blockEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!disablePaste) return;
+
+    const key = event.key.toLowerCase();
+    const pasteShortcut =
+      ((event.ctrlKey || event.metaKey) && key === 'v') ||
+      (event.shiftKey && key === 'insert');
+
+    if (pasteShortcut) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const blockEditorDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
+    if (!disablePaste) return;
+    event.preventDefault();
+  };
+
   // ---------- Render ----------
   const languageOptions = [
     { value: 'python', label: 'Python' },
@@ -518,6 +546,10 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             }
             placeholder="Write your code here"
             onChange={(e) => handleCodeChange(e.target.value)}
+            onPaste={blockPaste}
+            onKeyDown={blockEditorKeyDown}
+            onDrop={blockEditorDrop}
+            onContextMenu={disablePaste ? (e) => e.preventDefault() : undefined}
             padding={16}
             disabled={isRunning}
             style={{

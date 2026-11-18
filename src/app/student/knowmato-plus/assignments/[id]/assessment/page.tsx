@@ -82,6 +82,15 @@ export default function AssessmentPage() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [expired, setExpired] = useState(false);
   const expirySubmit = useRef(false);
+  const examRootRef = useRef<HTMLDivElement>(null);
+  const wasHiddenRef = useRef(false);
+
+  // The assessment starts only after an explicit user action so the browser
+  // permits fullscreen mode.
+  const [examStarted, setExamStarted] = useState(false);
+  const [fullscreenActive, setFullscreenActive] = useState(false);
+  const [focusWarning, setFocusWarning] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
 
   const current = questions[index] ?? null;
   const currentProgram = current?.type === 'programming' ? programs[current.id] : null;
@@ -196,6 +205,81 @@ export default function AssessmentPage() {
     };
     tick(); const id = window.setInterval(tick, 1000); return () => window.clearInterval(id);
   }, [assignment]);
+
+  const startAssessment = useCallback(async () => {
+    setExamStarted(true);
+    setFocusWarning(false);
+
+    const root = examRootRef.current;
+    if (!root || !document.fullscreenEnabled) {
+      setFullscreenActive(false);
+      setFocusWarning(true);
+      return;
+    }
+
+    try {
+      await root.requestFullscreen();
+      setFullscreenActive(true);
+    } catch (error) {
+      console.warn('Fullscreen request was not granted:', error);
+      setFullscreenActive(false);
+      // Do not strand a student if the browser/device does not support
+      // fullscreen. The warning overlay explains the limitation.
+      setFocusWarning(true);
+    }
+  }, []);
+
+  const resumeFullscreen = useCallback(async () => {
+    const root = examRootRef.current;
+    if (!root || !document.fullscreenEnabled) {
+      setFocusWarning(false);
+      return;
+    }
+
+    try {
+      await root.requestFullscreen();
+      setFullscreenActive(true);
+      setFocusWarning(false);
+    } catch (error) {
+      console.warn('Could not resume fullscreen:', error);
+      setFocusWarning(false);
+    }
+  }, []);
+
+  // Browser APIs can detect tab visibility changes and fullscreen exits.
+  // They cannot prevent OS-level app switching or guarantee a locked device.
+  useEffect(() => {
+    if (!examStarted || submitted) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        wasHiddenRef.current = true;
+        setViolationCount((count) => count + 1);
+        setFocusWarning(true);
+      } else if (wasHiddenRef.current) {
+        wasHiddenRef.current = false;
+        setFocusWarning(true);
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      const active = document.fullscreenElement === examRootRef.current;
+      setFullscreenActive(active);
+
+      if (!active && examStarted && !submitted) {
+        setViolationCount((count) => count + 1);
+        setFocusWarning(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [examStarted, submitted]);
 
   const submit = useCallback(async (automatic = false) => {
     if (!attemptId || submitting || submitted) return;
@@ -340,18 +424,60 @@ export default function AssessmentPage() {
     </div>
   );
 
+  if (!examStarted) {
+    return (
+      <div
+        ref={examRootRef}
+        className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-5 text-white"
+      >
+        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-7 text-center shadow-2xl backdrop-blur-xl sm:p-10">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-500/20 text-3xl">⌨️</div>
+          <h1 className="mt-5 text-2xl font-bold sm:text-3xl">Ready to begin?</h1>
+          <p className="mt-3 text-sm leading-6 text-white/65">
+            Your assessment will open in fullscreen mode. Keep this window active
+            until you submit your answers. Switching tabs or leaving the assessment
+            may be recorded as an exam violation.
+          </p>
+          <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <p className="font-semibold text-violet-200">Before you start</p>
+              <p className="mt-1 text-xs leading-5 text-white/55">Close unrelated tabs and applications. Keep your device connected to power.</p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <p className="font-semibold text-violet-200">During the assessment</p>
+              <p className="mt-1 text-xs leading-5 text-white/55">Use the provided editor, run your tests and submit before the timer expires.</p>
+            </div>
+          </div>
+          <button
+            onClick={startAssessment}
+            disabled={loading || expired}
+            className="mt-7 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-4 text-sm font-bold shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? 'Preparing assessment...' : 'Start Assessment in Fullscreen'}
+          </button>
+          <button
+            onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)}
+            className="mt-3 rounded-lg px-5 py-2 text-xs font-semibold text-white/55 hover:text-white"
+          >
+            Back to Assignment
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!current) return <div className="min-h-screen bg-[#17132f] p-8 text-center text-white">No assessment questions found.</div>;
 
   const progress = questions.length ? ((index + 1) / questions.length) * 100 : 0;
   const currentStatus = statuses[current.uniqueId] || getStatus(current);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
+    <div ref={examRootRef} className="min-h-screen w-full bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-black/40 backdrop-blur-xl">
         <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><button onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)} className="text-xs font-semibold text-violet-300">← Back to Assignment</button><h1 className="mt-1 text-lg font-bold">{assignment?.title || assignment?.name || 'Assessment'}</h1></div>
-            <div className="flex items-center gap-3"><div className={`rounded-full border px-4 py-2 text-sm font-bold ${expired ? 'border-red-400/30 bg-red-400/10 text-red-300' : remaining != null && remaining <= 300000 ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>{expired ? '⏰ Expired' : `⏳ ${remaining != null ? timeText(remaining) : '--:--:--'}`}</div><button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-5 py-2.5 text-sm font-bold disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit Assessment'}</button></div>
+            <div className="flex items-center gap-3">{violationCount > 0 && <div className="hidden rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200 sm:block">Warnings: {violationCount}</div>}<div className={`rounded-full border px-4 py-2 text-sm font-bold ${expired ? 'border-red-400/30 bg-red-400/10 text-red-300' : remaining != null && remaining <= 300000 ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>{expired ? '⏰ Expired' : `⏳ ${remaining != null ? timeText(remaining) : '--:--:--'}`}</div><button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-5 py-2.5 text-sm font-bold disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit Assessment'}</button></div>
           </div>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400 transition-all" style={{ width: `${progress}%` }} /></div>
         </div>
@@ -378,6 +504,35 @@ export default function AssessmentPage() {
           <div className="mt-6 flex items-center justify-between gap-3"><button onClick={() => go(index - 1)} disabled={index === 0} className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold disabled:opacity-30">← Previous</button><span className="text-xs text-white/45">{currentStatus === 'passed' ? '✅ Passed' : currentStatus === 'failed' ? '❌ Failed' : currentStatus === 'attempted' ? '🟠 Attempted' : '⚪ Not attempted'}</span>{index < questions.length - 1 ? <button onClick={() => go(index + 1)} className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold">Next →</button> : <button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-6 py-3 text-sm font-bold disabled:opacity-50">Submit Assessment</button>}</div>
         </section>
       </div></main>
+
+      {focusWarning && !submitted && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#080616]/95 p-5 backdrop-blur-md">
+          <div className="w-full max-w-lg rounded-3xl border border-amber-400/30 bg-[#211b3e] p-7 text-center shadow-2xl">
+            <div className="text-4xl">⚠️</div>
+            <h2 className="mt-4 text-xl font-bold">Stay in the assessment</h2>
+            <p className="mt-3 text-sm leading-6 text-white/65">
+              We detected that the assessment window lost visibility or fullscreen
+              mode was exited. Please return to fullscreen to continue.
+            </p>
+            {violationCount > 0 && (
+              <p className="mt-3 text-xs font-semibold text-amber-200">
+                Detected events: {violationCount}
+              </p>
+            )}
+            <button
+              onClick={resumeFullscreen}
+              className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold"
+            >
+              Return to Fullscreen
+            </button>
+            {!fullscreenActive && (
+              <p className="mt-3 text-[11px] text-white/40">
+                Pressing Esc exits fullscreen. Select the button above to resume.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-black/60 p-3 backdrop-blur-xl lg:hidden"><div className="mx-auto flex max-w-3xl items-center gap-3"><div className="flex-1"><div className="h-1 overflow-hidden rounded bg-white/10"><div className="h-full bg-violet-500" style={{ width: `${progress}%` }} /></div></div><button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-4 py-2.5 text-xs font-bold disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit'}</button></div></div>
     </div>

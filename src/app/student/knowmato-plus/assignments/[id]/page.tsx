@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 
 import AlertService from '@/services/alertService';
+import AssessmentRulesModal from '@/components/AssessmentRulesModal';
 
 import {
   getAttemptDetails,
@@ -78,6 +79,7 @@ export default function AssignmentDetailPage() {
     useState<AttemptDetails | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const attemptId = Number(params.id);
 
@@ -156,6 +158,10 @@ export default function AssignmentDetailPage() {
 
     fetchData();
   }, [attemptId, router, t]);
+
+  const requestAssessmentNavigation = (destination: string) => {
+    setPendingNavigation(destination);
+  };
 
   // --------------------------------------------------------------------
   // Loading state
@@ -395,11 +401,11 @@ export default function AssignmentDetailPage() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        router.push(
-                          `/student/knowmato-plus/assignments/${attempt.id}/question/${question.id}`,
-                        )
-                      }
+                      onClick={() => {
+                        const destination = `/student/knowmato-plus/assignments/${attempt.id}/question/${question.id}`;
+                        if (isExpired) router.push(destination);
+                        else requestAssessmentNavigation(destination);
+                      }}
                       className={`mt-4 w-full rounded-xl py-2 text-sm font-bold transition-all ${
                         isExpired
                           ? 'border border-white/20 bg-white/10 text-white/70 hover:bg-white/20'
@@ -500,11 +506,11 @@ export default function AssignmentDetailPage() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        router.push(
-                          `/student/knowmato-plus/assignments/${attempt.id}/mcq/${group.quizId}`,
-                        )
-                      }
+                      onClick={() => {
+                        const destination = `/student/knowmato-plus/assignments/${attempt.id}/mcq/${group.quizId}`;
+                        if (isExpired) router.push(destination);
+                        else requestAssessmentNavigation(destination);
+                      }}
                       className={`mt-4 w-full rounded-xl py-2 text-sm font-bold transition-all ${
                         isExpired
                           ? 'border border-white/20 bg-white/10 text-white/70 hover:bg-white/20'
@@ -527,6 +533,16 @@ export default function AssignmentDetailPage() {
           )}
         </section>
       </div>
+
+      <AssessmentRulesModal
+        open={pendingNavigation !== null}
+        onCancel={() => setPendingNavigation(null)}
+        onConfirm={() => {
+          const destination = pendingNavigation;
+          setPendingNavigation(null);
+          if (destination) router.push(destination);
+        }}
+      />
     </div>
   );
 }
