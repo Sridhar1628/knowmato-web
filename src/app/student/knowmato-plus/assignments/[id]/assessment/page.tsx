@@ -80,9 +80,11 @@ export default function AssessmentPage() {
   const [submitted, setSubmitted] = useState(false);
   const [finalResult, setFinalResult] = useState<any>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
   const [expired, setExpired] = useState(false);
   const expirySubmit = useRef(false);
   const examRootRef = useRef<HTMLDivElement>(null);
+  const contentScrollRef = useRef<HTMLDivElement>(null);
   const wasHiddenRef = useRef(false);
 
   // The assessment starts only after an explicit user action so the browser
@@ -130,6 +132,13 @@ export default function AssessmentPage() {
         const pqs: ProgrammingQuestion[] = Array.isArray(raw?.programming_questions) ? raw.programming_questions : [];
         pqs.forEach(q => unified.push({ id: q.id, type: 'programming', data: q, uniqueId: `programming-${q.id}` }));
         const quizzes = Array.isArray(raw?.mcq_quizzes) ? raw.mcq_quizzes : [];
+        // The assignment may not have its own expiry/time configured. In that
+        // case use the duration configured on its linked quiz (e.g. 90 minutes).
+        const quizDuration = quizzes.reduce((total: number, quiz: any) => {
+          const minutes = Number(quiz?.duration_minutes);
+          return total + (Number.isFinite(minutes) && minutes > 0 ? minutes : 0);
+        }, 0);
+        setDurationMinutes(quizDuration);
         const mcq = await Promise.allSettled(quizzes.map(async (quiz: any) => ({ quiz, questions: payload<any[]>(await getQuizQuestions(quiz.id)) })));
         mcq.forEach(x => {
           if (x.status !== 'fulfilled') return;
@@ -197,14 +206,46 @@ export default function AssessmentPage() {
   }, [attemptId, router, t]);
 
   useEffect(() => {
-    if (!assignment?.date_of_expiry) return;
+    // Deadline priority:
+    // 1) Explicit assignment expiry date/time.
+    // 2) Quiz duration measured from the server-created attempt.started_at.
+    // This keeps the timer consistent after refresh and across devices.
+    let deadlineMs: number | null = null;
+
+    if (assignment?.date_of_expiry) {
+      const expiry = new Date(assignment.date_of_expiry);
+      if (!Number.isNaN(expiry.getTime())) {
+        if (assignment.time) {
+          const parts = String(assignment.time).split(':');
+          expiry.setHours(Number(parts[0] || 0), Number(parts[1] || 0), Number(parts[2] || 0), 0);
+        }
+        deadlineMs = expiry.getTime();
+      }
+    }
+
+    if (deadlineMs == null && durationMinutes > 0) {
+      const startedAt = attempt?.started_at ? new Date(attempt.started_at) : null;
+      if (startedAt && !Number.isNaN(startedAt.getTime())) {
+        deadlineMs = startedAt.getTime() + durationMinutes * 60 * 1000;
+      }
+    }
+
+    if (deadlineMs == null) {
+      setRemaining(null);
+      setExpired(false);
+      return;
+    }
+
     const tick = () => {
-      const d = new Date(assignment.date_of_expiry);
-      if (assignment.time) { const p = String(assignment.time).split(':'); d.setHours(Number(p[0] || 0), Number(p[1] || 0), Number(p[2] || 0), 0); }
-      const ms = d.getTime() - Date.now(); setRemaining(Math.max(0, ms)); setExpired(ms <= 0);
+      const ms = deadlineMs! - Date.now();
+      setRemaining(Math.max(0, ms));
+      setExpired(ms <= 0);
     };
-    tick(); const id = window.setInterval(tick, 1000); return () => window.clearInterval(id);
-  }, [assignment]);
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [assignment, attempt, durationMinutes]);
 
   const startAssessment = useCallback(async () => {
     setExamStarted(true);
@@ -378,7 +419,7 @@ export default function AssessmentPage() {
   }, [attemptId, expired, submitted]);
 
   const unanswered = useMemo(() => questions.filter(q => q.type === 'mcq' ? answers[q.id] == null : !programs[q.id]?.code?.trim()), [questions, answers, programs]);
-  const go = (i: number) => { if (i >= 0 && i < questions.length) { setIndex(i); window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0); } };
+  const go = (i: number) => { if (i >= 0 && i < questions.length) { setIndex(i); window.setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0); } };
 
   const finalSubmit = async () => {
     if (expired || submitting || submitted) return;
@@ -455,12 +496,6 @@ export default function AssessmentPage() {
           >
             {loading ? 'Preparing assessment...' : 'Start Assessment in Fullscreen'}
           </button>
-          <button
-            onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)}
-            className="mt-3 rounded-lg px-5 py-2 text-xs font-semibold text-white/55 hover:text-white"
-          >
-            Back to Assignment
-          </button>
         </div>
       </div>
     );
@@ -472,18 +507,20 @@ export default function AssessmentPage() {
   const currentStatus = statuses[current.uniqueId] || getStatus(current);
 
   return (
-    <div ref={examRootRef} className="min-h-screen w-full bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/40 backdrop-blur-xl">
+    <div ref={examRootRef} className="flex h-screen w-full flex-col overflow-hidden bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] text-white">
+      <header className="relative z-40 shrink-0 border-b border-white/10 bg-black/40 backdrop-blur-xl">
         <div className="mx-auto max-w-[1600px] px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div><button onClick={() => router.push(`/student/knowmato-plus/assignments/${attemptId}`)} className="text-xs font-semibold text-violet-300">← Back to Assignment</button><h1 className="mt-1 text-lg font-bold">{assignment?.title || assignment?.name || 'Assessment'}</h1></div>
-            <div className="flex items-center gap-3">{violationCount > 0 && <div className="hidden rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200 sm:block">Warnings: {violationCount}</div>}<div className={`rounded-full border px-4 py-2 text-sm font-bold ${expired ? 'border-red-400/30 bg-red-400/10 text-red-300' : remaining != null && remaining <= 300000 ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>{expired ? '⏰ Expired' : `⏳ ${remaining != null ? timeText(remaining) : '--:--:--'}`}</div><button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-5 py-2.5 text-sm font-bold disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit Assessment'}</button></div>
+            <div><h1 className="text-lg font-bold">{assignment?.title || assignment?.name || 'Assessment'}</h1></div>
+            <div className="flex items-center gap-3">{violationCount > 0 && <div className="hidden rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200 sm:block">Warnings: {violationCount}</div>}<div className={`rounded-full border px-4 py-2 text-sm font-bold ${expired ? 'border-red-400/30 bg-red-400/10 text-red-300' : remaining != null && remaining <= 300000 ? 'border-amber-400/30 bg-amber-400/10 text-amber-300' : 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'}`}>{expired ? '⏰ Expired' : remaining != null ? `⏳ ${timeText(remaining)}` : '⏳ No time limit'}</div><button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-5 py-2.5 text-sm font-bold disabled:opacity-50">{submitting ? 'Submitting...' : 'Submit Assessment'}</button></div>
           </div>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-400 transition-all" style={{ width: `${progress}%` }} /></div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] p-4 pb-28 sm:p-6 lg:p-8"><div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <main ref={contentScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="mx-auto max-w-[1600px] p-4 pb-28 sm:p-6 lg:p-8">
+          <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="lg:sticky lg:top-24 lg:self-start"><div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl shadow-xl"><p className="text-sm font-bold">Questions</p><p className="mt-1 text-xs text-white/45">{index + 1} of {questions.length}</p><div className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-4">
           {questions.map((q, i) => { const s = statuses[q.uniqueId] || 'not_attempted'; return <button key={q.uniqueId} onClick={() => go(i)} title={q.type === 'programming' ? 'Programming' : 'MCQ'} className={`relative flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold ${s === 'passed' ? 'bg-emerald-500' : s === 'failed' ? 'bg-red-500' : s === 'attempted' ? 'bg-amber-500' : 'bg-white/10 text-white/60'} ${i === index ? 'ring-2 ring-white ring-offset-2 ring-offset-[#17132f]' : ''}`}>{i + 1}<span className="absolute -right-1 -top-1 text-[9px]">{q.type === 'programming' ? '💻' : '📝'}</span></button>; })}
         </div><div className="mt-5 border-t border-white/10 pt-4 text-[11px] text-white/50"><p>⚪ Not attempted</p><p className="mt-1">🟠 Attempted</p><p className="mt-1">🟢 Passed</p><p className="mt-1">🔴 Failed</p></div><div className="mt-4 rounded-xl bg-black/20 p-3"><p className="text-xs text-white/45">Progress</p><p className="mt-1 text-xl font-bold">{questions.filter(q => (statuses[q.uniqueId] || 'not_attempted') !== 'not_attempted').length} / {questions.length}</p></div></div></aside>
@@ -503,7 +540,9 @@ export default function AssessmentPage() {
 
           <div className="mt-6 flex items-center justify-between gap-3"><button onClick={() => go(index - 1)} disabled={index === 0} className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-bold disabled:opacity-30">← Previous</button><span className="text-xs text-white/45">{currentStatus === 'passed' ? '✅ Passed' : currentStatus === 'failed' ? '❌ Failed' : currentStatus === 'attempted' ? '🟠 Attempted' : '⚪ Not attempted'}</span>{index < questions.length - 1 ? <button onClick={() => go(index + 1)} className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-6 py-3 text-sm font-bold">Next →</button> : <button onClick={finalSubmit} disabled={submitting || expired} className="rounded-xl bg-gradient-to-r from-fuchsia-500 to-pink-500 px-6 py-3 text-sm font-bold disabled:opacity-50">Submit Assessment</button>}</div>
         </section>
-      </div></main>
+          </div>
+        </div>
+      </main>
 
       {focusWarning && !submitted && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#080616]/95 p-5 backdrop-blur-md">

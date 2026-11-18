@@ -29,8 +29,6 @@ export interface CodeCompilerProps {
 
   hideRunButton?: boolean;
   hideOutput?: boolean;
-  /** Disable clipboard paste and drag/drop in supervised assessments. */
-  disablePaste?: boolean;
 
   /**
    * Used by KnowMato Agent integration.
@@ -48,7 +46,6 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   onCodeChange,
   hideRunButton = false,
   hideOutput = false,
-  disablePaste = false,
   onExecutionResult,
 }) => {
   // ---------- State ----------
@@ -63,8 +60,52 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
   const executionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ---------- Assessment editor paste protection ----------
+  // Use native capture-phase listeners on the editor wrapper. This catches
+  // paste events before the textarea/code-editor package can process them.
+  // It deliberately does not affect terminal input or other page controls.
+  useEffect(() => {
+    const root = editorContainerRef.current;
+    if (!root) return;
+
+    const blockPaste = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if ('stopImmediatePropagation' in event) event.stopImmediatePropagation();
+    };
+
+    const blockPasteShortcut = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const isPasteShortcut = ((event.ctrlKey || event.metaKey) && key === 'v') ||
+        (event.shiftKey && key === 'insert');
+      if (isPasteShortcut) blockPaste(event);
+    };
+
+    const blockPasteBeforeInput = (event: Event) => {
+      const inputEvent = event as InputEvent;
+      if (inputEvent.inputType === 'insertFromPaste' || inputEvent.inputType === 'insertFromDrop') {
+        blockPaste(event);
+      }
+    };
+
+    root.addEventListener('paste', blockPaste, true);
+    root.addEventListener('keydown', blockPasteShortcut, true);
+    root.addEventListener('beforeinput', blockPasteBeforeInput, true);
+    root.addEventListener('drop', blockPaste, true);
+    root.addEventListener('contextmenu', blockPaste, true);
+
+    return () => {
+      root.removeEventListener('paste', blockPaste, true);
+      root.removeEventListener('keydown', blockPasteShortcut, true);
+      root.removeEventListener('beforeinput', blockPasteBeforeInput, true);
+      root.removeEventListener('drop', blockPaste, true);
+      root.removeEventListener('contextmenu', blockPaste, true);
+    };
+  }, []);
 
   // ---------- Sync props ----------
   useEffect(() => {
@@ -414,31 +455,6 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
     if (onCodeChange) onCodeChange(value);
   };
 
-  // ---------- Assessment editor restrictions ----------
-  const blockPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    if (!disablePaste) return;
-    event.preventDefault();
-  };
-
-  const blockEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!disablePaste) return;
-
-    const key = event.key.toLowerCase();
-    const pasteShortcut =
-      ((event.ctrlKey || event.metaKey) && key === 'v') ||
-      (event.shiftKey && key === 'insert');
-
-    if (pasteShortcut) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
-  const blockEditorDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
-    if (!disablePaste) return;
-    event.preventDefault();
-  };
-
   // ---------- Render ----------
   const languageOptions = [
     { value: 'python', label: 'Python' },
@@ -530,7 +546,20 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
       {/* Code Editor - Now with fixed height and scrolling */}
       <div>
         <label className="block text-sm font-semibold text-white/80 mb-1">Source Code</label>
-        <div className="rounded-xl border-2 border-white/20 overflow-hidden bg-gray-900/60 backdrop-blur-sm h-[420px]">
+        <div
+          ref={editorContainerRef}
+          className="rounded-xl border-2 border-white/20 overflow-hidden bg-gray-900/60 backdrop-blur-sm h-[420px]"
+          onPasteCapture={(event) => { event.preventDefault(); event.stopPropagation(); }}
+          onKeyDownCapture={(event) => {
+            const key = event.key.toLowerCase();
+            if (((event.ctrlKey || event.metaKey) && key === 'v') || (event.shiftKey && key === 'insert')) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }}
+          onContextMenuCapture={(event) => { event.preventDefault(); event.stopPropagation(); }}
+          onDropCapture={(event) => { event.preventDefault(); event.stopPropagation(); }}
+        >
           <CodeEditor
             value={sourceCode}
             language={
@@ -546,10 +575,6 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             }
             placeholder="Write your code here"
             onChange={(e) => handleCodeChange(e.target.value)}
-            onPaste={blockPaste}
-            onKeyDown={blockEditorKeyDown}
-            onDrop={blockEditorDrop}
-            onContextMenu={disablePaste ? (e) => e.preventDefault() : undefined}
             padding={16}
             disabled={isRunning}
             style={{
@@ -565,6 +590,7 @@ const CodeCompiler: React.FC<CodeCompilerProps> = ({
             className="w-full h-full outline-none"
           />
         </div>
+        <p className="mt-2 text-[11px] text-white/40">Paste is disabled in the assessment code editor. Please type your solution.</p>
       </div>
 
       {/* Terminal Console - Now with fixed height and scrolling */}
