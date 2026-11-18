@@ -80,6 +80,8 @@ export interface Assignment {
   batch: number;
   total_marks: string;
   pass_percentage?: number;
+  /** Total duration in minutes across active MCQ quizzes for this assignment. */
+  duration_minutes?: number | null;
   my_attempt: AssignmentAttemptSummary | null;
 }
 

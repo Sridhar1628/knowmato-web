@@ -51,6 +51,24 @@ function getExpiryDate(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function formatDuration(value: number | null | undefined): string | null {
+  const minutes = Number(value);
+
+  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+
+  const totalMinutes = Math.floor(minutes);
+  const hours = Math.floor(totalMinutes / 60);
+  const remainingMinutes = totalMinutes % 60;
+
+  if (hours > 0 && remainingMinutes > 0) {
+    return `${hours} hr ${remainingMinutes} min`;
+  }
+
+  if (hours > 0) return `${hours} hr`;
+
+  return `${totalMinutes} min`;
+}
+
 function isAssignmentExpired(
   assignment: Assignment,
   now: Date,
@@ -341,6 +359,16 @@ export default function AssignmentsListPage() {
                         t('assignments.notAvailable'),
                     })}
                   </p>
+
+                  {/* Assessment duration */}
+                  <div className="mt-3 flex items-center gap-2 text-xs text-white/60">
+                    <span aria-hidden="true">⏱️</span>
+                    <span>
+                      {t('assignments.duration', 'Duration')}: {' '}
+                      {formatDuration(assignment.duration_minutes) ??
+                        t('assignments.notAvailable')}
+                    </span>
+                  </div>
 
                   {/* Deadline */}
                   <div className="mt-3 flex items-center gap-1 text-xs text-white/40">
